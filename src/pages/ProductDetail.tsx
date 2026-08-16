@@ -206,6 +206,26 @@ export default function ProductDetail() {
     return getSmartProductImage(product?.name || "", fullUrl, product?.category_id || "");
   };
 
+  const recordUserProductView = (p: any) => {
+    if (typeof window === "undefined" || !p) return;
+    try {
+      const cat = p.category_id || p.category_slug || p.category || "";
+      if (cat) {
+        const rawCats = localStorage.getItem("user_viewed_categories");
+        const cats: string[] = rawCats ? JSON.parse(rawCats) : [];
+        const updatedCats = [cat, ...cats.filter((c: string) => c !== cat)].slice(0, 10);
+        localStorage.setItem("user_viewed_categories", JSON.stringify(updatedCats));
+      }
+      const rawProds = localStorage.getItem("recently_viewed_products");
+      const prods: any[] = rawProds ? JSON.parse(rawProds) : [];
+      const updatedProds = [
+        { id: p.id, name: p.name || p.title, slug: p.slug, category: cat, image: p.product_images?.[0]?.image_url || p.image || p.image_url },
+        ...prods.filter((item: any) => item.id !== p.id)
+      ].slice(0, 15);
+      localStorage.setItem("recently_viewed_products", JSON.stringify(updatedProds));
+    } catch {}
+  };
+
   // Get images from product or use defaults
   const rawImgList = product?.product_images && product.product_images.length > 0
     ? product.product_images.map(img => typeof img === "string" ? img : img.image_url)
@@ -412,6 +432,7 @@ export default function ProductDetail() {
                 setProduct(formattedProduct);
                 setSelectedImage(0);
                 trackView(formattedProduct.id);
+                recordUserProductView(formattedProduct);
                 setLoading(false);
                 return;
               }
@@ -497,6 +518,7 @@ export default function ProductDetail() {
             setProduct(data as unknown as Product);
             setSelectedImage(0);
             if (data.id) trackView(data.id);
+            recordUserProductView(data);
             setLoading(false);
             return;
           }

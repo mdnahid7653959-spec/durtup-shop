@@ -145,6 +145,84 @@ function validUrl(url?: string, fallback = ""): string {
   return fallback;
 }
 
+function normalizeKeyword(str: string): string {
+  const s = str.toLowerCase();
+  if (s.includes("bra") || s.includes("panties") || s.includes("underwear") || s.includes("lingerie") || s.includes("inner")) return "underwear";
+  if (s.includes("watch") || s.includes("smartwatch") || s.includes("ghori")) return "watch";
+  if (s.includes("shirt") || s.includes("t-shirt") || s.includes("panjabi") || s.includes("polo") || s.includes("jersey") || s.includes("pant") || s.includes("gabardine") || s.includes("trouser") || s.includes("khimar") || s.includes("palazzo") || s.includes("dress") || s.includes("clothing") || s.includes("fashion")) return "fashion";
+  if (s.includes("earbud") || s.includes("headphone") || s.includes("earphone") || s.includes("speaker") || s.includes("audio") || s.includes("sound")) return "audio";
+  if (s.includes("lamp") || s.includes("light") || s.includes("fan") || s.includes("projector") || s.includes("mouse") || s.includes("keyboard") || s.includes("router") || s.includes("cable") || s.includes("charger") || s.includes("dispenser") || s.includes("gadget") || s.includes("electronic")) return "gadgets";
+  if (s.includes("cream") || s.includes("oil") || s.includes("serum") || s.includes("lotion") || s.includes("soap") || s.includes("shampoo") || s.includes("skincare") || s.includes("beauty")) return "beauty";
+  if (s.includes("pillow") || s.includes("decor") || s.includes("mug") || s.includes("bottle") || s.includes("kitchen") || s.includes("home") || s.includes("living")) return "home";
+  return s.replace(/[^a-z0-9]/g, "").slice(0, 8);
+}
+
+function getSmartPersonalizedForYou(candidates: Product[]): Product[] {
+  if (!candidates || candidates.length === 0) return [];
+
+  // Read user preference categories and browsing history from localStorage
+  let userInterests: string[] = [];
+  try {
+    if (typeof window !== "undefined") {
+      const viewedCats = localStorage.getItem("user_viewed_categories");
+      if (viewedCats) {
+        const arr = JSON.parse(viewedCats);
+        if (Array.isArray(arr)) {
+          userInterests.push(...arr.map((c: string) => normalizeKeyword(String(c))));
+        }
+      }
+      const viewedProds = localStorage.getItem("recently_viewed_products");
+      if (viewedProds) {
+        const arr = JSON.parse(viewedProds);
+        if (Array.isArray(arr)) {
+          userInterests.push(...arr.map((p: any) => normalizeKeyword(p.name || p.title || p.category || "")));
+        }
+      }
+    }
+  } catch {}
+
+  const seenIds = new Set<string>();
+  const seenTypes = new Set<string>();
+  const selected: Product[] = [];
+
+  // 1. First priority: Pick unique, distinct products matching user's top viewed categories
+  if (userInterests.length > 0) {
+    for (const p of candidates) {
+      if (selected.length >= 3) break;
+      const type = normalizeKeyword(p.name + " " + ((p as any).category || ""));
+      if (!seenIds.has(p.id) && !seenTypes.has(type)) {
+        if (userInterests.some((ui) => ui && (type.includes(ui) || ui.includes(type)))) {
+          seenIds.add(p.id);
+          seenTypes.add(type);
+          selected.push(p);
+        }
+      }
+    }
+  }
+
+  // 2. Second priority: Fill remaining slots with completely unique products from DIFFERENT categories
+  for (const p of candidates) {
+    if (selected.length >= 3) break;
+    const type = normalizeKeyword(p.name + " " + ((p as any).category || ""));
+    if (!seenIds.has(p.id) && !seenTypes.has(type)) {
+      seenIds.add(p.id);
+      seenTypes.add(type);
+      selected.push(p);
+    }
+  }
+
+  // 3. Fallback: If still not enough, pick by ID deduplication
+  for (const p of candidates) {
+    if (selected.length >= 3) break;
+    if (!seenIds.has(p.id)) {
+      seenIds.add(p.id);
+      selected.push(p);
+    }
+  }
+
+  return selected;
+}
+
 function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: HeroBentoProps) {
   const countdown = useCountdown(30);
   const isMobile = useIsMobile();
@@ -161,12 +239,10 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
   activeTiles.forEach((t) => (tileMap[t.id] = t));
   const customSections = activeSections.filter((s) => s.visible !== false);
 
-
   const isVisible = (id: string) => tileMap[id]?.visible !== false;
   const cfg = (id: string): BentoTileCfg => tileMap[id] ?? { id, visible: true };
 
-
-  const forYouItems = forYou.slice(0, 3);
+  const forYouItems = getSmartPersonalizedForYou(forYou);
   const flashItems = flashSale.slice(0, 2);
   const trend = trending[0];
 

@@ -45,6 +45,16 @@ export default function CategoryPage() {
       };
       setCategory(initialCat);
 
+      // Track viewed category in user preference history
+      if (typeof window !== "undefined" && slug) {
+        try {
+          const raw = localStorage.getItem("user_viewed_categories");
+          const existing: string[] = raw ? JSON.parse(raw) : [];
+          const updated = [slug, ...existing.filter((s: string) => s !== slug)].slice(0, 10);
+          localStorage.setItem("user_viewed_categories", JSON.stringify(updated));
+        } catch {}
+      }
+
       const allMohasagor = await getCachedMohasagorProducts();
       let instantFiltered: Product[] = [];
       if (allMohasagor.length > 0) {
