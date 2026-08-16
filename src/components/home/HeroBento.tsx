@@ -102,16 +102,38 @@ const CATEGORIES = [
   },
 ];
 
-function useCountdown(hours = 4) {
-  const [t, setT] = useState(hours * 3600);
+function useCountdown(days = 30) {
+  const STORAGE_KEY = "flash_sale_target_end_time";
+  const [timeLeft, setTimeLeft] = useState(() => {
+    const now = Date.now();
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(STORAGE_KEY);
+        if (stored) {
+          const target = parseInt(stored, 10);
+          if (target > now) {
+            return Math.floor((target - now) / 1000);
+          }
+        }
+        const newTarget = now + days * 24 * 3600 * 1000;
+        localStorage.setItem(STORAGE_KEY, String(newTarget));
+      } catch {}
+    }
+    return days * 24 * 3600;
+  });
+
   useEffect(() => {
-    const i = setInterval(() => setT((v) => (v > 0 ? v - 1 : hours * 3600)), 1000);
+    const i = setInterval(() => {
+      setTimeLeft((prev) => (prev > 0 ? prev - 1 : days * 24 * 3600));
+    }, 1000);
     return () => clearInterval(i);
-  }, [hours]);
-  const h = String(Math.floor(t / 3600)).padStart(2, "0");
-  const m = String(Math.floor((t % 3600) / 60)).padStart(2, "0");
-  const s = String(t % 60).padStart(2, "0");
-  return { h, m, s, formatted: `${h}:${m}:${s}` };
+  }, [days]);
+
+  const d = String(Math.floor(timeLeft / (3600 * 24))).padStart(2, "0");
+  const h = String(Math.floor((timeLeft % (3600 * 24)) / 3600)).padStart(2, "0");
+  const m = String(Math.floor((timeLeft % 3600) / 60)).padStart(2, "0");
+  const s = String(timeLeft % 60).padStart(2, "0");
+  return { d, h, m, s, formatted: `${d}d ${h}:${m}:${s}` };
 }
 
 function validUrl(url?: string, fallback = ""): string {
@@ -124,7 +146,7 @@ function validUrl(url?: string, fallback = ""): string {
 }
 
 function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: HeroBentoProps) {
-  const countdown = useCountdown(4);
+  const countdown = useCountdown(30);
   const isMobile = useIsMobile();
   const { config } = useSiteConfig<{
     tiles?: BentoTileCfg[];
@@ -236,12 +258,15 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
               <line x1="120" y1="15" x2="120" y2="55" strokeDasharray="2,2" />
             </svg>
 
-            {/* Top Timer Plaque / Tab */}
-            <div className="absolute top-0 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:left-[30%] md:left-[35%] z-20 bg-gradient-to-b from-[#f3e8d2] to-[#e8d7b5] border-b border-x border-[#d5b577] px-3 sm:px-4 py-0.5 sm:py-1 rounded-b-xl sm:rounded-b-2xl flex items-center gap-1.5 sm:gap-2 shadow-sm">
-              <span className="font-['Plus_Jakarta_Sans',sans-serif] font-black text-[#0d1f4d] text-[9px] sm:text-[10px] md:text-xs tracking-wider uppercase">
+            {/* Top Timer Plaque / Tab (1-Month Persistent Countdown) */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:left-[26%] md:left-[30%] z-20 bg-gradient-to-b from-[#f3e8d2] to-[#e8d7b5] border-b border-x border-[#d5b577] px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-b-xl sm:rounded-b-2xl flex items-center gap-1 sm:gap-1.5 shadow-sm">
+              <span className="font-['Plus_Jakarta_Sans',sans-serif] font-black text-[#0d1f4d] text-[8px] sm:text-[10px] md:text-xs tracking-wider uppercase">
                 ENDS IN
               </span>
-              <div className="flex items-center gap-0.5 sm:gap-1 text-white font-mono text-[9px] sm:text-[11px] md:text-xs font-black">
+              <div className="flex items-center gap-0.5 sm:gap-1 text-white font-mono text-[8px] sm:text-[10px] md:text-xs font-black">
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.d[0]}</span>
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.d[1]}</span>
+                <span className="text-[#0d1f4d] text-[7px] sm:text-[9px] font-black uppercase mx-0.5">D</span>
                 <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.h[0]}</span>
                 <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.h[1]}</span>
                 <span className="text-[#0d1f4d] font-black leading-tight">:</span>
@@ -253,20 +278,14 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
               </div>
             </div>
 
-            {/* Left Main Title & Subtitle */}
-            <div className="flex flex-col min-w-0 relative z-10 pt-3 sm:pt-4 md:pt-2">
+            {/* Left Main Title */}
+            <div className="flex flex-col min-w-0 relative z-10 pt-2 sm:pt-3">
               <h2
-                className="font-['Bebas_Neue'] text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] text-[#0d1f4d] leading-[0.88] tracking-tight drop-shadow-sm group-hover:text-orange-600 transition-colors"
+                className="font-['Bebas_Neue'] text-3xl sm:text-4xl md:text-5xl lg:text-[3.35rem] text-[#0d1f4d] leading-[0.9] tracking-tight drop-shadow-sm group-hover:text-orange-600 transition-colors"
                 style={titleStyle("flash", flashCfg.textStyle)}
               >
                 {flashCfg.title || "FLASH SALE DEALS"}
               </h2>
-              <p
-                className="text-[#0d1f4d] font-extrabold uppercase tracking-wider sm:tracking-widest text-[10px] sm:text-xs md:text-sm mt-1 sm:mt-2"
-                style={subtitleStyle("flash", flashCfg.textStyle)}
-              >
-                {flashCfg.subtitle || "UP TO 70% OFF"}
-              </p>
             </div>
 
             {/* Right Product Thumbnails & Bottom CTA */}
