@@ -5,6 +5,7 @@ import type { Product } from "@/components/products/ProductCard";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { titleStyle, subtitleStyle, type TextStyle } from "@/lib/bentoText";
+import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 
 
 interface HeroBentoProps {
@@ -226,6 +227,34 @@ function getSmartPersonalizedForYou(candidates: Product[]): Product[] {
 function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: HeroBentoProps) {
   const countdown = useCountdown(30);
   const isMobile = useIsMobile();
+  const [categoryImgs, setCategoryImgs] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    let isMounted = true;
+    async function loadCategoryImages() {
+      try {
+        const all = await getCachedMohasagorProducts();
+        if (all && all.length > 0 && isMounted) {
+          const techList = filterProductsByCategory(all, "electronics");
+          const fashionList = filterProductsByCategory(all, "fashion");
+          const homeList = filterProductsByCategory(all, "home");
+          const beautyList = filterProductsByCategory(all, "beauty");
+
+          setCategoryImgs({
+            cat_tech: techList[0]?.image || "",
+            cat_lifestyle: fashionList[0]?.image || "",
+            cat_home: homeList[0]?.image || "",
+            cat_beauty: beautyList[0]?.image || "",
+          });
+        }
+      } catch (e) {
+        console.warn("Failed to load category images", e);
+      }
+    }
+    loadCategoryImages();
+    return () => { isMounted = false; };
+  }, []);
+
   const { config } = useSiteConfig<{
     tiles?: BentoTileCfg[];
     sections?: CustomSection[];
@@ -402,25 +431,27 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
         {/* Category tiles */}
         {CATEGORIES.filter((c) => isVisible(c.id)).map(({ id, name, sub, to, defaultImg, shadow }) => {
           const c = cfg(id);
-          const tileImg = validUrl(c.imageUrl, defaultImg);
+          const dynamicImg = categoryImgs[id];
+          const tileImg = validUrl(c.imageUrl, dynamicImg || defaultImg);
           return (
             <Link
               key={id}
               to={c.link || to}
               className={`col-span-1 row-span-1 rounded-[1.25rem] md:rounded-[2rem] p-3 sm:p-4 md:p-5 text-white flex flex-col justify-between shadow-md md:shadow-lg ${shadow} group cursor-pointer overflow-hidden relative hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 border border-white/10`}
             >
-              {/* Product Background Image */}
+              {/* Dynamic Product Background Image from API */}
               <img
                 src={tileImg}
                 alt={c.title || name}
                 className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-700 ease-out"
-                style={c.imageUrl ? imgStyle(c) : undefined}
+                style={c.imageUrl ? imgStyle(c) : { objectFit: "cover", objectPosition: "center" }}
+                onError={(e) => {
+                  (e.target as HTMLImageElement).src = defaultImg;
+                }}
               />
               
               {/* Dark Gradient Overlay for Maximum Readability */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/20 group-hover:via-black/35 transition-colors duration-300" />
-
-
 
               {/* Bottom Professional Typography */}
               <div className="relative z-10">

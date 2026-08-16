@@ -10,9 +10,9 @@ async function runMobile() {
   await page.setViewport({ width: 390, height: 844, isMobile: true, hasTouch: true });
   await page.goto('http://localhost:8080/', { waitUntil: 'networkidle2' });
   await new Promise(r => setTimeout(r, 2000));
-  await page.evaluate(() => window.scrollBy(0, 600));
-  await new Promise(r => setTimeout(r, 500));
-  await page.screenshot({ path: 'scratch/mobile_after_scroll.png' });
+  await page.evaluate(() => window.scrollBy(0, 150));
+  await new Promise(r => setTimeout(r, 600));
+  await page.screenshot({ path: 'scratch/mobile_screen.png' });
   await browser.close();
   console.log('Mobile screenshot saved');
 }
