@@ -1,0 +1,5370 @@
+{
+  "summary": {
+    "tables": {
+      "addresses": 15,
+      "admin_activity_logs": 8,
+      "admin_credentials": 8,
+      "admin_roles": 8,
+      "admin_sessions": 9,
+      "blog_posts": 15,
+      "brands": 9,
+      "campaigns": 16,
+      "cart_items": 7,
+      "categories": 10,
+      "category_commissions": 5,
+      "cj_api_tokens": 8,
+      "cj_category_mappings": 8,
+      "cj_settings": 10,
+      "cms_banners": 15,
+      "cms_pages": 10,
+      "consignments": 26,
+      "conversations": 15,
+      "coupons": 13,
+      "custom_sections": 9,
+      "free_delivery_rules": 12,
+      "inventory_alerts": 7,
+      "inventory_logs": 11,
+      "layout_config": 8,
+      "loyalty_points": 11,
+      "loyalty_rewards": 10,
+      "messages": 8,
+      "notifications": 11,
+      "order_items": 10,
+      "orders": 19,
+      "payments": 20,
+      "product_images": 7,
+      "product_variants": 12,
+      "products": 49,
+      "profiles": 10,
+      "push_notifications": 18,
+      "push_tokens": 7,
+      "recently_viewed": 5,
+      "reviews": 8,
+      "search_history": 6,
+      "seller_earnings": 12,
+      "seller_payouts": 16,
+      "seller_support_messages": 9,
+      "seller_support_tickets": 11,
+      "sellers": 53,
+      "shipping_rates": 16,
+      "shipping_zones": 7,
+      "site_config": 6,
+      "site_settings": 4,
+      "staff_audit_logs": 10,
+      "staff_departments": 6,
+      "staff_invitations": 6,
+      "staff_members": 16,
+      "staff_messages": 7,
+      "staff_permissions": 5,
+      "staff_roles": 9,
+      "staff_tasks": 11,
+      "studio_theme_versions": 15,
+      "theme_config": 6,
+      "theme_versions": 5,
+      "user_roles": 5,
+      "user_vouchers": 9,
+      "wallet_transactions": 10,
+      "warehouses": 10,
+      "wishlist": 4
+    },
+    "views": [
+      "products_public"
+    ],
+    "rpc_functions": {
+      "current_staff_id": [],
+      "has_role": [
+        {
+          "name": "_role",
+          "type": "Database[\"public\"][\"Enums\"][\"app_role\"]"
+        },
+        {
+          "name": "_user_id",
+          "type": "string"
+        }
+      ],
+      "is_admin": [],
+      "is_seller_or_admin": [],
+      "is_staff": [],
+      "resolve_product_seller": [
+        {
+          "name": "_product_seller_id",
+          "type": "string"
+        }
+      ],
+      "staff_effective_permissions": [
+        {
+          "name": "_staff_id",
+          "type": "string"
+        }
+      ],
+      "staff_has_permission": [
+        {
+          "name": "_key",
+          "type": "string; _user_id: string"
+        }
+      ]
+    },
+    "enums": [],
+    "policies_count_per_table": {
+      "addresses": 7,
+      "admin_activity_logs": 3,
+      "admin_credentials": 2,
+      "admin_roles": 3,
+      "admin_sessions": 2,
+      "blog_posts": 4,
+      "brands": 10,
+      "campaigns": 4,
+      "cart_items": 2,
+      "categories": 10,
+      "category_commissions": 6,
+      "cj_api_tokens": 1,
+      "cj_category_mappings": 7,
+      "cj_settings": 8,
+      "cms_banners": 5,
+      "cms_pages": 4,
+      "consignments": 8,
+      "conversations": 11,
+      "coupons": 7,
+      "custom_sections": 3,
+      "free_delivery_rules": 4,
+      "inventory_alerts": 3,
+      "inventory_logs": 10,
+      "layout_config": 3,
+      "loyalty_points": 4,
+      "loyalty_rewards": 4,
+      "messages": 5,
+      "notifications": 6,
+      "order_items": 8,
+      "orders": 14,
+      "payments": 7,
+      "product_images": 6,
+      "product_variants": 6,
+      "products": 17,
+      "profiles": 22,
+      "push_notifications": 2,
+      "push_tokens": 6,
+      "recently_viewed": 6,
+      "reviews": 6,
+      "search_history": 6,
+      "seller_earnings": 5,
+      "seller_payouts": 6,
+      "seller_support_messages": 3,
+      "seller_support_tickets": 3,
+      "sellers": 12,
+      "shipping_rates": 6,
+      "shipping_zones": 6,
+      "site_config": 4,
+      "site_settings": 11,
+      "staff_audit_logs": 2,
+      "staff_departments": 2,
+      "staff_invitations": 1,
+      "staff_members": 3,
+      "staff_messages": 3,
+      "staff_permissions": 2,
+      "staff_roles": 2,
+      "staff_tasks": 3,
+      "studio_theme_versions": 2,
+      "theme_config": 3,
+      "theme_versions": 2,
+      "user_roles": 5,
+      "user_vouchers": 5,
+      "wallet_transactions": 4,
+      "warehouses": 7,
+      "wishlist": 2,
+      "storage": 13,
+      "admin_permissions": 1,
+      "campaign_products": 2,
+      "support_tickets": 5,
+      "ticket_messages": 2,
+      "loyalty_transactions": 2,
+      "traffic_analytics": 1,
+      "conversion_events": 1,
+      "return_requests": 4
+    },
+    "total_tables": 65,
+    "total_views": 1,
+    "total_rpcs": 8,
+    "total_migrations": 75
+  },
+  "tables_detail": {
+    "addresses": [
+      {
+        "name": "address_line1",
+        "type": "string"
+      },
+      {
+        "name": "address_line2",
+        "type": "string | null"
+      },
+      {
+        "name": "address_type",
+        "type": "string | null"
+      },
+      {
+        "name": "city",
+        "type": "string"
+      },
+      {
+        "name": "country",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "full_name",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_default",
+        "type": "boolean"
+      },
+      {
+        "name": "label",
+        "type": "string | null"
+      },
+      {
+        "name": "phone",
+        "type": "string | null"
+      },
+      {
+        "name": "postal_code",
+        "type": "string | null"
+      },
+      {
+        "name": "state",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "admin_activity_logs": [
+      {
+        "name": "action",
+        "type": "string"
+      },
+      {
+        "name": "admin_id",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "details",
+        "type": "Json | null"
+      },
+      {
+        "name": "entity_id",
+        "type": "string | null"
+      },
+      {
+        "name": "entity_type",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "ip_address",
+        "type": "string | null"
+      }
+    ],
+    "admin_credentials": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "display_name",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "last_login",
+        "type": "string | null"
+      },
+      {
+        "name": "password_hash",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "username",
+        "type": "string"
+      }
+    ],
+    "admin_roles": [
+      {
+        "name": "admin_id",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_system",
+        "type": "boolean | null"
+      },
+      {
+        "name": "name",
+        "type": "string | null"
+      },
+      {
+        "name": "permissions",
+        "type": "Json | null"
+      },
+      {
+        "name": "role",
+        "type": "string"
+      }
+    ],
+    "admin_sessions": [
+      {
+        "name": "admin_id",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "expires_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "ip_address",
+        "type": "string | null"
+      },
+      {
+        "name": "is_valid",
+        "type": "boolean"
+      },
+      {
+        "name": "last_activity",
+        "type": "string"
+      },
+      {
+        "name": "session_token",
+        "type": "string"
+      },
+      {
+        "name": "user_agent",
+        "type": "string | null"
+      }
+    ],
+    "blog_posts": [
+      {
+        "name": "author_id",
+        "type": "string | null"
+      },
+      {
+        "name": "content",
+        "type": "string | null"
+      },
+      {
+        "name": "cover_image",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "excerpt",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_published",
+        "type": "boolean"
+      },
+      {
+        "name": "meta_description",
+        "type": "string | null"
+      },
+      {
+        "name": "meta_title",
+        "type": "string | null"
+      },
+      {
+        "name": "published_at",
+        "type": "string | null"
+      },
+      {
+        "name": "slug",
+        "type": "string"
+      },
+      {
+        "name": "status",
+        "type": "string | null"
+      },
+      {
+        "name": "tags",
+        "type": "string[] | null"
+      },
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "brands": [
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "created_by",
+        "type": "string | null"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean | null"
+      },
+      {
+        "name": "logo_url",
+        "type": "string | null"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "slug",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      }
+    ],
+    "campaigns": [
+      {
+        "name": "banner_image",
+        "type": "string | null"
+      },
+      {
+        "name": "campaign_type",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "discount_type",
+        "type": "string | null"
+      },
+      {
+        "name": "discount_value",
+        "type": "number | null"
+      },
+      {
+        "name": "ends_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "max_discount_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "min_order_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "slug",
+        "type": "string | null"
+      },
+      {
+        "name": "starts_at",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "cart_items": [
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "product_id",
+        "type": "string"
+      },
+      {
+        "name": "quantity",
+        "type": "number"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      },
+      {
+        "name": "variant_id",
+        "type": "string | null"
+      }
+    ],
+    "categories": [
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "image_url",
+        "type": "string | null"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean | null"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "parent_id",
+        "type": "string | null"
+      },
+      {
+        "name": "slug",
+        "type": "string"
+      },
+      {
+        "name": "sort_order",
+        "type": "number | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      }
+    ],
+    "category_commissions": [
+      {
+        "name": "category_id",
+        "type": "string | null"
+      },
+      {
+        "name": "commission_rate",
+        "type": "number"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "cj_api_tokens": [
+      {
+        "name": "access_token",
+        "type": "string"
+      },
+      {
+        "name": "access_token_expires_at",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "last_auth_attempt_at",
+        "type": "string | null"
+      },
+      {
+        "name": "refresh_token",
+        "type": "string"
+      },
+      {
+        "name": "refresh_token_expires_at",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "cj_category_mappings": [
+      {
+        "name": "cj_category_name",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "custom_margin_type",
+        "type": "string | null"
+      },
+      {
+        "name": "custom_margin_value",
+        "type": "number | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_enabled",
+        "type": "boolean"
+      },
+      {
+        "name": "local_category_id",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "cj_settings": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "default_margin_type",
+        "type": "string"
+      },
+      {
+        "name": "default_margin_value",
+        "type": "number"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_enabled",
+        "type": "boolean"
+      },
+      {
+        "name": "show_in_categories",
+        "type": "boolean"
+      },
+      {
+        "name": "show_in_search",
+        "type": "boolean"
+      },
+      {
+        "name": "show_on_homepage",
+        "type": "boolean | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "usd_to_bdt_rate",
+        "type": "number"
+      }
+    ],
+    "cms_banners": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "ends_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "image_fit",
+        "type": "string | null"
+      },
+      {
+        "name": "image_position",
+        "type": "string | null"
+      },
+      {
+        "name": "image_url",
+        "type": "string | null"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "link_url",
+        "type": "string | null"
+      },
+      {
+        "name": "mobile_image_url",
+        "type": "string | null"
+      },
+      {
+        "name": "position",
+        "type": "string | null"
+      },
+      {
+        "name": "sort_order",
+        "type": "number | null"
+      },
+      {
+        "name": "starts_at",
+        "type": "string | null"
+      },
+      {
+        "name": "subtitle",
+        "type": "string | null"
+      },
+      {
+        "name": "title",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "cms_pages": [
+      {
+        "name": "content",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_published",
+        "type": "boolean"
+      },
+      {
+        "name": "meta_description",
+        "type": "string | null"
+      },
+      {
+        "name": "meta_title",
+        "type": "string | null"
+      },
+      {
+        "name": "slug",
+        "type": "string"
+      },
+      {
+        "name": "status",
+        "type": "string | null"
+      },
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "consignments": [
+      {
+        "name": "admin_notes",
+        "type": "string | null"
+      },
+      {
+        "name": "amount_to_collect",
+        "type": "number | null"
+      },
+      {
+        "name": "approved_at",
+        "type": "string | null"
+      },
+      {
+        "name": "consignment_id",
+        "type": "string | null"
+      },
+      {
+        "name": "consignment_number",
+        "type": "string | null"
+      },
+      {
+        "name": "courier",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "delivered_at",
+        "type": "string | null"
+      },
+      {
+        "name": "delivery_type",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "item_description",
+        "type": "string | null"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "order_id",
+        "type": "string | null"
+      },
+      {
+        "name": "product_id",
+        "type": "string | null"
+      },
+      {
+        "name": "quantity",
+        "type": "number"
+      },
+      {
+        "name": "received_at",
+        "type": "string | null"
+      },
+      {
+        "name": "recipient_address",
+        "type": "string | null"
+      },
+      {
+        "name": "recipient_name",
+        "type": "string | null"
+      },
+      {
+        "name": "recipient_phone",
+        "type": "string | null"
+      },
+      {
+        "name": "rejection_reason",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string | null"
+      },
+      {
+        "name": "shipped_at",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "string"
+      },
+      {
+        "name": "tracking_number",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "warehouse_id",
+        "type": "string | null"
+      }
+    ],
+    "conversations": [
+      {
+        "name": "buyer_id",
+        "type": "string | null"
+      },
+      {
+        "name": "buyer_unread_count",
+        "type": "number | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "last_message",
+        "type": "string | null"
+      },
+      {
+        "name": "last_message_at",
+        "type": "string | null"
+      },
+      {
+        "name": "product_id",
+        "type": "string | null"
+      },
+      {
+        "name": "product_name",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_name",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_unread_count",
+        "type": "number | null"
+      },
+      {
+        "name": "status",
+        "type": "string | null"
+      },
+      {
+        "name": "subject",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string | null"
+      }
+    ],
+    "coupons": [
+      {
+        "name": "code",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "discount_type",
+        "type": "string"
+      },
+      {
+        "name": "discount_value",
+        "type": "number"
+      },
+      {
+        "name": "end_date",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean | null"
+      },
+      {
+        "name": "max_discount_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "min_order_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "start_date",
+        "type": "string | null"
+      },
+      {
+        "name": "usage_limit",
+        "type": "number | null"
+      },
+      {
+        "name": "used_count",
+        "type": "number | null"
+      }
+    ],
+    "custom_sections": [
+      {
+        "name": "config",
+        "type": "Json | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "section_type",
+        "type": "string | null"
+      },
+      {
+        "name": "sort_order",
+        "type": "number | null"
+      },
+      {
+        "name": "type",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "free_delivery_rules": [
+      {
+        "name": "conditions",
+        "type": "Json | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "end_date",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "min_order_amount",
+        "type": "number"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "priority",
+        "type": "number | null"
+      },
+      {
+        "name": "rule_type",
+        "type": "string | null"
+      },
+      {
+        "name": "start_date",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "zone_id",
+        "type": "string | null"
+      }
+    ],
+    "inventory_alerts": [
+      {
+        "name": "alert_type",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "product_id",
+        "type": "string | null"
+      },
+      {
+        "name": "threshold",
+        "type": "number"
+      },
+      {
+        "name": "triggered_at",
+        "type": "string | null"
+      }
+    ],
+    "inventory_logs": [
+      {
+        "name": "change_type",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "created_by",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "new_quantity",
+        "type": "number"
+      },
+      {
+        "name": "notes",
+        "type": "string | null"
+      },
+      {
+        "name": "order_id",
+        "type": "string | null"
+      },
+      {
+        "name": "previous_quantity",
+        "type": "number"
+      },
+      {
+        "name": "product_id",
+        "type": "string | null"
+      },
+      {
+        "name": "quantity_change",
+        "type": "number"
+      },
+      {
+        "name": "variant_id",
+        "type": "string | null"
+      }
+    ],
+    "layout_config": [
+      {
+        "name": "config",
+        "type": "Json"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "page",
+        "type": "string | null"
+      },
+      {
+        "name": "page_type",
+        "type": "string"
+      },
+      {
+        "name": "sections",
+        "type": "Json | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "loyalty_points": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "expires_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "lifetime_points",
+        "type": "number | null"
+      },
+      {
+        "name": "name",
+        "type": "string | null"
+      },
+      {
+        "name": "points",
+        "type": "number"
+      },
+      {
+        "name": "reference_id",
+        "type": "string | null"
+      },
+      {
+        "name": "tier",
+        "type": "string | null"
+      },
+      {
+        "name": "transaction_type",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "loyalty_rewards": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "points_cost",
+        "type": "number | null"
+      },
+      {
+        "name": "points_required",
+        "type": "number | null"
+      },
+      {
+        "name": "reward_type",
+        "type": "string | null"
+      },
+      {
+        "name": "reward_value",
+        "type": "Json | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "messages": [
+      {
+        "name": "attachments",
+        "type": "Json | null"
+      },
+      {
+        "name": "content",
+        "type": "string"
+      },
+      {
+        "name": "conversation_id",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_read",
+        "type": "boolean"
+      },
+      {
+        "name": "sender_id",
+        "type": "string | null"
+      },
+      {
+        "name": "sender_type",
+        "type": "string | null"
+      }
+    ],
+    "notifications": [
+      {
+        "name": "action_url",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_read",
+        "type": "boolean"
+      },
+      {
+        "name": "link",
+        "type": "string | null"
+      },
+      {
+        "name": "message",
+        "type": "string | null"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "notification_type",
+        "type": "string | null"
+      },
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "type",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "order_items": [
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "order_id",
+        "type": "string"
+      },
+      {
+        "name": "price",
+        "type": "number"
+      },
+      {
+        "name": "product_id",
+        "type": "string | null"
+      },
+      {
+        "name": "product_name",
+        "type": "string"
+      },
+      {
+        "name": "quantity",
+        "type": "number"
+      },
+      {
+        "name": "total",
+        "type": "number"
+      },
+      {
+        "name": "variant_id",
+        "type": "string | null"
+      },
+      {
+        "name": "variant_name",
+        "type": "string | null"
+      }
+    ],
+    "orders": [
+      {
+        "name": "billing_address",
+        "type": "Json | null"
+      },
+      {
+        "name": "courier_name",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "discount_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "notes",
+        "type": "string | null"
+      },
+      {
+        "name": "order_number",
+        "type": "string"
+      },
+      {
+        "name": "payment_method",
+        "type": "string | null"
+      },
+      {
+        "name": "payment_status",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string | null"
+      },
+      {
+        "name": "shipping_address",
+        "type": "Json | null"
+      },
+      {
+        "name": "shipping_cost",
+        "type": "number | null"
+      },
+      {
+        "name": "status",
+        "type": "string | null"
+      },
+      {
+        "name": "subtotal",
+        "type": "number"
+      },
+      {
+        "name": "tax_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "total",
+        "type": "number"
+      },
+      {
+        "name": "tracking_number",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "payments": [
+      {
+        "name": "amount",
+        "type": "number"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "currency",
+        "type": "string"
+      },
+      {
+        "name": "failed_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "order_id",
+        "type": "string | null"
+      },
+      {
+        "name": "paid_at",
+        "type": "string | null"
+      },
+      {
+        "name": "payment_method",
+        "type": "string"
+      },
+      {
+        "name": "payment_provider",
+        "type": "string | null"
+      },
+      {
+        "name": "provider_reference",
+        "type": "string | null"
+      },
+      {
+        "name": "provider_response",
+        "type": "Json | null"
+      },
+      {
+        "name": "provider_status",
+        "type": "string | null"
+      },
+      {
+        "name": "refund_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "refund_reason",
+        "type": "string | null"
+      },
+      {
+        "name": "refunded_at",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "string"
+      },
+      {
+        "name": "transaction_id",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "product_images": [
+      {
+        "name": "alt_text",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "image_url",
+        "type": "string"
+      },
+      {
+        "name": "is_primary",
+        "type": "boolean | null"
+      },
+      {
+        "name": "product_id",
+        "type": "string"
+      },
+      {
+        "name": "sort_order",
+        "type": "number | null"
+      }
+    ],
+    "product_variants": [
+      {
+        "name": "color",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "image_url",
+        "type": "string | null"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean | null"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "price",
+        "type": "number | null"
+      },
+      {
+        "name": "product_id",
+        "type": "string"
+      },
+      {
+        "name": "size",
+        "type": "string | null"
+      },
+      {
+        "name": "sku",
+        "type": "string | null"
+      },
+      {
+        "name": "stock_quantity",
+        "type": "number | null"
+      },
+      {
+        "name": "storage",
+        "type": "string | null"
+      }
+    ],
+    "products": [
+      {
+        "name": "approval_status",
+        "type": "string | null"
+      },
+      {
+        "name": "approved_at",
+        "type": "string | null"
+      },
+      {
+        "name": "approved_by",
+        "type": "string | null"
+      },
+      {
+        "name": "brand_id",
+        "type": "string | null"
+      },
+      {
+        "name": "category_id",
+        "type": "string | null"
+      },
+      {
+        "name": "color",
+        "type": "string | null"
+      },
+      {
+        "name": "cost_price",
+        "type": "number | null"
+      },
+      {
+        "name": "country_of_origin",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "dimensions",
+        "type": "string | null"
+      },
+      {
+        "name": "discount_price",
+        "type": "number | null"
+      },
+      {
+        "name": "discount_type",
+        "type": "string | null"
+      },
+      {
+        "name": "estimated_delivery",
+        "type": "string | null"
+      },
+      {
+        "name": "flash_sale_end",
+        "type": "string | null"
+      },
+      {
+        "name": "free_shipping",
+        "type": "boolean | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_best_seller",
+        "type": "boolean | null"
+      },
+      {
+        "name": "is_featured",
+        "type": "boolean | null"
+      },
+      {
+        "name": "is_flash_sale",
+        "type": "boolean | null"
+      },
+      {
+        "name": "is_new_arrival",
+        "type": "boolean | null"
+      },
+      {
+        "name": "max_order_quantity",
+        "type": "number | null"
+      },
+      {
+        "name": "meta_description",
+        "type": "string | null"
+      },
+      {
+        "name": "meta_keywords",
+        "type": "string | null"
+      },
+      {
+        "name": "meta_title",
+        "type": "string | null"
+      },
+      {
+        "name": "min_order_quantity",
+        "type": "number | null"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "product_condition",
+        "type": "string | null"
+      },
+      {
+        "name": "publish_date",
+        "type": "string | null"
+      },
+      {
+        "name": "rating_average",
+        "type": "number | null"
+      },
+      {
+        "name": "rating_count",
+        "type": "number | null"
+      },
+      {
+        "name": "regular_price",
+        "type": "number"
+      },
+      {
+        "name": "rejection_reason",
+        "type": "string | null"
+      },
+      {
+        "name": "return_policy",
+        "type": "string | null"
+      },
+      {
+        "name": "reviews_enabled",
+        "type": "boolean | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string | null"
+      },
+      {
+        "name": "shipping_cost",
+        "type": "number | null"
+      },
+      {
+        "name": "short_description",
+        "type": "string | null"
+      },
+      {
+        "name": "sku",
+        "type": "string | null"
+      },
+      {
+        "name": "slug",
+        "type": "string"
+      },
+      {
+        "name": "sold_count",
+        "type": "number | null"
+      },
+      {
+        "name": "status",
+        "type": "string | null"
+      },
+      {
+        "name": "stock_quantity",
+        "type": "number | null"
+      },
+      {
+        "name": "tags",
+        "type": "string[] | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      },
+      {
+        "name": "video_url",
+        "type": "string | null"
+      },
+      {
+        "name": "view_count",
+        "type": "number | null"
+      },
+      {
+        "name": "warranty_info",
+        "type": "string | null"
+      },
+      {
+        "name": "weight",
+        "type": "number | null"
+      }
+    ],
+    "profiles": [
+      {
+        "name": "avatar_url",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "full_name",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean | null"
+      },
+      {
+        "name": "phone",
+        "type": "string | null"
+      },
+      {
+        "name": "role",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "push_notifications": [
+      {
+        "name": "action_url",
+        "type": "string | null"
+      },
+      {
+        "name": "body",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "created_by",
+        "type": "string | null"
+      },
+      {
+        "name": "data",
+        "type": "Json | null"
+      },
+      {
+        "name": "failed_count",
+        "type": "number | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "image_url",
+        "type": "string | null"
+      },
+      {
+        "name": "message",
+        "type": "string | null"
+      },
+      {
+        "name": "scheduled_at",
+        "type": "string | null"
+      },
+      {
+        "name": "sent_at",
+        "type": "string | null"
+      },
+      {
+        "name": "sent_by",
+        "type": "string | null"
+      },
+      {
+        "name": "sent_count",
+        "type": "number | null"
+      },
+      {
+        "name": "status",
+        "type": "string | null"
+      },
+      {
+        "name": "target_audience",
+        "type": "string | null"
+      },
+      {
+        "name": "target_type",
+        "type": "string | null"
+      },
+      {
+        "name": "target_users",
+        "type": "string[] | null"
+      },
+      {
+        "name": "title",
+        "type": "string"
+      }
+    ],
+    "push_tokens": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "device_info",
+        "type": "Json | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "platform",
+        "type": "string | null"
+      },
+      {
+        "name": "token",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "recently_viewed": [
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "product_id",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      },
+      {
+        "name": "view_count",
+        "type": "number | null"
+      },
+      {
+        "name": "viewed_at",
+        "type": "string"
+      }
+    ],
+    "reviews": [
+      {
+        "name": "comment",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_approved",
+        "type": "boolean | null"
+      },
+      {
+        "name": "product_id",
+        "type": "string"
+      },
+      {
+        "name": "rating",
+        "type": "number"
+      },
+      {
+        "name": "title",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "search_history": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "query",
+        "type": "string | null"
+      },
+      {
+        "name": "results_count",
+        "type": "number | null"
+      },
+      {
+        "name": "search_term",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string | null"
+      }
+    ],
+    "seller_earnings": [
+      {
+        "name": "amount",
+        "type": "number"
+      },
+      {
+        "name": "commission",
+        "type": "number"
+      },
+      {
+        "name": "commission_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "commission_rate",
+        "type": "number | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "earned_at",
+        "type": "string"
+      },
+      {
+        "name": "gross_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "net_amount",
+        "type": "number"
+      },
+      {
+        "name": "order_id",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "string"
+      }
+    ],
+    "seller_payouts": [
+      {
+        "name": "amount",
+        "type": "number"
+      },
+      {
+        "name": "commission_deducted",
+        "type": "number | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "net_amount",
+        "type": "number | null"
+      },
+      {
+        "name": "payment_details",
+        "type": "Json | null"
+      },
+      {
+        "name": "payment_method",
+        "type": "string | null"
+      },
+      {
+        "name": "payout_method",
+        "type": "string | null"
+      },
+      {
+        "name": "period_end",
+        "type": "string | null"
+      },
+      {
+        "name": "period_start",
+        "type": "string | null"
+      },
+      {
+        "name": "processed_at",
+        "type": "string | null"
+      },
+      {
+        "name": "reference",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "string"
+      },
+      {
+        "name": "transaction_reference",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "seller_support_messages": [
+      {
+        "name": "attachments",
+        "type": "Json"
+      },
+      {
+        "name": "content",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "read_at",
+        "type": "string | null"
+      },
+      {
+        "name": "sender_id",
+        "type": "string"
+      },
+      {
+        "name": "sender_name",
+        "type": "string | null"
+      },
+      {
+        "name": "sender_type",
+        "type": "string"
+      },
+      {
+        "name": "ticket_id",
+        "type": "string"
+      }
+    ],
+    "seller_support_tickets": [
+      {
+        "name": "assigned_staff_id",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "last_message_at",
+        "type": "string | null"
+      },
+      {
+        "name": "last_message_preview",
+        "type": "string | null"
+      },
+      {
+        "name": "seller_id",
+        "type": "string"
+      },
+      {
+        "name": "seller_unread_count",
+        "type": "number"
+      },
+      {
+        "name": "staff_unread_count",
+        "type": "number"
+      },
+      {
+        "name": "status",
+        "type": "string"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "sellers": [
+      {
+        "name": "approval_status",
+        "type": "string | null"
+      },
+      {
+        "name": "approved_at",
+        "type": "string | null"
+      },
+      {
+        "name": "approved_by",
+        "type": "string | null"
+      },
+      {
+        "name": "bank_account",
+        "type": "Json | null"
+      },
+      {
+        "name": "bank_account_name",
+        "type": "string | null"
+      },
+      {
+        "name": "bank_account_number",
+        "type": "string | null"
+      },
+      {
+        "name": "bank_branch",
+        "type": "string | null"
+      },
+      {
+        "name": "bank_name",
+        "type": "string | null"
+      },
+      {
+        "name": "birth_certificate_image",
+        "type": "string | null"
+      },
+      {
+        "name": "birth_certificate_number",
+        "type": "string | null"
+      },
+      {
+        "name": "business_address",
+        "type": "string | null"
+      },
+      {
+        "name": "business_email",
+        "type": "string | null"
+      },
+      {
+        "name": "business_license",
+        "type": "string | null"
+      },
+      {
+        "name": "business_name",
+        "type": "string | null"
+      },
+      {
+        "name": "business_phone",
+        "type": "string | null"
+      },
+      {
+        "name": "business_registration_number",
+        "type": "string | null"
+      },
+      {
+        "name": "business_type",
+        "type": "string | null"
+      },
+      {
+        "name": "commission_rate",
+        "type": "number | null"
+      },
+      {
+        "name": "contact_email",
+        "type": "string | null"
+      },
+      {
+        "name": "contact_phone",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "id_document_type",
+        "type": "string | null"
+      },
+      {
+        "name": "is_verified",
+        "type": "boolean | null"
+      },
+      {
+        "name": "logo_url",
+        "type": "string | null"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "mobile_banking_number",
+        "type": "string | null"
+      },
+      {
+        "name": "mobile_banking_provider",
+        "type": "string | null"
+      },
+      {
+        "name": "nid_back_image",
+        "type": "string | null"
+      },
+      {
+        "name": "nid_front_image",
+        "type": "string | null"
+      },
+      {
+        "name": "nid_number",
+        "type": "string | null"
+      },
+      {
+        "name": "rating",
+        "type": "number | null"
+      },
+      {
+        "name": "rating_average",
+        "type": "number | null"
+      },
+      {
+        "name": "rating_count",
+        "type": "number | null"
+      },
+      {
+        "name": "rejection_reason",
+        "type": "string | null"
+      },
+      {
+        "name": "return_address",
+        "type": "Json | null"
+      },
+      {
+        "name": "shop_banner",
+        "type": "string | null"
+      },
+      {
+        "name": "shop_description",
+        "type": "string | null"
+      },
+      {
+        "name": "shop_logo",
+        "type": "string | null"
+      },
+      {
+        "name": "shop_name",
+        "type": "string | null"
+      },
+      {
+        "name": "shop_slug",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "string"
+      },
+      {
+        "name": "tax_id",
+        "type": "string | null"
+      },
+      {
+        "name": "total_orders",
+        "type": "number | null"
+      },
+      {
+        "name": "total_products",
+        "type": "number | null"
+      },
+      {
+        "name": "total_sales",
+        "type": "number | null"
+      },
+      {
+        "name": "trade_license_image",
+        "type": "string | null"
+      },
+      {
+        "name": "trade_license_number",
+        "type": "string | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string | null"
+      },
+      {
+        "name": "warehouse_address",
+        "type": "Json | null"
+      },
+      {
+        "name": "warning_count",
+        "type": "number"
+      }
+    ],
+    "shipping_rates": [
+      {
+        "name": "base_rate",
+        "type": "number | null"
+      },
+      {
+        "name": "cod_charge",
+        "type": "number | null"
+      },
+      {
+        "name": "cod_percentage",
+        "type": "number | null"
+      },
+      {
+        "name": "courier_name",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "estimated_days",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "max_weight",
+        "type": "number | null"
+      },
+      {
+        "name": "min_order_total",
+        "type": "number | null"
+      },
+      {
+        "name": "min_weight",
+        "type": "number | null"
+      },
+      {
+        "name": "name",
+        "type": "string | null"
+      },
+      {
+        "name": "per_kg_rate",
+        "type": "number | null"
+      },
+      {
+        "name": "price",
+        "type": "number"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "zone_id",
+        "type": "string | null"
+      }
+    ],
+    "shipping_zones": [
+      {
+        "name": "areas",
+        "type": "string[] | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "regions",
+        "type": "string[] | null"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "site_config": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "key",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "value",
+        "type": "Json | null"
+      }
+    ],
+    "site_settings": [
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "key",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string | null"
+      },
+      {
+        "name": "value",
+        "type": "Json | null"
+      }
+    ],
+    "staff_audit_logs": [
+      {
+        "name": "action",
+        "type": "string"
+      },
+      {
+        "name": "actor_user_id",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "ip",
+        "type": "string | null"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "staff_id",
+        "type": "string | null"
+      },
+      {
+        "name": "target_id",
+        "type": "string | null"
+      },
+      {
+        "name": "target_type",
+        "type": "string | null"
+      },
+      {
+        "name": "user_agent",
+        "type": "string | null"
+      }
+    ],
+    "staff_departments": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "staff_invitations": [
+      {
+        "name": "consumed_at",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "expires_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "staff_id",
+        "type": "string"
+      },
+      {
+        "name": "token_hash",
+        "type": "string"
+      }
+    ],
+    "staff_members": [
+      {
+        "name": "activated_at",
+        "type": "string | null"
+      },
+      {
+        "name": "avatar_url",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "department_id",
+        "type": "string | null"
+      },
+      {
+        "name": "email",
+        "type": "string"
+      },
+      {
+        "name": "full_name",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "invited_at",
+        "type": "string"
+      },
+      {
+        "name": "invited_by",
+        "type": "string | null"
+      },
+      {
+        "name": "joining_date",
+        "type": "string | null"
+      },
+      {
+        "name": "monthly_salary",
+        "type": "number | null"
+      },
+      {
+        "name": "phone",
+        "type": "string | null"
+      },
+      {
+        "name": "role_id",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "Database[\"public\"][\"Enums\"][\"staff_status\"]"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string | null"
+      }
+    ],
+    "staff_messages": [
+      {
+        "name": "body",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "from_admin_id",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "read_at",
+        "type": "string | null"
+      },
+      {
+        "name": "subject",
+        "type": "string"
+      },
+      {
+        "name": "to_staff_id",
+        "type": "string"
+      }
+    ],
+    "staff_permissions": [
+      {
+        "name": "granted_at",
+        "type": "string"
+      },
+      {
+        "name": "granted_by",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "permission_key",
+        "type": "string"
+      },
+      {
+        "name": "staff_id",
+        "type": "string"
+      }
+    ],
+    "staff_roles": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "dashboard_key",
+        "type": "string"
+      },
+      {
+        "name": "default_permissions",
+        "type": "Json"
+      },
+      {
+        "name": "department_id",
+        "type": "string | null"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "staff_tasks": [
+      {
+        "name": "assigned_by",
+        "type": "string | null"
+      },
+      {
+        "name": "completed_at",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "due_date",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "priority",
+        "type": "string"
+      },
+      {
+        "name": "staff_id",
+        "type": "string"
+      },
+      {
+        "name": "status",
+        "type": "Database[\"public\"][\"Enums\"][\"staff_task_status\"]"
+      },
+      {
+        "name": "title",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "studio_theme_versions": [
+      {
+        "name": "archived_at",
+        "type": "string | null"
+      },
+      {
+        "name": "bento_config",
+        "type": "Json"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "created_by",
+        "type": "string | null"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "layout_config",
+        "type": "Json"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "parent_version_id",
+        "type": "string | null"
+      },
+      {
+        "name": "published_at",
+        "type": "string | null"
+      },
+      {
+        "name": "published_by",
+        "type": "string | null"
+      },
+      {
+        "name": "status",
+        "type": "Database[\"public\"][\"Enums\"][\"studio_theme_status\"]"
+      },
+      {
+        "name": "theme_config",
+        "type": "Json"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "version_number",
+        "type": "number"
+      }
+    ],
+    "theme_config": [
+      {
+        "name": "config",
+        "type": "Json"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "theme_versions": [
+      {
+        "name": "config",
+        "type": "Json"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "theme_id",
+        "type": "string | null"
+      },
+      {
+        "name": "version",
+        "type": "string"
+      }
+    ],
+    "user_roles": [
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "role",
+        "type": "Database[\"public\"][\"Enums\"][\"app_role\"]"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "user_vouchers": [
+      {
+        "name": "code",
+        "type": "string"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "discount_type",
+        "type": "string | null"
+      },
+      {
+        "name": "discount_value",
+        "type": "number"
+      },
+      {
+        "name": "expires_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_used",
+        "type": "boolean"
+      },
+      {
+        "name": "used_at",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "wallet_transactions": [
+      {
+        "name": "amount",
+        "type": "number"
+      },
+      {
+        "name": "balance_after",
+        "type": "number | null"
+      },
+      {
+        "name": "category",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "description",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "reference_id",
+        "type": "string | null"
+      },
+      {
+        "name": "transaction_type",
+        "type": "string | null"
+      },
+      {
+        "name": "type",
+        "type": "string | null"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ],
+    "warehouses": [
+      {
+        "name": "address",
+        "type": "string | null"
+      },
+      {
+        "name": "city",
+        "type": "string | null"
+      },
+      {
+        "name": "contact_phone",
+        "type": "string | null"
+      },
+      {
+        "name": "country",
+        "type": "string | null"
+      },
+      {
+        "name": "created_at",
+        "type": "string"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "is_active",
+        "type": "boolean"
+      },
+      {
+        "name": "metadata",
+        "type": "Json | null"
+      },
+      {
+        "name": "name",
+        "type": "string"
+      },
+      {
+        "name": "updated_at",
+        "type": "string"
+      }
+    ],
+    "wishlist": [
+      {
+        "name": "created_at",
+        "type": "string | null"
+      },
+      {
+        "name": "id",
+        "type": "string"
+      },
+      {
+        "name": "product_id",
+        "type": "string"
+      },
+      {
+        "name": "user_id",
+        "type": "string"
+      }
+    ]
+  },
+  "policies": {
+    "addresses": [
+      {
+        "name": "Users can view their own addresses",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own addresses",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own addresses",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can delete their own addresses",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Block anonymous access to addresses",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users manage own addresses",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins view addresses",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      }
+    ],
+    "admin_activity_logs": [
+      {
+        "name": "No public access to admin logs",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins view activity logs",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins insert activity logs",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      }
+    ],
+    "admin_credentials": [
+      {
+        "name": "No public access to admin credentials",
+        "file": "20260111070733_a68e588d-81ca-4bcc-8040-9b2a9403dd6e.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "No public access to admin credentials",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      }
+    ],
+    "admin_roles": [
+      {
+        "name": "Admin can view roles",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Super admin can manage roles",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins view roles",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      }
+    ],
+    "admin_sessions": [
+      {
+        "name": "No public access to admin sessions",
+        "file": "20260118172958_d42ef9d9-5ace-4e1e-86e8-4c9d37e75f17.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "deny_all_admin_sessions",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "blog_posts": [
+      {
+        "name": "Anyone can view published posts",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admin can manage posts",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view published posts",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage posts",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "brands": [
+      {
+        "name": "Anyone can view brands",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can manage brands",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can insert brands",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can update brands",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can delete brands",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Anyone can view brands",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage brands",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers can create brands",
+        "file": "20260719132737_1ad5b833-8305-478a-9d1f-d04484d421bd.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers can update their own brands",
+        "file": "20260719132737_1ad5b833-8305-478a-9d1f-d04484d421bd.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Anyone can view brands",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "campaigns": [
+      {
+        "name": "Anyone can view active campaigns",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage campaigns",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view active campaigns",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage campaigns",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "cart_items": [
+      {
+        "name": "Users can manage their cart",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users can manage their cart",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      }
+    ],
+    "categories": [
+      {
+        "name": "Anyone can view categories",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can insert categories",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Authenticated users can update categories",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Authenticated users can delete categories",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Admins can insert categories",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can update categories",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can delete categories",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Anyone can view categories",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage categories",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view categories",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "category_commissions": [
+      {
+        "name": "Anyone can view commissions",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage commissions",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Authenticated users can view commissions",
+        "file": "20260318083632_32aab1b8-4432-4c40-a49f-1dd5afbffcad.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins and sellers can view commissions",
+        "file": "20260318085301_1dc197d5-ad3b-4bfb-b7a2-29c1d56a54a5.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone view commissions",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage commissions",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "cj_api_tokens": [
+      {
+        "name": "deny_all_cj_tokens",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "cj_category_mappings": [
+      {
+        "name": "Anyone can read CJ category mappings",
+        "file": "20260124174752_9b2dfa83-514d-483d-aac6-df4115ef9bc3.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Service role can manage CJ category mappings",
+        "file": "20260124174752_9b2dfa83-514d-483d-aac6-df4115ef9bc3.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can manage CJ category mappings",
+        "file": "20260206053708_ac0fc6bd-808e-4c73-8524-188d088f278d.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Authenticated users can read CJ category mappings",
+        "file": "20260318083632_32aab1b8-4432-4c40-a49f-1dd5afbffcad.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins can read CJ category mappings",
+        "file": "20260318085301_1dc197d5-ad3b-4bfb-b7a2-29c1d56a54a5.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone read cj mappings",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage cj mappings",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "cj_settings": [
+      {
+        "name": "Anyone can read CJ settings",
+        "file": "20260124174752_9b2dfa83-514d-483d-aac6-df4115ef9bc3.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Service role can manage CJ settings",
+        "file": "20260124174752_9b2dfa83-514d-483d-aac6-df4115ef9bc3.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can manage CJ settings",
+        "file": "20260206053708_ac0fc6bd-808e-4c73-8524-188d088f278d.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Authenticated users can read CJ settings",
+        "file": "20260318083632_32aab1b8-4432-4c40-a49f-1dd5afbffcad.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins can read CJ settings",
+        "file": "20260318085301_1dc197d5-ad3b-4bfb-b7a2-29c1d56a54a5.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone can read CJ display settings",
+        "file": "20260318092118_e85092ee-358f-4acb-ade8-40bf1843c0be.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone read cj settings",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage cj settings",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "cms_banners": [
+      {
+        "name": "Anyone can view active banners",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage banners",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view banners",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage banners",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view cms banners",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "cms_pages": [
+      {
+        "name": "Anyone can view published pages",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage pages",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view published pages",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage pages",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "consignments": [
+      {
+        "name": "Sellers can view their own consignments",
+        "file": "20260127164845_f07c7e49-0046-4ab1-9e76-f85c3d3512e7.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers can create consignments",
+        "file": "20260127164845_f07c7e49-0046-4ab1-9e76-f85c3d3512e7.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can update consignments",
+        "file": "20260127164845_f07c7e49-0046-4ab1-9e76-f85c3d3512e7.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can delete consignments",
+        "file": "20260127164845_f07c7e49-0046-4ab1-9e76-f85c3d3512e7.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Admins/sellers manage consignments",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers can create own consignments",
+        "file": "20260719152319_ea7bda3a-6cfe-4b74-9782-fa0038083439.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers can view own consignments",
+        "file": "20260719152319_ea7bda3a-6cfe-4b74-9782-fa0038083439.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can manage consignments",
+        "file": "20260719152319_ea7bda3a-6cfe-4b74-9782-fa0038083439.sql",
+        "for": "ALL"
+      }
+    ],
+    "conversations": [
+      {
+        "name": "Users can view their conversations as buyer",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers can view their conversations",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create conversations",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Block anonymous access to conversations",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Buyers can update their conversations",
+        "file": "20260317211256_a56e7b65-f441-49f2-bcd9-9327795246ed.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Sellers can update their conversations",
+        "file": "20260317211256_a56e7b65-f441-49f2-bcd9-9327795246ed.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users view own convos",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users create own convos",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins manage convos",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Participants view convos",
+        "file": "20260718114335_189efbe7-46de-4502-9e37-079a37bbafd9.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users create convos",
+        "file": "20260718114335_189efbe7-46de-4502-9e37-079a37bbafd9.sql",
+        "for": "INSERT"
+      }
+    ],
+    "coupons": [
+      {
+        "name": "Anyone can view active coupons",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can manage coupons",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can insert coupons",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can update coupons",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can delete coupons",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Anyone can view active coupons",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage coupons",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      }
+    ],
+    "custom_sections": [
+      {
+        "name": "Anyone can read active custom sections",
+        "file": "20260319063132_c3b470e0-a3eb-41b7-ad13-fa2b254cf2e1.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone view sections",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage sections",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "free_delivery_rules": [
+      {
+        "name": "Anyone can view active rules",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admin can manage rules",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view rules",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage rules",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "inventory_alerts": [
+      {
+        "name": "Admin can manage inventory alerts",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins/sellers manage alerts",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers manage own alerts",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "ALL"
+      }
+    ],
+    "inventory_logs": [
+      {
+        "name": "Admins and sellers can view inventory logs",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins and sellers can insert inventory logs",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can view all inventory logs",
+        "file": "20260318083632_32aab1b8-4432-4c40-a49f-1dd5afbffcad.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers can view own product inventory logs",
+        "file": "20260318083632_32aab1b8-4432-4c40-a49f-1dd5afbffcad.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can insert inventory logs",
+        "file": "20260318084858_c4542703-eb50-4afe-8677-ef6cbeced286.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers can insert own product inventory logs",
+        "file": "20260318084858_c4542703-eb50-4afe-8677-ef6cbeced286.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins/sellers view inventory logs",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins/sellers insert inventory logs",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers view own inventory logs",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers insert own inventory logs",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "INSERT"
+      }
+    ],
+    "layout_config": [
+      {
+        "name": "Anyone can read layout",
+        "file": "20260319062242_28b17217-084a-45f6-847b-1cac54b44370.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone view layout",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage layout",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "loyalty_points": [
+      {
+        "name": "Users can view own loyalty points",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admin can manage loyalty points",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Block anonymous access to loyalty_points",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users view own points",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      }
+    ],
+    "loyalty_rewards": [
+      {
+        "name": "Anyone can view active rewards",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admin can manage rewards",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view rewards",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage rewards",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "messages": [
+      {
+        "name": "Users can view messages in their conversations",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can send messages in their conversations",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Block anonymous access to messages",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users view messages in own convos",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users insert own messages",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      }
+    ],
+    "notifications": [
+      {
+        "name": "Users can view their own notifications",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can update their own notifications",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Block anonymous access to notifications",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users view own notifications",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users update own notifications",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins manage notifications",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "order_items": [
+      {
+        "name": "Users can view order items",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert order items",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can view their own order items",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own order items",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Block anonymous access to order_items",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers can view order items for their orders",
+        "file": "20260317195033_ad059f0a-cb3a-45b4-aba2-5bd9a5f29c68.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can view their own order items",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own order items",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "INSERT"
+      }
+    ],
+    "orders": [
+      {
+        "name": "Users can view their own orders",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create orders",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their orders",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can view their own orders",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can view their own orders",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create orders",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their orders",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can update orders",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Block anonymous access to orders",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers can view their orders",
+        "file": "20260317195033_ad059f0a-cb3a-45b4-aba2-5bd9a5f29c68.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers can update their orders",
+        "file": "20260317195033_ad059f0a-cb3a-45b4-aba2-5bd9a5f29c68.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can view their own orders",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create orders",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their orders",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "payments": [
+      {
+        "name": "Users can view their own payments",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create their own payments",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can manage all payments",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Block anonymous access to payments",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users view own payments",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users create own payments",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins manage payments",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "product_images": [
+      {
+        "name": "Anyone can view product images",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can manage images",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view product images",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers admins manage images",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can manage product images",
+        "file": "20260730222229_admin_products_rls_fix.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view product images",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "product_variants": [
+      {
+        "name": "Anyone can view variants",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can manage variants",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view variants",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers admins manage variants",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can manage product variants",
+        "file": "20260730222229_admin_products_rls_fix.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view product variants",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "products": [
+      {
+        "name": "Anyone can view active products",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can insert products",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Authenticated users can update products",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Authenticated users can delete products",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Sellers and admins can insert products",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers and admins can update products",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can delete products",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Sellers can update own products",
+        "file": "20260318083632_32aab1b8-4432-4c40-a49f-1dd5afbffcad.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Anyone can view active products",
+        "file": "20260318091608_7ac01b46-dfc5-48e7-b53c-29caac24bb23.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone can view products",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers admins insert products",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers admins update products",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins delete products",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Anyone can insert products",
+        "file": "20260730222229_admin_products_rls_fix.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Anyone can update products",
+        "file": "20260730222229_admin_products_rls_fix.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Anyone can delete products",
+        "file": "20260730222229_admin_products_rls_fix.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Anyone can view products",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "profiles": [
+      {
+        "name": "Users can view their own profile",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can update their own profile",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can insert their own profile",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can view their own profile",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own profile",
+        "file": "20260111093029_c986e569-a0e3-416f-b6df-1470426b276d.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own profile",
+        "file": "20260111093029_c986e569-a0e3-416f-b6df-1470426b276d.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can view their own profile",
+        "file": "20260111093029_c986e569-a0e3-416f-b6df-1470426b276d.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can view their own profile",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own profile",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own profile",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can view all profiles",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Block anonymous access to profiles",
+        "file": "20260111153553_885796a3-0937-4699-b5f3-25b4396af992.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users can view their own profile",
+        "file": "20260118172958_d42ef9d9-5ace-4e1e-86e8-4c9d37e75f17.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can update their own profile",
+        "file": "20260118172958_d42ef9d9-5ace-4e1e-86e8-4c9d37e75f17.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can insert their own profile",
+        "file": "20260118172958_d42ef9d9-5ace-4e1e-86e8-4c9d37e75f17.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can view all profiles",
+        "file": "20260118172958_d42ef9d9-5ace-4e1e-86e8-4c9d37e75f17.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can update profiles",
+        "file": "20260118172958_d42ef9d9-5ace-4e1e-86e8-4c9d37e75f17.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Block anonymous access to profiles",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view seller profile user_id",
+        "file": "20260317205456_3b9e999e-fd6d-4a02-a565-c2dc4362f07d.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can view their own profile",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can update their own profile",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can insert their own profile",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "INSERT"
+      }
+    ],
+    "push_notifications": [
+      {
+        "name": "Anyone can view sent notifications",
+        "file": "20260203061543_62b6bcf5-c4d2-449b-8b22-5340e2edf941.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage push notifs",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "push_tokens": [
+      {
+        "name": "Users can view their own tokens",
+        "file": "20260203061543_62b6bcf5-c4d2-449b-8b22-5340e2edf941.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own tokens",
+        "file": "20260203061543_62b6bcf5-c4d2-449b-8b22-5340e2edf941.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own tokens",
+        "file": "20260203061543_62b6bcf5-c4d2-449b-8b22-5340e2edf941.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can delete their own tokens",
+        "file": "20260203061543_62b6bcf5-c4d2-449b-8b22-5340e2edf941.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Block anonymous access to push_tokens",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users manage own tokens",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "recently_viewed": [
+      {
+        "name": "Users can view their own recently viewed",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert their own recently viewed",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own recently viewed",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can delete their own recently viewed",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Block anonymous access to recently_viewed",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users manage own history",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "reviews": [
+      {
+        "name": "Anyone can view approved reviews",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create reviews",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their reviews",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Anyone can view approved reviews",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create reviews",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their reviews",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "search_history": [
+      {
+        "name": "Users can view their own search history",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can insert search history",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can delete their own search history",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Users can view their own search history",
+        "file": "20260318083133_68c8fc78-37a4-43a7-857b-7fd515005fbd.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users view own searches",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users log searches",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      }
+    ],
+    "seller_earnings": [
+      {
+        "name": "Sellers can view their earnings",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only system manages earnings",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Block anonymous access to seller_earnings",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers/admins view earnings",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Sellers view own earnings",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "SELECT"
+      }
+    ],
+    "seller_payouts": [
+      {
+        "name": "Sellers can view their payouts",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage payouts",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Block anonymous access to seller_payouts",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers/admins view payouts",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage payouts",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Sellers view own payouts",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "SELECT"
+      }
+    ],
+    "seller_support_messages": [
+      {
+        "name": "ssm_view",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "ssm_insert",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "ssm_update",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "seller_support_tickets": [
+      {
+        "name": "sst_view",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "sst_insert",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "sst_update",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "sellers": [
+      {
+        "name": "Anyone can view approved sellers",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create their seller profile",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Sellers can update their own profile",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Only admins can delete sellers",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Sellers can view own profile fully",
+        "file": "20260206053708_ac0fc6bd-808e-4c73-8524-188d088f278d.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Block anonymous access to sellers",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view active sellers",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users create own seller",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users update own seller",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins delete sellers",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Public view active sellers",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Owner or admin view seller",
+        "file": "20260720063446_c80ec670-b52a-422b-a996-57bcea23a8eb.sql",
+        "for": "SELECT"
+      }
+    ],
+    "shipping_rates": [
+      {
+        "name": "Anyone can view shipping rates",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage shipping rates",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view active shipping rates",
+        "file": "20260125135639_2aca2133-64b9-4ff4-a3a7-4bc4e5744a4d.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can manage shipping rates",
+        "file": "20260125135639_2aca2133-64b9-4ff4-a3a7-4bc4e5744a4d.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view rates",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage rates",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "shipping_zones": [
+      {
+        "name": "Anyone can view shipping zones",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage shipping zones",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view active shipping zones",
+        "file": "20260125135639_2aca2133-64b9-4ff4-a3a7-4bc4e5744a4d.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can manage shipping zones",
+        "file": "20260125135639_2aca2133-64b9-4ff4-a3a7-4bc4e5744a4d.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone view zones",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage zones",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "site_config": [
+      {
+        "name": "Anyone can read site config",
+        "file": "20260319070141_99170872-fc2e-4eff-971e-1352905783a2.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone view site config",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage site config",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view site config",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "site_settings": [
+      {
+        "name": "Anyone can view site settings",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated users can manage settings",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can insert settings",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Admins can update settings",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Admins can delete settings",
+        "file": "20260111065913_fc2d29a4-b95d-44d1-beb5-a97cd1e98490.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Authenticated users can view site settings",
+        "file": "20260318083133_68c8fc78-37a4-43a7-857b-7fd515005fbd.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins can view site settings",
+        "file": "20260318085301_1dc197d5-ad3b-4bfb-b7a2-29c1d56a54a5.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone can read site settings",
+        "file": "20260318092118_e85092ee-358f-4acb-ade8-40bf1843c0be.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone can view site settings",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage settings",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Anyone can view site settings",
+        "file": "20260730235000_public_read_policies.sql",
+        "for": "SELECT"
+      }
+    ],
+    "staff_audit_logs": [
+      {
+        "name": "Admins view audit",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Staff view own audit",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      }
+    ],
+    "staff_departments": [
+      {
+        "name": "Admins manage departments",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Authenticated read departments",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      }
+    ],
+    "staff_invitations": [
+      {
+        "name": "Service only invitations",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      }
+    ],
+    "staff_members": [
+      {
+        "name": "Admins manage staff",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Staff view own record",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Staff update own profile fields",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "staff_messages": [
+      {
+        "name": "Admins manage staff messages",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Staff view own messages",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Staff mark own messages read",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "staff_permissions": [
+      {
+        "name": "Admins manage staff perms",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Staff view own perms",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      }
+    ],
+    "staff_roles": [
+      {
+        "name": "Admins manage staff roles",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Authenticated read staff roles",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      }
+    ],
+    "staff_tasks": [
+      {
+        "name": "Admins manage tasks",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Staff view own tasks",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Staff update own tasks",
+        "file": "20260720140834_e2e30639-6750-4be8-a624-5c9371f7acef.sql",
+        "for": "UPDATE"
+      }
+    ],
+    "studio_theme_versions": [
+      {
+        "name": "Public can read published or preview versions",
+        "file": "20260721120348_b9c75679-f9f8-4aad-9494-7e24f0d2630c.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage all theme versions",
+        "file": "20260721120348_b9c75679-f9f8-4aad-9494-7e24f0d2630c.sql",
+        "for": "ALL"
+      }
+    ],
+    "theme_config": [
+      {
+        "name": "Anyone can read theme",
+        "file": "20260319062242_28b17217-084a-45f6-847b-1cac54b44370.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Anyone view theme",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage theme",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "theme_versions": [
+      {
+        "name": "Anyone can read versions",
+        "file": "20260319062242_28b17217-084a-45f6-847b-1cac54b44370.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage theme versions",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "user_roles": [
+      {
+        "name": "Users can view their own roles",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can view all roles",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins can manage roles",
+        "file": "20260124151739_0b908705-a9d3-4027-a799-41bab47a816a.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users view own roles",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage roles",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "user_vouchers": [
+      {
+        "name": "Users can view their own vouchers",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can collect vouchers",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own vouchers",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users view own vouchers",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage vouchers",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      }
+    ],
+    "wallet_transactions": [
+      {
+        "name": "Users can view their own transactions",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Block anonymous access to wallet_transactions",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can manage wallet transactions",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users view own wallet",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      }
+    ],
+    "warehouses": [
+      {
+        "name": "Anyone can view active warehouses",
+        "file": "20260127164845_f07c7e49-0046-4ab1-9e76-f85c3d3512e7.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage warehouses",
+        "file": "20260127164845_f07c7e49-0046-4ab1-9e76-f85c3d3512e7.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Only admins can view warehouses",
+        "file": "20260206053708_ac0fc6bd-808e-4c73-8524-188d088f278d.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Approved sellers can view active warehouses",
+        "file": "20260317195939_83f026d3-018e-4965-8b09-939a05aaf40f.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admins manage warehouses",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Staff view warehouses",
+        "file": "20260718114253_49ba551d-cbe4-4c35-8a27-5bf3aec12784.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Authenticated view active warehouses",
+        "file": "20260719151822_46c9778b-f397-4379-94ec-f4b21862cd77.sql",
+        "for": "SELECT"
+      }
+    ],
+    "wishlist": [
+      {
+        "name": "Users can manage their wishlist",
+        "file": "20260111063052_6e6b4822-7e16-43ab-9c89-85c3a2cc0c0b.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users can manage their wishlist",
+        "file": "20260718112902_f6535787-dd59-49ad-b243-190ef2a8aa8b.sql",
+        "for": "ALL"
+      }
+    ],
+    "storage": [
+      {
+        "name": "Anyone can view product media",
+        "file": "20260111152335_891728b8-407e-43f5-8052-568f7dac2719.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Service role can manage product media",
+        "file": "20260111152335_891728b8-407e-43f5-8052-568f7dac2719.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Public read product-media",
+        "file": "20260718122211_3c73251f-0782-4feb-9d0c-f8aef6697e48.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Service role manages product-media",
+        "file": "20260718122211_3c73251f-0782-4feb-9d0c-f8aef6697e48.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Avatars are publicly viewable",
+        "file": "20260719095439_89866365-5a61-4cf2-b178-1f903f8c9ee9.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can upload their own avatar",
+        "file": "20260719095439_89866365-5a61-4cf2-b178-1f903f8c9ee9.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Users can update their own avatar",
+        "file": "20260719095439_89866365-5a61-4cf2-b178-1f903f8c9ee9.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Users can delete their own avatar",
+        "file": "20260719095439_89866365-5a61-4cf2-b178-1f903f8c9ee9.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "Authenticated can upload to product-media",
+        "file": "20260719130523_361e1add-f8fb-4af5-89c7-4048356ce866.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Authenticated can update own product-media",
+        "file": "20260719130523_361e1add-f8fb-4af5-89c7-4048356ce866.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Authenticated can delete own product-media",
+        "file": "20260719130523_361e1add-f8fb-4af5-89c7-4048356ce866.sql",
+        "for": "DELETE"
+      },
+      {
+        "name": "seller_support_read",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "seller_support_upload",
+        "file": "20260721144416_531a3ef5-37d4-4ef7-a934-20cdff9d9bf9.sql",
+        "for": "INSERT"
+      }
+    ],
+    "admin_permissions": [
+      {
+        "name": "No public access to admin permissions",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      }
+    ],
+    "campaign_products": [
+      {
+        "name": "Anyone can view campaign products",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Only admins manage campaign products",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "ALL"
+      }
+    ],
+    "support_tickets": [
+      {
+        "name": "Users can view their tickets",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create tickets",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Only admins update tickets",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "UPDATE"
+      },
+      {
+        "name": "Block anonymous access to support_tickets",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Users can create tickets",
+        "file": "20260318084858_c4542703-eb50-4afe-8677-ef6cbeced286.sql",
+        "for": "INSERT"
+      }
+    ],
+    "ticket_messages": [
+      {
+        "name": "Ticket participants can view messages",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can add messages to their tickets",
+        "file": "20260125064340_3a252f22-1ca5-4a97-afa9-94334c5c5123.sql",
+        "for": "INSERT"
+      }
+    ],
+    "loyalty_transactions": [
+      {
+        "name": "Users can view own transactions",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Admin can manage transactions",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      }
+    ],
+    "traffic_analytics": [
+      {
+        "name": "Admin can view analytics",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      }
+    ],
+    "conversion_events": [
+      {
+        "name": "Admin can view conversions",
+        "file": "20260125092907_683b6c04-3709-46b1-853f-46c13f5be5b8.sql",
+        "for": "ALL"
+      }
+    ],
+    "return_requests": [
+      {
+        "name": "Users can view their own return requests",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "SELECT"
+      },
+      {
+        "name": "Users can create return requests",
+        "file": "20260127172247_af67d034-231d-4886-92d5-6ce624f97dd8.sql",
+        "for": "INSERT"
+      },
+      {
+        "name": "Block anonymous access to return_requests",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      },
+      {
+        "name": "Admins can manage return requests",
+        "file": "20260206053836_db0c7a8e-b6fd-4cd8-8b98-b0a5213f0de5.sql",
+        "for": "ALL"
+      }
+    ]
+  }
+}

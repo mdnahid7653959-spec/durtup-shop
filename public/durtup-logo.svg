@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 410 95" fill="none">
+  <style>
+    .durtup-text {
+      font-family: 'Poppins', 'Inter', -apple-system, sans-serif;
+      font-weight: 900;
+      font-style: italic;
+      fill: #ffffff;
+    }
+    .shop-text {
+      font-family: 'Poppins', 'Inter', -apple-system, sans-serif;
+      font-weight: 700;
+      font-style: italic;
+      fill: #ffffff;
+      opacity: 0.95;
+    }
+  </style>
+  <g transform="translate(5, 0)">
+    <!-- Main "Durtup" Text -->
+    <text x="5" y="65" class="durtup-text" font-size="68" letter-spacing="-1">Durtup</text>
+    <!-- ".shop" Text -->
+    <text x="255" y="65" class="shop-text" font-size="42" letter-spacing="-0.5">.shop</text>
+    
+    <!-- Smile Arrow Path -->
+    <path d="M 12 76 Q 145 110 250 72 C 245 75 239 79 235 85 L 250 72 L 243 60 C 245 66 247 70 250 72 Z" fill="#ffffff" />
+  </g>
+</svg>

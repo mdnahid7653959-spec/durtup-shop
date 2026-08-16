@@ -1,0 +1,23 @@
+/* Root-level scroll enforcement (last-loaded CSS wins) */
+
+html,
+body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: clip !important;
+  overscroll-behavior: auto !important;
+  touch-action: auto !important;
+}
+
+/* Ensure the React root doesn't become the scroll container or clip scroll */
+#root {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+/* Safety: any accidental full-screen fixed wrapper should not block page scrolling */
+body {
+  position: relative !important;
+}

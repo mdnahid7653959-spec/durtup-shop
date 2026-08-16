@@ -1,0 +1,5 @@
+connectorId: eshop-connector
+generate:
+  javascriptSdk:
+    outputDir: "../../src/integrations/firebase/dataconnect"
+    package: "@eshop/dataconnect"

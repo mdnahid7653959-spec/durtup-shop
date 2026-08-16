@@ -1,0 +1,9 @@
+supabase/
+scratch/
+.agents/
+.lovable/
+e2e_supplier_test.js
+check_*.js
+test_*.js
+*.cjs
+*.log

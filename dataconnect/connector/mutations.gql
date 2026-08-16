@@ -1,0 +1,3 @@
+mutation createProduct($name: String!, $slug: String!, $regularPrice: Float!) @auth(level: USER) {
+  products_insert(data: { name: $name, slug: $slug, regularPrice: $regularPrice })
+}

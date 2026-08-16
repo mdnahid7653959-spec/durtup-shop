@@ -1,0 +1,940 @@
+type Addresses @table(name: "addresses") {
+  addressLine1: String! @col(name: "address_line1")
+  addressLine2: String @col(name: "address_line2")
+  addressType: String @col(name: "address_type")
+  city: String! @col(name: "city")
+  country: String! @col(name: "country")
+  createdAt: String! @col(name: "created_at")
+  fullName: String! @col(name: "full_name")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isDefault: Boolean! @col(name: "is_default")
+  label: String @col(name: "label")
+  phone: String @col(name: "phone")
+  postalCode: String @col(name: "postal_code")
+  state: String @col(name: "state")
+  updatedAt: String! @col(name: "updated_at")
+  userId: String! @col(name: "user_id")
+}
+
+type AdminActivityLogs @table(name: "admin_activity_logs") {
+  action: String! @col(name: "action")
+  adminId: String @col(name: "admin_id")
+  createdAt: String! @col(name: "created_at")
+  details: Any @col(name: "details")
+  entityId: String @col(name: "entity_id")
+  entityType: String @col(name: "entity_type")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  ipAddress: String @col(name: "ip_address")
+}
+
+type AdminCredentials @table(name: "admin_credentials") {
+  createdAt: String! @col(name: "created_at")
+  displayName: String! @col(name: "display_name")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  lastLogin: String @col(name: "last_login")
+  passwordHash: String! @col(name: "password_hash")
+  updatedAt: String! @col(name: "updated_at")
+  username: String! @col(name: "username")
+}
+
+type AdminRoles @table(name: "admin_roles") {
+  adminId: String @col(name: "admin_id")
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isSystem: Boolean @col(name: "is_system")
+  name: String @col(name: "name")
+  permissions: Any @col(name: "permissions")
+  role: String! @col(name: "role")
+}
+
+type AdminSessions @table(name: "admin_sessions") {
+  adminId: String! @col(name: "admin_id")
+  createdAt: String! @col(name: "created_at")
+  expiresAt: String! @col(name: "expires_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  ipAddress: String @col(name: "ip_address")
+  isValid: Boolean! @col(name: "is_valid")
+  lastActivity: String! @col(name: "last_activity")
+  sessionToken: String! @col(name: "session_token")
+  userAgent: String @col(name: "user_agent")
+}
+
+type BlogPosts @table(name: "blog_posts") {
+  authorId: String @col(name: "author_id")
+  content: String @col(name: "content")
+  coverImage: String @col(name: "cover_image")
+  createdAt: String! @col(name: "created_at")
+  excerpt: String @col(name: "excerpt")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isPublished: Boolean! @col(name: "is_published")
+  metaDescription: String @col(name: "meta_description")
+  metaTitle: String @col(name: "meta_title")
+  publishedAt: String @col(name: "published_at")
+  slug: String! @col(name: "slug")
+  status: String @col(name: "status")
+  tags: String @col(name: "tags")
+  title: String! @col(name: "title")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type Brands @table(name: "brands") {
+  createdAt: String @col(name: "created_at")
+  createdBy: String @col(name: "created_by")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean @col(name: "is_active")
+  logoUrl: String @col(name: "logo_url")
+  name: String! @col(name: "name")
+  slug: String! @col(name: "slug")
+  updatedAt: String @col(name: "updated_at")
+}
+
+type Campaigns @table(name: "campaigns") {
+  bannerImage: String @col(name: "banner_image")
+  campaignType: String @col(name: "campaign_type")
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  discountType: String @col(name: "discount_type")
+  discountValue: Float @col(name: "discount_value")
+  endsAt: String @col(name: "ends_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  maxDiscountAmount: Float @col(name: "max_discount_amount")
+  metadata: Any @col(name: "metadata")
+  minOrderAmount: Float @col(name: "min_order_amount")
+  name: String! @col(name: "name")
+  slug: String @col(name: "slug")
+  startsAt: String @col(name: "starts_at")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type CartItems @table(name: "cart_items") {
+  createdAt: String @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  productId: String! @col(name: "product_id")
+  quantity: Float! @col(name: "quantity")
+  updatedAt: String @col(name: "updated_at")
+  userId: String! @col(name: "user_id")
+  variantId: String @col(name: "variant_id")
+}
+
+type Categories @table(name: "categories") {
+  createdAt: String @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  imageUrl: String @col(name: "image_url")
+  isActive: Boolean @col(name: "is_active")
+  name: String! @col(name: "name")
+  parentId: String @col(name: "parent_id")
+  slug: String! @col(name: "slug")
+  sortOrder: Float @col(name: "sort_order")
+  updatedAt: String @col(name: "updated_at")
+}
+
+type CategoryCommissions @table(name: "category_commissions") {
+  categoryId: String @col(name: "category_id")
+  commissionRate: Float! @col(name: "commission_rate")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type CjApiTokens @table(name: "cj_api_tokens") {
+  accessToken: String! @col(name: "access_token")
+  accessTokenExpiresAt: String! @col(name: "access_token_expires_at")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  lastAuthAttemptAt: String @col(name: "last_auth_attempt_at")
+  refreshToken: String! @col(name: "refresh_token")
+  refreshTokenExpiresAt: String! @col(name: "refresh_token_expires_at")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type CjCategoryMappings @table(name: "cj_category_mappings") {
+  cjCategoryName: String! @col(name: "cj_category_name")
+  createdAt: String! @col(name: "created_at")
+  customMarginType: String @col(name: "custom_margin_type")
+  customMarginValue: Float @col(name: "custom_margin_value")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isEnabled: Boolean! @col(name: "is_enabled")
+  localCategoryId: String @col(name: "local_category_id")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type CjSettings @table(name: "cj_settings") {
+  createdAt: String! @col(name: "created_at")
+  defaultMarginType: String! @col(name: "default_margin_type")
+  defaultMarginValue: Float! @col(name: "default_margin_value")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isEnabled: Boolean! @col(name: "is_enabled")
+  showInCategories: Boolean! @col(name: "show_in_categories")
+  showInSearch: Boolean! @col(name: "show_in_search")
+  showOnHomepage: Boolean @col(name: "show_on_homepage")
+  updatedAt: String! @col(name: "updated_at")
+  usdToBdtRate: Float! @col(name: "usd_to_bdt_rate")
+}
+
+type CmsBanners @table(name: "cms_banners") {
+  createdAt: String! @col(name: "created_at")
+  endsAt: String @col(name: "ends_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  imageFit: String @col(name: "image_fit")
+  imagePosition: String @col(name: "image_position")
+  imageUrl: String @col(name: "image_url")
+  isActive: Boolean! @col(name: "is_active")
+  linkUrl: String @col(name: "link_url")
+  mobileImageUrl: String @col(name: "mobile_image_url")
+  position: String @col(name: "position")
+  sortOrder: Float @col(name: "sort_order")
+  startsAt: String @col(name: "starts_at")
+  subtitle: String @col(name: "subtitle")
+  title: String @col(name: "title")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type CmsPages @table(name: "cms_pages") {
+  content: String @col(name: "content")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isPublished: Boolean! @col(name: "is_published")
+  metaDescription: String @col(name: "meta_description")
+  metaTitle: String @col(name: "meta_title")
+  slug: String! @col(name: "slug")
+  status: String @col(name: "status")
+  title: String! @col(name: "title")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type Consignments @table(name: "consignments") {
+  adminNotes: String @col(name: "admin_notes")
+  amountToCollect: Float @col(name: "amount_to_collect")
+  approvedAt: String @col(name: "approved_at")
+  consignmentId: String @col(name: "consignment_id")
+  consignmentNumber: String @col(name: "consignment_number")
+  courier: String @col(name: "courier")
+  createdAt: String! @col(name: "created_at")
+  deliveredAt: String @col(name: "delivered_at")
+  deliveryType: String @col(name: "delivery_type")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  itemDescription: String @col(name: "item_description")
+  metadata: Any @col(name: "metadata")
+  orderId: String @col(name: "order_id")
+  productId: String @col(name: "product_id")
+  quantity: Float! @col(name: "quantity")
+  receivedAt: String @col(name: "received_at")
+  recipientAddress: String @col(name: "recipient_address")
+  recipientName: String @col(name: "recipient_name")
+  recipientPhone: String @col(name: "recipient_phone")
+  rejectionReason: String @col(name: "rejection_reason")
+  sellerId: String @col(name: "seller_id")
+  shippedAt: String @col(name: "shipped_at")
+  status: String! @col(name: "status")
+  trackingNumber: String @col(name: "tracking_number")
+  updatedAt: String! @col(name: "updated_at")
+  warehouseId: String @col(name: "warehouse_id")
+}
+
+type Conversations @table(name: "conversations") {
+  buyerId: String @col(name: "buyer_id")
+  buyerUnreadCount: Float @col(name: "buyer_unread_count")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  lastMessage: String @col(name: "last_message")
+  lastMessageAt: String @col(name: "last_message_at")
+  productId: String @col(name: "product_id")
+  productName: String @col(name: "product_name")
+  sellerId: String @col(name: "seller_id")
+  sellerName: String @col(name: "seller_name")
+  sellerUnreadCount: Float @col(name: "seller_unread_count")
+  status: String @col(name: "status")
+  subject: String @col(name: "subject")
+  updatedAt: String! @col(name: "updated_at")
+  userId: String @col(name: "user_id")
+}
+
+type Coupons @table(name: "coupons") {
+  code: String! @col(name: "code")
+  createdAt: String @col(name: "created_at")
+  description: String @col(name: "description")
+  discountType: String! @col(name: "discount_type")
+  discountValue: Float! @col(name: "discount_value")
+  endDate: String @col(name: "end_date")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean @col(name: "is_active")
+  maxDiscountAmount: Float @col(name: "max_discount_amount")
+  minOrderAmount: Float @col(name: "min_order_amount")
+  startDate: String @col(name: "start_date")
+  usageLimit: Float @col(name: "usage_limit")
+  usedCount: Float @col(name: "used_count")
+}
+
+type CustomSections @table(name: "custom_sections") {
+  config: Any @col(name: "config")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  name: String! @col(name: "name")
+  sectionType: String @col(name: "section_type")
+  sortOrder: Float @col(name: "sort_order")
+  type: String @col(name: "type")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type FreeDeliveryRules @table(name: "free_delivery_rules") {
+  conditions: Any @col(name: "conditions")
+  createdAt: String! @col(name: "created_at")
+  endDate: String @col(name: "end_date")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  minOrderAmount: Float! @col(name: "min_order_amount")
+  name: String! @col(name: "name")
+  priority: Float @col(name: "priority")
+  ruleType: String @col(name: "rule_type")
+  startDate: String @col(name: "start_date")
+  updatedAt: String! @col(name: "updated_at")
+  zoneId: String @col(name: "zone_id")
+}
+
+type InventoryAlerts @table(name: "inventory_alerts") {
+  alertType: String @col(name: "alert_type")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  productId: String @col(name: "product_id")
+  threshold: Float! @col(name: "threshold")
+  triggeredAt: String @col(name: "triggered_at")
+}
+
+type InventoryLogs @table(name: "inventory_logs") {
+  changeType: String! @col(name: "change_type")
+  createdAt: String! @col(name: "created_at")
+  createdBy: String @col(name: "created_by")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  newQuantity: Float! @col(name: "new_quantity")
+  notes: String @col(name: "notes")
+  orderId: String @col(name: "order_id")
+  previousQuantity: Float! @col(name: "previous_quantity")
+  productId: String @col(name: "product_id")
+  quantityChange: Float! @col(name: "quantity_change")
+  variantId: String @col(name: "variant_id")
+}
+
+type LayoutConfig @table(name: "layout_config") {
+  config: Any! @col(name: "config")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  page: String @col(name: "page")
+  pageType: String! @col(name: "page_type")
+  sections: Any @col(name: "sections")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type LoyaltyPoints @table(name: "loyalty_points") {
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  expiresAt: String @col(name: "expires_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  lifetimePoints: Float @col(name: "lifetime_points")
+  name: String @col(name: "name")
+  points: Float! @col(name: "points")
+  referenceId: String @col(name: "reference_id")
+  tier: String @col(name: "tier")
+  transactionType: String @col(name: "transaction_type")
+  userId: String! @col(name: "user_id")
+}
+
+type LoyaltyRewards @table(name: "loyalty_rewards") {
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  name: String! @col(name: "name")
+  pointsCost: Float @col(name: "points_cost")
+  pointsRequired: Float @col(name: "points_required")
+  rewardType: String @col(name: "reward_type")
+  rewardValue: Any @col(name: "reward_value")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type Messages @table(name: "messages") {
+  attachments: Any @col(name: "attachments")
+  content: String! @col(name: "content")
+  conversationId: String @col(name: "conversation_id")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isRead: Boolean! @col(name: "is_read")
+  senderId: String @col(name: "sender_id")
+  senderType: String @col(name: "sender_type")
+}
+
+type Notifications @table(name: "notifications") {
+  actionUrl: String @col(name: "action_url")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isRead: Boolean! @col(name: "is_read")
+  link: String @col(name: "link")
+  message: String @col(name: "message")
+  metadata: Any @col(name: "metadata")
+  notificationType: String @col(name: "notification_type")
+  title: String! @col(name: "title")
+  type: String @col(name: "type")
+  userId: String! @col(name: "user_id")
+}
+
+type OrderItems @table(name: "order_items") {
+  createdAt: String @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  orderId: String! @col(name: "order_id")
+  price: Float! @col(name: "price")
+  productId: String @col(name: "product_id")
+  productName: String! @col(name: "product_name")
+  quantity: Float! @col(name: "quantity")
+  total: Float! @col(name: "total")
+  variantId: String @col(name: "variant_id")
+  variantName: String @col(name: "variant_name")
+}
+
+type Orders @table(name: "orders") {
+  billingAddress: Any @col(name: "billing_address")
+  courierName: String @col(name: "courier_name")
+  createdAt: String @col(name: "created_at")
+  discountAmount: Float @col(name: "discount_amount")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  notes: String @col(name: "notes")
+  orderNumber: String! @col(name: "order_number")
+  paymentMethod: String @col(name: "payment_method")
+  paymentStatus: String @col(name: "payment_status")
+  sellerId: String @col(name: "seller_id")
+  shippingAddress: Any @col(name: "shipping_address")
+  shippingCost: Float @col(name: "shipping_cost")
+  status: String @col(name: "status")
+  subtotal: Float! @col(name: "subtotal")
+  taxAmount: Float @col(name: "tax_amount")
+  total: Float! @col(name: "total")
+  trackingNumber: String @col(name: "tracking_number")
+  updatedAt: String @col(name: "updated_at")
+  userId: String! @col(name: "user_id")
+}
+
+type Payments @table(name: "payments") {
+  amount: Float! @col(name: "amount")
+  createdAt: String! @col(name: "created_at")
+  currency: String! @col(name: "currency")
+  failedAt: String @col(name: "failed_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  metadata: Any @col(name: "metadata")
+  orderId: String @col(name: "order_id")
+  paidAt: String @col(name: "paid_at")
+  paymentMethod: String! @col(name: "payment_method")
+  paymentProvider: String @col(name: "payment_provider")
+  providerReference: String @col(name: "provider_reference")
+  providerResponse: Any @col(name: "provider_response")
+  providerStatus: String @col(name: "provider_status")
+  refundAmount: Float @col(name: "refund_amount")
+  refundReason: String @col(name: "refund_reason")
+  refundedAt: String @col(name: "refunded_at")
+  status: String! @col(name: "status")
+  transactionId: String @col(name: "transaction_id")
+  updatedAt: String! @col(name: "updated_at")
+  userId: String! @col(name: "user_id")
+}
+
+type ProductImages @table(name: "product_images") {
+  altText: String @col(name: "alt_text")
+  createdAt: String @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  imageUrl: String! @col(name: "image_url")
+  isPrimary: Boolean @col(name: "is_primary")
+  productId: String! @col(name: "product_id")
+  sortOrder: Float @col(name: "sort_order")
+}
+
+type ProductVariants @table(name: "product_variants") {
+  color: String @col(name: "color")
+  createdAt: String @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  imageUrl: String @col(name: "image_url")
+  isActive: Boolean @col(name: "is_active")
+  name: String! @col(name: "name")
+  price: Float @col(name: "price")
+  productId: String! @col(name: "product_id")
+  size: String @col(name: "size")
+  sku: String @col(name: "sku")
+  stockQuantity: Float @col(name: "stock_quantity")
+  storage: String @col(name: "storage")
+}
+
+type Products @table(name: "products") {
+  approvalStatus: String @col(name: "approval_status")
+  approvedAt: String @col(name: "approved_at")
+  approvedBy: String @col(name: "approved_by")
+  brandId: String @col(name: "brand_id")
+  categoryId: String @col(name: "category_id")
+  color: String @col(name: "color")
+  costPrice: Float @col(name: "cost_price")
+  countryOfOrigin: String @col(name: "country_of_origin")
+  createdAt: String @col(name: "created_at")
+  description: String @col(name: "description")
+  dimensions: String @col(name: "dimensions")
+  discountPrice: Float @col(name: "discount_price")
+  discountType: String @col(name: "discount_type")
+  estimatedDelivery: String @col(name: "estimated_delivery")
+  flashSaleEnd: String @col(name: "flash_sale_end")
+  freeShipping: Boolean @col(name: "free_shipping")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isBestSeller: Boolean @col(name: "is_best_seller")
+  isFeatured: Boolean @col(name: "is_featured")
+  isFlashSale: Boolean @col(name: "is_flash_sale")
+  isNewArrival: Boolean @col(name: "is_new_arrival")
+  maxOrderQuantity: Float @col(name: "max_order_quantity")
+  metaDescription: String @col(name: "meta_description")
+  metaKeywords: String @col(name: "meta_keywords")
+  metaTitle: String @col(name: "meta_title")
+  minOrderQuantity: Float @col(name: "min_order_quantity")
+  name: String! @col(name: "name")
+  productCondition: String @col(name: "product_condition")
+  publishDate: String @col(name: "publish_date")
+  ratingAverage: Float @col(name: "rating_average")
+  ratingCount: Float @col(name: "rating_count")
+  regularPrice: Float! @col(name: "regular_price")
+  rejectionReason: String @col(name: "rejection_reason")
+  returnPolicy: String @col(name: "return_policy")
+  reviewsEnabled: Boolean @col(name: "reviews_enabled")
+  sellerId: String @col(name: "seller_id")
+  shippingCost: Float @col(name: "shipping_cost")
+  shortDescription: String @col(name: "short_description")
+  sku: String @col(name: "sku")
+  slug: String! @col(name: "slug")
+  soldCount: Float @col(name: "sold_count")
+  status: String @col(name: "status")
+  stockQuantity: Float @col(name: "stock_quantity")
+  tags: String @col(name: "tags")
+  updatedAt: String @col(name: "updated_at")
+  videoUrl: String @col(name: "video_url")
+  viewCount: Float @col(name: "view_count")
+  warrantyInfo: String @col(name: "warranty_info")
+  weight: Float @col(name: "weight")
+}
+
+type Profiles @table(name: "profiles") {
+  avatarUrl: String @col(name: "avatar_url")
+  createdAt: String @col(name: "created_at")
+  email: String! @col(name: "email")
+  fullName: String @col(name: "full_name")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean @col(name: "is_active")
+  phone: String @col(name: "phone")
+  role: String! @col(name: "role")
+  updatedAt: String @col(name: "updated_at")
+  userId: String! @col(name: "user_id")
+}
+
+type PushNotifications @table(name: "push_notifications") {
+  actionUrl: String @col(name: "action_url")
+  body: String @col(name: "body")
+  createdAt: String! @col(name: "created_at")
+  createdBy: String @col(name: "created_by")
+  data: Any @col(name: "data")
+  failedCount: Float @col(name: "failed_count")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  imageUrl: String @col(name: "image_url")
+  message: String @col(name: "message")
+  scheduledAt: String @col(name: "scheduled_at")
+  sentAt: String @col(name: "sent_at")
+  sentBy: String @col(name: "sent_by")
+  sentCount: Float @col(name: "sent_count")
+  status: String @col(name: "status")
+  targetAudience: String @col(name: "target_audience")
+  targetType: String @col(name: "target_type")
+  targetUsers: String @col(name: "target_users")
+  title: String! @col(name: "title")
+}
+
+type PushTokens @table(name: "push_tokens") {
+  createdAt: String! @col(name: "created_at")
+  deviceInfo: Any @col(name: "device_info")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  platform: String @col(name: "platform")
+  token: String! @col(name: "token")
+  userId: String! @col(name: "user_id")
+}
+
+type RecentlyViewed @table(name: "recently_viewed") {
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  productId: String @col(name: "product_id")
+  userId: String! @col(name: "user_id")
+  viewCount: Float @col(name: "view_count")
+  viewedAt: String! @col(name: "viewed_at")
+}
+
+type Reviews @table(name: "reviews") {
+  comment: String @col(name: "comment")
+  createdAt: String @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isApproved: Boolean @col(name: "is_approved")
+  productId: String! @col(name: "product_id")
+  rating: Float! @col(name: "rating")
+  title: String @col(name: "title")
+  userId: String! @col(name: "user_id")
+}
+
+type SearchHistory @table(name: "search_history") {
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  query: String @col(name: "query")
+  resultsCount: Float @col(name: "results_count")
+  searchTerm: String @col(name: "search_term")
+  userId: String @col(name: "user_id")
+}
+
+type SellerEarnings @table(name: "seller_earnings") {
+  amount: Float! @col(name: "amount")
+  commission: Float! @col(name: "commission")
+  commissionAmount: Float @col(name: "commission_amount")
+  commissionRate: Float @col(name: "commission_rate")
+  createdAt: String! @col(name: "created_at")
+  earnedAt: String! @col(name: "earned_at")
+  grossAmount: Float @col(name: "gross_amount")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  netAmount: Float! @col(name: "net_amount")
+  orderId: String @col(name: "order_id")
+  sellerId: String @col(name: "seller_id")
+  status: String! @col(name: "status")
+}
+
+type SellerPayouts @table(name: "seller_payouts") {
+  amount: Float! @col(name: "amount")
+  commissionDeducted: Float @col(name: "commission_deducted")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  netAmount: Float @col(name: "net_amount")
+  paymentDetails: Any @col(name: "payment_details")
+  paymentMethod: String @col(name: "payment_method")
+  payoutMethod: String @col(name: "payout_method")
+  periodEnd: String @col(name: "period_end")
+  periodStart: String @col(name: "period_start")
+  processedAt: String @col(name: "processed_at")
+  reference: String @col(name: "reference")
+  sellerId: String @col(name: "seller_id")
+  status: String! @col(name: "status")
+  transactionReference: String @col(name: "transaction_reference")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type SellerSupportMessages @table(name: "seller_support_messages") {
+  attachments: Any! @col(name: "attachments")
+  content: String @col(name: "content")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  readAt: String @col(name: "read_at")
+  senderId: String! @col(name: "sender_id")
+  senderName: String @col(name: "sender_name")
+  senderType: String! @col(name: "sender_type")
+  ticketId: String! @col(name: "ticket_id")
+}
+
+type SellerSupportTickets @table(name: "seller_support_tickets") {
+  assignedStaffId: String @col(name: "assigned_staff_id")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  lastMessageAt: String @col(name: "last_message_at")
+  lastMessagePreview: String @col(name: "last_message_preview")
+  sellerId: String! @col(name: "seller_id")
+  sellerUnreadCount: Float! @col(name: "seller_unread_count")
+  staffUnreadCount: Float! @col(name: "staff_unread_count")
+  status: String! @col(name: "status")
+  subject: String! @col(name: "subject")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type Sellers @table(name: "sellers") {
+  approvalStatus: String @col(name: "approval_status")
+  approvedAt: String @col(name: "approved_at")
+  approvedBy: String @col(name: "approved_by")
+  bankAccount: Any @col(name: "bank_account")
+  bankAccountName: String @col(name: "bank_account_name")
+  bankAccountNumber: String @col(name: "bank_account_number")
+  bankBranch: String @col(name: "bank_branch")
+  bankName: String @col(name: "bank_name")
+  birthCertificateImage: String @col(name: "birth_certificate_image")
+  birthCertificateNumber: String @col(name: "birth_certificate_number")
+  businessAddress: String @col(name: "business_address")
+  businessEmail: String @col(name: "business_email")
+  businessLicense: String @col(name: "business_license")
+  businessName: String @col(name: "business_name")
+  businessPhone: String @col(name: "business_phone")
+  businessRegistrationNumber: String @col(name: "business_registration_number")
+  businessType: String @col(name: "business_type")
+  commissionRate: Float @col(name: "commission_rate")
+  contactEmail: String @col(name: "contact_email")
+  contactPhone: String @col(name: "contact_phone")
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  idDocumentType: String @col(name: "id_document_type")
+  isVerified: Boolean @col(name: "is_verified")
+  kycRejectedReason: String @col(name: "kyc_rejected_reason")
+  kycStatus: String @col(name: "kyc_status")
+  kycVerifiedAt: String @col(name: "kyc_verified_at")
+  kycVerifiedBy: String @col(name: "kyc_verified_by")
+  logoUrl: String @col(name: "logo_url")
+  metadata: Any @col(name: "metadata")
+  mobileBankingNumber: String @col(name: "mobile_banking_number")
+  mobileBankingProvider: String @col(name: "mobile_banking_provider")
+  nidBackImage: String @col(name: "nid_back_image")
+  nidFrontImage: String @col(name: "nid_front_image")
+  nidNumber: String @col(name: "nid_number")
+  rating: Float @col(name: "rating")
+  ratingAverage: Float @col(name: "rating_average")
+  ratingCount: Float @col(name: "rating_count")
+  rejectionReason: String @col(name: "rejection_reason")
+  returnAddress: Any @col(name: "return_address")
+  shopBanner: String @col(name: "shop_banner")
+  shopDescription: String @col(name: "shop_description")
+  shopLogo: String @col(name: "shop_logo")
+  shopName: String @col(name: "shop_name")
+  shopSlug: String @col(name: "shop_slug")
+  status: String! @col(name: "status")
+  taxId: String @col(name: "tax_id")
+  totalOrders: Float @col(name: "total_orders")
+  totalProducts: Float @col(name: "total_products")
+  totalSales: Float @col(name: "total_sales")
+  tradeLicenseImage: String @col(name: "trade_license_image")
+  tradeLicenseNumber: String @col(name: "trade_license_number")
+  updatedAt: String! @col(name: "updated_at")
+  userId: String @col(name: "user_id")
+  warehouseAddress: Any @col(name: "warehouse_address")
+  warningCount: Float! @col(name: "warning_count")
+}
+
+type ShippingRates @table(name: "shipping_rates") {
+  baseRate: Float @col(name: "base_rate")
+  codCharge: Float @col(name: "cod_charge")
+  codPercentage: Float @col(name: "cod_percentage")
+  courierName: String @col(name: "courier_name")
+  createdAt: String! @col(name: "created_at")
+  estimatedDays: String @col(name: "estimated_days")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  maxWeight: Float @col(name: "max_weight")
+  minOrderTotal: Float @col(name: "min_order_total")
+  minWeight: Float @col(name: "min_weight")
+  name: String @col(name: "name")
+  perKgRate: Float @col(name: "per_kg_rate")
+  price: Float! @col(name: "price")
+  updatedAt: String! @col(name: "updated_at")
+  zoneId: String @col(name: "zone_id")
+}
+
+type ShippingZones @table(name: "shipping_zones") {
+  areas: String @col(name: "areas")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  name: String! @col(name: "name")
+  regions: String @col(name: "regions")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type SiteConfig @table(name: "site_config") {
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  key: String! @col(name: "key")
+  updatedAt: String! @col(name: "updated_at")
+  value: Any @col(name: "value")
+}
+
+type SiteSettings @table(name: "site_settings") {
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  key: String! @col(name: "key")
+  updatedAt: String @col(name: "updated_at")
+  value: Any @col(name: "value")
+}
+
+type StaffAuditLogs @table(name: "staff_audit_logs") {
+  action: String! @col(name: "action")
+  actorUserId: String @col(name: "actor_user_id")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  ip: String @col(name: "ip")
+  metadata: Any @col(name: "metadata")
+  staffId: String @col(name: "staff_id")
+  targetId: String @col(name: "target_id")
+  targetType: String @col(name: "target_type")
+  userAgent: String @col(name: "user_agent")
+}
+
+type StaffDepartments @table(name: "staff_departments") {
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  name: String! @col(name: "name")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type StaffInvitations @table(name: "staff_invitations") {
+  consumedAt: String @col(name: "consumed_at")
+  createdAt: String! @col(name: "created_at")
+  expiresAt: String! @col(name: "expires_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  staffId: String! @col(name: "staff_id")
+  tokenHash: String! @col(name: "token_hash")
+}
+
+type StaffMembers @table(name: "staff_members") {
+  activatedAt: String @col(name: "activated_at")
+  avatarUrl: String @col(name: "avatar_url")
+  createdAt: String! @col(name: "created_at")
+  departmentId: String @col(name: "department_id")
+  email: String! @col(name: "email")
+  fullName: String! @col(name: "full_name")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  invitedAt: String! @col(name: "invited_at")
+  invitedBy: String @col(name: "invited_by")
+  joiningDate: String @col(name: "joining_date")
+  monthlySalary: Float @col(name: "monthly_salary")
+  phone: String @col(name: "phone")
+  roleId: String @col(name: "role_id")
+  status: String! @col(name: "status")
+  updatedAt: String! @col(name: "updated_at")
+  userId: String @col(name: "user_id")
+}
+
+type StaffMessages @table(name: "staff_messages") {
+  body: String! @col(name: "body")
+  createdAt: String! @col(name: "created_at")
+  fromAdminId: String @col(name: "from_admin_id")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  readAt: String @col(name: "read_at")
+  subject: String! @col(name: "subject")
+  toStaffId: String! @col(name: "to_staff_id")
+}
+
+type StaffPermissions @table(name: "staff_permissions") {
+  grantedAt: String! @col(name: "granted_at")
+  grantedBy: String @col(name: "granted_by")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  permissionKey: String! @col(name: "permission_key")
+  staffId: String! @col(name: "staff_id")
+}
+
+type StaffRoles @table(name: "staff_roles") {
+  createdAt: String! @col(name: "created_at")
+  dashboardKey: String! @col(name: "dashboard_key")
+  defaultPermissions: Any! @col(name: "default_permissions")
+  departmentId: String @col(name: "department_id")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  name: String! @col(name: "name")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type StaffTasks @table(name: "staff_tasks") {
+  assignedBy: String @col(name: "assigned_by")
+  completedAt: String @col(name: "completed_at")
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  dueDate: String @col(name: "due_date")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  priority: String! @col(name: "priority")
+  staffId: String! @col(name: "staff_id")
+  status: String! @col(name: "status")
+  title: String! @col(name: "title")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type StudioThemeVersions @table(name: "studio_theme_versions") {
+  archivedAt: String @col(name: "archived_at")
+  bentoConfig: Any! @col(name: "bento_config")
+  createdAt: String! @col(name: "created_at")
+  createdBy: String @col(name: "created_by")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  layoutConfig: Any! @col(name: "layout_config")
+  name: String! @col(name: "name")
+  parentVersionId: String @col(name: "parent_version_id")
+  publishedAt: String @col(name: "published_at")
+  publishedBy: String @col(name: "published_by")
+  status: String! @col(name: "status")
+  themeConfig: Any! @col(name: "theme_config")
+  updatedAt: String! @col(name: "updated_at")
+  versionNumber: Float! @col(name: "version_number")
+}
+
+type ThemeConfig @table(name: "theme_config") {
+  config: Any! @col(name: "config")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  name: String! @col(name: "name")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type ThemeVersions @table(name: "theme_versions") {
+  config: Any! @col(name: "config")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  themeId: String @col(name: "theme_id")
+  version: String! @col(name: "version")
+}
+
+type UserRoles @table(name: "user_roles") {
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  role: String! @col(name: "role")
+  updatedAt: String! @col(name: "updated_at")
+  userId: String! @col(name: "user_id")
+}
+
+type UserVouchers @table(name: "user_vouchers") {
+  code: String! @col(name: "code")
+  createdAt: String! @col(name: "created_at")
+  discountType: String @col(name: "discount_type")
+  discountValue: Float! @col(name: "discount_value")
+  expiresAt: String @col(name: "expires_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isUsed: Boolean! @col(name: "is_used")
+  usedAt: String @col(name: "used_at")
+  userId: String! @col(name: "user_id")
+}
+
+type WalletTransactions @table(name: "wallet_transactions") {
+  amount: Float! @col(name: "amount")
+  balanceAfter: Float @col(name: "balance_after")
+  category: String @col(name: "category")
+  createdAt: String! @col(name: "created_at")
+  description: String @col(name: "description")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  referenceId: String @col(name: "reference_id")
+  transactionType: String @col(name: "transaction_type")
+  type: String @col(name: "type")
+  userId: String! @col(name: "user_id")
+}
+
+type Warehouses @table(name: "warehouses") {
+  address: String @col(name: "address")
+  city: String @col(name: "city")
+  contactPhone: String @col(name: "contact_phone")
+  country: String @col(name: "country")
+  createdAt: String! @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  isActive: Boolean! @col(name: "is_active")
+  metadata: Any @col(name: "metadata")
+  name: String! @col(name: "name")
+  updatedAt: String! @col(name: "updated_at")
+}
+
+type Wishlist @table(name: "wishlist") {
+  createdAt: String @col(name: "created_at")
+  id: UUID! @default(expr: "uuidV4()") @col(name: "id")
+  productId: String! @col(name: "product_id")
+  userId: String! @col(name: "user_id")
+}
+

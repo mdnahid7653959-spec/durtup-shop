@@ -1,0 +1,11 @@
+specVersion: "v1alpha"
+serviceId: "eshop-data-connect"
+location: "us-central1"
+schema:
+  source: "./schema"
+  datasource:
+    postgresql:
+      database: "eshopapp6119d"
+      cloudSql:
+        instanceId: "eshop-app-6119d-instance"
+connectorDirs: ["./connector"]

@@ -1,0 +1,6 @@
+query getProductById($id: UUID!) @auth(level: PUBLIC) {
+  products(id: $id) {
+    id
+    name
+  }
+}
