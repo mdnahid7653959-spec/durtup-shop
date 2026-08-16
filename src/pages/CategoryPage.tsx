@@ -22,20 +22,30 @@ interface Category {
 
 export default function CategoryPage() {
   const { slug } = useParams();
-  const [category, setCategory] = useState<Category | null>(null);
+  const [category, setCategory] = useState<Category | null>(() => {
+    if (!slug) return null;
+    const formattedName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
+    return {
+      id: `cat-${slug}`,
+      name: formattedName,
+      slug,
+      description: `Explore top quality products in ${formattedName}`,
+    };
+  });
   const [products, setProducts] = useState<Product[]>([]);
   const [cjProducts, setCJProducts] = useState<CombinedProduct[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
 
   const { data: cjSettings } = useCJSettings();
   const { data: cjMappings } = useCJCategoryMappings();
 
   useEffect(() => {
+    let isMounted = true;
+
     async function fetchData() {
       if (!slug) return;
 
-      // 0ms Fast Path: Check if cached Mohasagor products exist and render instantly
       const formattedName = slug.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ");
       const initialCat = {
         id: `cat-${slug}`,
@@ -46,7 +56,7 @@ export default function CategoryPage() {
       setCategory(initialCat);
 
       // Track viewed category in user preference history
-      if (typeof window !== "undefined" && slug) {
+      if (typeof window !== "undefined") {
         try {
           const raw = localStorage.getItem("user_viewed_categories");
           const existing: string[] = raw ? JSON.parse(raw) : [];
@@ -55,35 +65,15 @@ export default function CategoryPage() {
         } catch {}
       }
 
-      const allMohasagor = await getCachedMohasagorProducts();
-      let instantFiltered: Product[] = [];
-      if (allMohasagor.length > 0) {
-        instantFiltered = filterProductsByCategory(allMohasagor, slug, formattedName);
-        setProducts(instantFiltered);
-        setLoading(false); // Instantly turn off spinner in 0ms!
-      } else {
-        setLoading(true);
-      }
-
       try {
-        // Fetch all categories for mapping
-        const { data: allCats } = await supabase
-          .from("categories")
-          .select("id, name, slug, description")
-          .eq("is_active", true);
-
-        if (allCats) {
-          setCategories(allCats);
+        // 1. Get all Mohasagor API products
+        const allMohasagor = await getCachedMohasagorProducts();
+        const apiFiltered = filterProductsByCategory(allMohasagor, slug, formattedName);
+        if (isMounted && apiFiltered.length > 0) {
+          setProducts(apiFiltered);
         }
 
-        // Fetch current category from DB
-        const { data: catData } = await supabase
-          .from("categories")
-          .select("*")
-          .eq("slug", slug)
-          .maybeSingle();
-
-        // Check local / admin products for this category
+        // 2. Get local / admin products
         let localCatProducts: Product[] = [];
         try {
           const raw = localStorage.getItem("enterprise_admin_products") || localStorage.getItem("local_products");
@@ -93,7 +83,7 @@ export default function CategoryPage() {
               localCatProducts = list
                 .filter((p: any) => {
                   const pCat = (p.category_id || p.category_slug || p.category || "").toString().toLowerCase();
-                  const targetSlug = (slug || "").toString().toLowerCase();
+                  const targetSlug = slug.toLowerCase();
                   return pCat.includes(targetSlug) || targetSlug.includes(pCat);
                 })
                 .map((p: any, i: number) => ({
@@ -114,73 +104,64 @@ export default function CategoryPage() {
           }
         } catch {}
 
+        // 3. Query DB products if available
         let mappedDbProducts: Product[] = [];
-        if (catData) {
-          setCategory(catData);
+        try {
           const { data: prodData } = await supabase
             .from("products")
             .select(`
-              *,
-              category:categories(id, name, slug),
+              id, name, slug, regular_price, discount_price, rating_average, rating_count, sold_count, free_shipping, is_new_arrival, is_best_seller,
               product_images(image_url, is_primary)
             `)
-            .eq("category_id", catData.id)
-            .order("created_at", { ascending: false })
             .limit(50);
 
-          mappedDbProducts = (prodData || []).map(p => {
-            const primaryImage = p.product_images?.find((img: any) => img.is_primary)?.image_url;
-            const firstImage = p.product_images?.[0]?.image_url;
-            const fallbackImage = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop";
-            
-            return {
+          if (prodData && prodData.length > 0) {
+            mappedDbProducts = prodData.map((p: any) => ({
               id: p.id,
               name: p.name,
               slug: p.slug,
-              image: primaryImage || firstImage || fallbackImage,
-              price: p.discount_price || p.regular_price,
+              image: p.product_images?.find((img: any) => img.is_primary)?.image_url || p.product_images?.[0]?.image_url || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
+              price: p.discount_price || p.regular_price || 0,
               originalPrice: p.discount_price ? p.regular_price : undefined,
               rating: Number(p.rating_average) || 4.8,
               reviews: p.rating_count || 18,
               sold: p.sold_count || 40,
-              freeShipping: p.free_shipping || true,
-              isNew: p.is_new_arrival || false,
-              isBestSeller: p.is_best_seller || false,
-            };
-          });
-        }
-
-        // Merge Admin products + DB products + Supplier products seamlessly
-        const mergedList = [
-          ...localCatProducts,
-          ...mappedDbProducts,
-          ...instantFiltered
-        ];
-
-        // Deduplicate by product ID or name
-        const uniqueProductsMap = new Map<string, Product>();
-        mergedList.forEach(p => {
-          const key = p.id || p.name;
-          if (!uniqueProductsMap.has(key)) {
-            uniqueProductsMap.set(key, p);
+              freeShipping: p.free_shipping ?? true,
+              isNew: p.is_new_arrival ?? true,
+              isBestSeller: p.is_best_seller ?? false,
+            }));
           }
+        } catch {}
+
+        // Merge all sources
+        const combined = [...localCatProducts, ...apiFiltered, ...mappedDbProducts];
+        const unique = new Map<string, Product>();
+        combined.forEach(p => {
+          if (!unique.has(p.id)) unique.set(p.id, p);
         });
 
-        const finalProducts = Array.from(uniqueProductsMap.values());
-        if (finalProducts.length > 0) {
-          setProducts(finalProducts);
+        if (isMounted) {
+          setProducts(Array.from(unique.values()));
         }
-
       } catch (err) {
-        console.error("Error in CategoryPage fetchData:", err);
+        console.warn("CategoryPage fetchData error:", err);
       } finally {
-
-        setLoading(false);
+        if (isMounted) setLoading(false);
       }
     }
 
     fetchData();
-  }, [slug, cjSettings?.is_enabled, cjSettings?.show_in_categories]);
+
+    const handleUpdate = () => {
+      fetchData();
+    };
+    window.addEventListener("mohasagor_products_updated", handleUpdate);
+
+    return () => {
+      isMounted = false;
+      window.removeEventListener("mohasagor_products_updated", handleUpdate);
+    };
+  }, [slug]);
 
   async function fetchCJProductsForCategory(cat: Category, allCats: Category[]) {
     try {

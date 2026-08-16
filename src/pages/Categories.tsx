@@ -47,12 +47,21 @@ interface Category {
   children?: Category[];
 }
 
+const defaultMohasagorCats: Category[] = [
+  { id: "cat-electronics", name: "Electronics & Gadgets", slug: "electronics", image_url: "https://mohasagor.com.bd/public/storage/images/products/eLWq6za5bthOuiTD40ZvFOjinbTfMEnbRIaCJkP3.png", parent_id: null },
+  { id: "cat-fashion", name: "Fashion & Clothing", slug: "fashion", image_url: "https://mohasagor.com.bd/public/storage/images/products/mgiwhl1BwLXSNkjjGmle1UBdV68gFeTAM89wbC7j.png", parent_id: null },
+  { id: "cat-home", name: "Home & Kitchen", slug: "home", image_url: "https://mohasagor.com.bd/public/storage/images/products/8zdCA2XuHO7IB9dH6Ezm6jJub4AePatuDvhSKFPV.jpg", parent_id: null },
+  { id: "cat-beauty", name: "Health & Beauty", slug: "beauty", image_url: "https://mohasagor.com.bd/public/storage/images/products/Z5cO12U9EbUwsd52tjuZwRL2QFaIalS47wpkxNfV.jpg", parent_id: null },
+  { id: "cat-watches", name: "Watches & Accessories", slug: "watches", image_url: "https://mohasagor.com.bd/public/storage/images/products/oOyfIL7udV4sQxq1Sz9uVFX5iGiQ8DWfKa6QhegT.png", parent_id: null },
+  { id: "cat-kids", name: "Toys & Baby Care", slug: "kids", image_url: "https://mohasagor.com.bd/public/storage/images/products/UpG8zJxrUofDm6wzCVE1WUVWvoxz7nNdIiFk8xoK.jpg", parent_id: null },
+];
+
 const Categories = () => {
   const navigate = useNavigate();
-  const [categories, setCategories] = useState<Category[]>([]);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [categories, setCategories] = useState<Category[]>(defaultMohasagorCats);
+  const [selectedCategory, setSelectedCategory] = useState<Category | null>(defaultMohasagorCats[0]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [productsLoading, setProductsLoading] = useState(false);
 
   useEffect(() => {
@@ -64,35 +73,22 @@ const Categories = () => {
           .eq("is_active", true)
           .order("sort_order", { ascending: true });
 
-        if (error) throw error;
+        if (!error && data && data.length > 0) {
+          const parentCategories = data.filter(c => !c.parent_id);
+          const childCategories = data.filter(c => c.parent_id);
 
-        // Build category tree
-        const parentCategories = (data || []).filter(c => !c.parent_id);
-        const childCategories = (data || []).filter(c => c.parent_id);
+          const categoriesWithChildren = parentCategories.map(parent => ({
+            ...parent,
+            children: childCategories.filter(child => child.parent_id === parent.id),
+          }));
 
-        const categoriesWithChildren = parentCategories.map(parent => ({
-          ...parent,
-          children: childCategories.filter(child => child.parent_id === parent.id),
-        }));
-
-        const defaultMohasagorCats: Category[] = [
-          { id: "cat-electronics", name: "Electronics & Gadgets", slug: "electronics", image_url: null, parent_id: null },
-          { id: "cat-fashion", name: "Fashion & Clothing", slug: "fashion", image_url: null, parent_id: null },
-          { id: "cat-home", name: "Home & Kitchen", slug: "home", image_url: null, parent_id: null },
-          { id: "cat-beauty", name: "Health & Beauty", slug: "beauty", image_url: null, parent_id: null },
-          { id: "cat-watches", name: "Watches & Accessories", slug: "watches", image_url: null, parent_id: null },
-          { id: "cat-kids", name: "Toys & Baby Care", slug: "kids", image_url: null, parent_id: null },
-        ];
-
-        const finalCats = categoriesWithChildren.length > 0 ? categoriesWithChildren : defaultMohasagorCats;
-        setCategories(finalCats);
-        if (finalCats.length > 0) {
-          setSelectedCategory(finalCats[0]);
+          if (categoriesWithChildren.length > 0) {
+            setCategories(categoriesWithChildren);
+            setSelectedCategory(categoriesWithChildren[0]);
+          }
         }
       } catch (error) {
-        console.error("Error fetching categories:", error);
-      } finally {
-        setIsLoading(false);
+        console.warn("Category fetch notice:", error);
       }
     };
 
@@ -101,65 +97,72 @@ const Categories = () => {
 
   // Fetch products when category changes
   useEffect(() => {
+    let isMounted = true;
     const fetchProducts = async () => {
       if (!selectedCategory) return;
-      
-      // Fast Path: Check cached Mohasagor products first (0ms)
-      const cachedMohasagor = await getCachedMohasagorProducts();
-      if (cachedMohasagor.length > 0) {
-        const instantFiltered = filterProductsByCategory(cachedMohasagor, selectedCategory.slug, selectedCategory.name);
-        setProducts(instantFiltered);
-        setProductsLoading(false); // 0ms Instant render!
-      } else {
-        setProductsLoading(true);
-      }
+      setProductsLoading(true);
 
       try {
-        let mappedProducts: Product[] = [];
-        if (!selectedCategory.id.startsWith("cat-")) {
-          const { data, error } = await supabase
+        // 1. Get cached / live Mohasagor API products
+        const allMohasagor = await getCachedMohasagorProducts();
+        let instantFiltered: Product[] = [];
+        if (allMohasagor && allMohasagor.length > 0) {
+          instantFiltered = filterProductsByCategory(allMohasagor, selectedCategory.slug, selectedCategory.name);
+          if (isMounted && instantFiltered.length > 0) {
+            setProducts(instantFiltered);
+            setProductsLoading(false);
+          }
+        }
+
+        // 2. Query DB products if available
+        let mappedDbProducts: Product[] = [];
+        try {
+          const { data: prodData } = await supabase
             .from("products")
             .select(`
               *,
               product_images(image_url, is_primary)
             `)
-            .eq("category_id", selectedCategory.id)
-            .eq("status", "active")
-            .order("created_at", { ascending: false })
-            .limit(20);
+            .or(`category_id.eq.${selectedCategory.id},category.ilike.%${selectedCategory.slug}%`)
+            .limit(30);
 
-          if (!error && data && data.length > 0) {
-            mappedProducts = data.map(p => {
-              const primaryImage = p.product_images?.find((img: any) => img.is_primary)?.image_url;
-              const firstImage = p.product_images?.[0]?.image_url;
-              const fallbackImage = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop";
-              
-              return {
-                id: p.id,
-                name: p.name,
-                slug: p.slug,
-                image: primaryImage || firstImage || fallbackImage,
-                price: p.discount_price || p.regular_price,
-                originalPrice: p.discount_price ? p.regular_price : undefined,
-                rating: Number(p.rating_average) || 0,
-                reviews: p.rating_count || 0,
-                sold: p.sold_count || 0,
-                freeShipping: p.free_shipping || false,
-                isNew: p.is_new_arrival || false,
-                isBestSeller: p.is_best_seller || false,
-              };
-            });
-            setProducts(mappedProducts);
+          if (prodData && prodData.length > 0) {
+            mappedDbProducts = prodData.map((p: any) => ({
+              id: p.id,
+              name: p.name,
+              slug: p.slug,
+              image: p.product_images?.find((img: any) => img.is_primary)?.image_url || p.product_images?.[0]?.image_url || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop",
+              price: p.discount_price || p.regular_price || 0,
+              originalPrice: p.discount_price ? p.regular_price : undefined,
+              rating: Number(p.rating_average) || 4.8,
+              reviews: p.rating_count || 18,
+              sold: p.sold_count || 40,
+              freeShipping: p.free_shipping ?? true,
+              isNew: p.is_new_arrival ?? true,
+              isBestSeller: p.is_best_seller ?? false,
+            }));
           }
+        } catch {}
+
+        // Combine DB + Supplier products
+        const merged = [...mappedDbProducts, ...instantFiltered];
+        const unique = new Map<string, Product>();
+        merged.forEach(p => {
+          if (!unique.has(p.id)) unique.set(p.id, p);
+        });
+
+        if (isMounted) {
+          setProducts(Array.from(unique.values()));
         }
-      } catch (error) {
-        console.error("Error fetching products:", error);
+      } catch (err) {
+        console.warn("Categories fetchProducts error:", err);
       } finally {
-        setProductsLoading(false);
+        if (isMounted) setProductsLoading(false);
       }
     };
 
     fetchProducts();
+    return () => { isMounted = false; };
   }, [selectedCategory]);
 
   const handleCategoryClick = (category: Category) => {
