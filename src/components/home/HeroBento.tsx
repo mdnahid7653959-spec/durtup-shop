@@ -65,41 +65,41 @@ const CATEGORIES = [
     id: "cat_tech",
     name: "Tech & Gadgets",
     sub: "Smart Devices",
-    tag: "Gadgets",
+    tag: "⚡ 40% OFF",
     to: "/category/electronics",
-    defaultImg: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=600&h=500&fit=crop",
-    shadow: "shadow-blue-500/10",
-    badgeColor: "bg-blue-500/30 text-blue-200 border-blue-400/40",
+    defaultImg: "https://images.unsplash.com/photo-1546868871-7041f2a55e12?w=800&auto=format&fit=crop&q=85",
+    shadow: "shadow-blue-500/15",
+    badgeColor: "bg-blue-600/90 text-white border-blue-400/50",
   },
   {
     id: "cat_lifestyle",
     name: "Fashion & Lifestyle",
     sub: "Trendy Styles",
-    tag: "Fashion",
+    tag: "🔥 TRENDING",
     to: "/category/fashion",
-    defaultImg: "https://images.unsplash.com/photo-1445205170230-053b83016050?w=600&h=500&fit=crop",
-    shadow: "shadow-pink-500/10",
-    badgeColor: "bg-pink-500/30 text-pink-200 border-pink-400/40",
+    defaultImg: "https://images.unsplash.com/photo-1483985988355-763728e1935b?w=800&auto=format&fit=crop&q=85",
+    shadow: "shadow-pink-500/15",
+    badgeColor: "bg-pink-600/90 text-white border-pink-400/50",
   },
   {
     id: "cat_home",
     name: "Home & Living",
     sub: "Modern Decor",
-    tag: "Living",
+    tag: "🏡 LUXURY DECOR",
     to: "/category/home",
-    defaultImg: "https://images.unsplash.com/photo-1583847268964-b28dc8f51f92?w=600&h=500&fit=crop",
-    shadow: "shadow-emerald-500/10",
-    badgeColor: "bg-emerald-500/30 text-emerald-200 border-emerald-400/40",
+    defaultImg: "https://images.unsplash.com/photo-1618221195710-dd6b41faaea6?w=800&auto=format&fit=crop&q=85",
+    shadow: "shadow-amber-500/15",
+    badgeColor: "bg-amber-600/90 text-white border-amber-400/50",
   },
   {
     id: "cat_beauty",
     name: "Beauty & Care",
     sub: "Glow Essentials",
-    tag: "Skincare",
+    tag: "💄 GLOW ESSENTIALS",
     to: "/category/beauty",
-    defaultImg: "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=600&h=500&fit=crop",
-    shadow: "shadow-purple-500/10",
-    badgeColor: "bg-purple-500/30 text-purple-200 border-purple-400/40",
+    defaultImg: "https://images.unsplash.com/photo-1598440947619-2c35fc9aa908?w=800&auto=format&fit=crop&q=85",
+    shadow: "shadow-purple-500/15",
+    badgeColor: "bg-purple-600/90 text-white border-purple-400/50",
   },
 ];
 
@@ -428,18 +428,17 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
           </Link>
         )}
 
-        {/* Category tiles */}
-        {CATEGORIES.filter((c) => isVisible(c.id)).map(({ id, name, sub, to, defaultImg, shadow }) => {
+        {/* Category tiles - Ultra-Attractive High-Converting Design */}
+        {CATEGORIES.filter((c) => isVisible(c.id)).map(({ id, name, sub, tag, to, defaultImg, shadow, badgeColor }) => {
           const c = cfg(id);
-          const dynamicImg = categoryImgs[id];
-          const tileImg = validUrl(c.imageUrl, dynamicImg || defaultImg);
+          const tileImg = validUrl(c.imageUrl, defaultImg);
           return (
             <Link
               key={id}
               to={c.link || to}
-              className={`col-span-1 row-span-1 rounded-[1.25rem] md:rounded-[2rem] p-3 sm:p-4 md:p-5 text-white flex flex-col justify-between shadow-md md:shadow-lg ${shadow} group cursor-pointer overflow-hidden relative hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 border border-white/10`}
+              className={`col-span-1 row-span-1 rounded-[1.25rem] md:rounded-[2rem] p-3 sm:p-4 md:p-5 text-white flex flex-col justify-between shadow-md md:shadow-lg ${shadow} group cursor-pointer overflow-hidden relative hover:-translate-y-1 active:scale-[0.98] transition-all duration-300 border border-white/15`}
             >
-              {/* Dynamic Product Background Image from API */}
+              {/* Ultra Attractive Product Image */}
               <img
                 src={tileImg}
                 alt={c.title || name}
@@ -451,14 +450,21 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
               />
               
               {/* Dark Gradient Overlay for Maximum Readability */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/45 to-black/20 group-hover:via-black/35 transition-colors duration-300" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10 group-hover:via-black/20 transition-colors duration-300 pointer-events-none" />
+
+              {/* Top Accent Badge */}
+              <div className="relative z-10 flex justify-start">
+                <span className={`inline-flex items-center text-[7px] sm:text-[9px] font-black px-2 py-0.5 rounded-full border shadow-sm backdrop-blur-md ${badgeColor}`}>
+                  {c.badge || tag}
+                </span>
+              </div>
 
               {/* Bottom Professional Typography */}
               <div className="relative z-10">
                 <h3 className="font-['Plus_Jakarta_Sans',sans-serif] font-black text-white text-sm sm:text-base md:text-lg leading-tight tracking-tight drop-shadow-md group-hover:text-orange-300 transition-colors">
                   {c.title || name}
                 </h3>
-                <p className="text-[10px] sm:text-xs text-white/80 font-medium tracking-wide mt-0.5 line-clamp-1 drop-shadow">
+                <p className="text-[10px] sm:text-xs text-white/90 font-medium tracking-wide mt-0.5 line-clamp-1 drop-shadow">
                   {c.subtitle || sub}
                 </p>
               </div>
