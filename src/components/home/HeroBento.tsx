@@ -359,34 +359,48 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
           );
         })}
 
-        {/* For You Section */}
+        {/* For You Section - Big Clear Product Photos */}
         {isVisible("foryou") && (
-          <div className="col-span-2 md:col-span-1 row-span-2 rounded-[1.5rem] md:rounded-[2.5rem] bg-card border border-border p-4 sm:p-5 md:p-6 shadow-md shadow-black/5">
-            <h3 className="font-['Bebas_Neue'] text-2xl text-foreground mb-3 sm:mb-4" style={titleStyle("foryou", foryouCfg.textStyle)}>
-              {foryouCfg.title || "FOR YOU"}
-            </h3>
-            <div className="space-y-3">
+          <div className="col-span-2 md:col-span-1 row-span-2 rounded-[1.5rem] md:rounded-[2.5rem] bg-card border border-border p-3.5 sm:p-5 md:p-6 shadow-md shadow-black/5 flex flex-col justify-between">
+            <div className="flex items-center justify-between mb-2.5 sm:mb-4">
+              <h3 className="font-['Bebas_Neue'] text-2xl sm:text-3xl text-foreground leading-none tracking-wide" style={titleStyle("foryou", foryouCfg.textStyle)}>
+                {foryouCfg.title || "FOR YOU"}
+              </h3>
+              <span className="text-[10px] md:text-xs font-bold text-orange-600 uppercase tracking-wider">
+                Top Picks
+              </span>
+            </div>
+
+            {/* Responsive Grid: 3-column with big product photos on mobile, vertical list on desktop */}
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 md:grid-cols-1 md:space-y-3 md:gap-0">
               {(forYouItems.length > 0
                 ? forYouItems
                 : [
-                    { id: "fy1", name: "Men's Solid Colour Ban...", price: 350, image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop", slug: "mens-shirt" },
-                    { id: "fy2", name: "Wireless Bluetooth Speaker", price: 450, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop", slug: "speaker" },
-                    { id: "fy3", name: "Smart Fitness Tracker Watch", price: 850, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop", slug: "watch" }
+                    { id: "fy1", name: "Men's Solid Colour Ban...", price: 350, image: "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop", slug: "mens-shirt" },
+                    { id: "fy2", name: "Wireless Bluetooth Speaker", price: 450, image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=300&h=300&fit=crop", slug: "speaker" },
+                    { id: "fy3", name: "Smart Fitness Tracker Watch", price: 850, image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=300&h=300&fit=crop", slug: "watch" }
                   ]
               ).map((p) => (
                 <Link
                   key={p.id}
                   to={`/product/${p.slug || p.id}`}
-                  className="flex items-center gap-3 group active:opacity-70"
+                  className="group flex flex-col md:flex-row items-center gap-2 md:gap-3 p-1.5 sm:p-2 md:p-1.5 rounded-xl sm:rounded-2xl hover:bg-muted/60 transition-all border border-border/60 md:border-transparent bg-muted/20 md:bg-transparent active:scale-[0.98]"
                 >
-                  <div className="w-12 h-12 rounded-xl overflow-hidden shrink-0 border border-border bg-muted">
-                    <img src={p.image} alt={p.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                  <div className="w-full aspect-square md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden shrink-0 border border-border/80 bg-white shadow-sm flex items-center justify-center">
+                    <img
+                      src={p.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop"}
+                      alt={p.name}
+                      className="w-full h-full object-cover group-hover:scale-108 transition-transform duration-300"
+                      onError={(e) => {
+                        (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=300&h=300&fit=crop";
+                      }}
+                    />
                   </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-xs font-bold text-foreground line-clamp-1 group-hover:text-orange-600">
+                  <div className="flex-1 min-w-0 text-center md:text-left w-full">
+                    <p className="text-[11px] sm:text-xs font-bold text-foreground line-clamp-1 group-hover:text-orange-600 transition-colors">
                       {p.name}
                     </p>
-                    <p className="text-xs font-black text-orange-600">
+                    <p className="text-xs sm:text-sm font-black text-orange-600 mt-0.5">
                       ৳ {p.price.toLocaleString("en-BD")}
                     </p>
                   </div>
@@ -396,30 +410,47 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
           </div>
         )}
 
-        {/* Trending product */}
+        {/* Trending product - Clear, High-Visibility Full Bleed Product Card */}
         {isVisible("trending") && (
           <Link
             to={trendingCfg.link || (trend ? `/product/${trend.slug}` : "/products")}
-            className="col-span-2 md:col-span-1 row-span-2 rounded-[1.5rem] md:rounded-[2.5rem] bg-neutral-900 overflow-hidden relative group shadow-lg active:scale-[0.99] transition-transform"
+            className="col-span-2 md:col-span-1 row-span-2 rounded-[1.5rem] md:rounded-[2.5rem] bg-[#0f0f14] overflow-hidden relative group shadow-lg active:scale-[0.99] transition-all flex flex-col justify-between border border-white/10"
           >
+            {/* Background product photo */}
             <img
-              src={trendingCfg.imageUrl || trend?.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=800&h=1000&fit=crop"}
-              alt="Trending Product"
-              className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-700"
-              style={imgStyle(trendingCfg)}
+              src={trendingCfg.imageUrl || trend?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=1000&fit=crop"}
+              alt={trendingCfg.title || trend?.name || "Trending Product"}
+              className="absolute inset-0 w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-700"
+              style={{ objectFit: "cover", objectPosition: "center" }}
+              onError={(e) => {
+                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=800&h=1000&fit=crop";
+              }}
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/30 to-transparent" />
 
-            <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-5 md:p-6 text-white">
-              <span className="inline-block font-bold bg-orange-600 text-white px-3 py-1 rounded-full uppercase tracking-wider text-[9px]">
+            {/* Subtle Dark Gradient Overlay for Maximum Photo Clarity & Text Readability */}
+            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/25 to-black/10 pointer-events-none" />
+
+            {/* Top Badge */}
+            <div className="relative z-10 p-3 sm:p-4 flex justify-between items-center">
+              <span className="inline-flex items-center gap-1 font-black bg-gradient-to-r from-orange-500 to-amber-500 text-white px-2.5 py-0.5 rounded-full uppercase tracking-wider text-[9px] sm:text-[10px] shadow-md">
+                <Zap className="w-3 h-3 fill-white" />
                 {trendingCfg.subtitle || "TRENDING"}
               </span>
-              <h3 className="font-['Bebas_Neue'] text-2xl sm:text-3xl mt-2 leading-tight tracking-wider line-clamp-2" style={titleStyle("trending", trendingCfg.textStyle)}>
+            </div>
+
+            {/* Bottom Info */}
+            <div className="relative z-10 p-3 sm:p-4 md:p-5 pt-8">
+              <h3 className="font-['Bebas_Neue'] text-xl sm:text-2xl md:text-3xl text-white leading-tight tracking-wide line-clamp-1 drop-shadow-md group-hover:text-orange-300 transition-colors" style={titleStyle("trending", trendingCfg.textStyle)}>
                 {trendingCfg.title || trend?.name || "X1 WIRELESS SPEAKER"}
               </h3>
-              <p className="text-base sm:text-lg font-black mt-1 text-orange-400">
-                ৳ {(trend?.price || 450).toLocaleString("en-BD")}
-              </p>
+              <div className="flex items-center justify-between mt-1">
+                <p className="text-sm sm:text-base md:text-lg font-black text-orange-400 drop-shadow">
+                  ৳ {(trend?.price || 450).toLocaleString("en-BD")}
+                </p>
+                <span className="text-[10px] font-bold text-white/90 bg-white/20 backdrop-blur-md px-2.5 py-0.5 rounded-full">
+                  View →
+                </span>
+              </div>
             </div>
           </Link>
         )}
