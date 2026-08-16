@@ -8,9 +8,10 @@ async function capture() {
       args: ['--no-sandbox']
     });
     const page = await browser.newPage();
-    await page.setViewport({ width: 1280, height: 800 });
+    await page.setViewport({ width: 1440, height: 900 });
     await page.goto('http://localhost:8080/', { waitUntil: 'networkidle2' });
-    await page.screenshot({ path: 'scratch/header_updated_screenshot.png' });
+    await new Promise(r => setTimeout(r, 2000));
+    await page.screenshot({ path: 'scratch/latest_screen.png' });
     await browser.close();
     console.log("Screenshot saved successfully");
   } catch (err) {

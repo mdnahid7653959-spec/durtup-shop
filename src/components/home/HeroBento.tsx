@@ -1,6 +1,6 @@
 import { memo, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { Cpu, Shirt, Home as HomeIcon, Sparkles as SparklesIcon } from "lucide-react";
+import { Cpu, Shirt, Home as HomeIcon, Sparkles as SparklesIcon, ShoppingCart, Zap } from "lucide-react";
 import type { Product } from "@/components/products/ProductCard";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -111,7 +111,7 @@ function useCountdown(hours = 4) {
   const h = String(Math.floor(t / 3600)).padStart(2, "0");
   const m = String(Math.floor((t % 3600) / 60)).padStart(2, "0");
   const s = String(t % 60).padStart(2, "0");
-  return `${h}:${m}:${s}`;
+  return { h, m, s, formatted: `${h}:${m}:${s}` };
 }
 
 function validUrl(url?: string, fallback = ""): string {
@@ -212,42 +212,93 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
           </Link>
         )}
 
-        {/* Flash deals */}
+        {/* Flash deals - Luxury Gold Framed Banner */}
         {isVisible("flash") && (
           <Link
             to={flashCfg.link || "/products?filter=flash-sale"}
-            className="col-span-2 row-span-1 rounded-[1.25rem] md:rounded-[2rem] bg-card border border-border p-3 sm:p-4 md:p-6 flex items-center justify-between shadow-md md:shadow-xl shadow-black/5 hover:-translate-y-1 active:scale-[0.99] transition-transform overflow-hidden relative"
+            className="col-span-2 row-span-1 rounded-[1.25rem] md:rounded-[2rem] bg-gradient-to-r from-[#fefdfa] via-[#f7f2e8] to-[#f0e7d8] border-2 border-[#d5b577] p-3 sm:p-4 md:p-6 flex items-center justify-between shadow-md md:shadow-xl shadow-[#cbb07a]/15 hover:-translate-y-0.5 active:scale-[0.99] transition-all overflow-hidden relative group"
           >
-            <img
-              src={validUrl(flashCfg.imageUrl, "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&h=400&fit=crop")}
-              alt="Flash Sale Banner"
-              className="absolute inset-0 w-full h-full object-cover opacity-25"
-              style={imgStyle(flashCfg)}
-              onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?w=600&h=400&fit=crop";
-              }}
-            />
+            {/* Inner Gold Inset Border */}
+            <div className="absolute inset-1 sm:inset-1.5 md:inset-2 rounded-[1rem] md:rounded-[1.6rem] border border-[#d5b577]/70 pointer-events-none z-10" />
 
-            <div className="flex flex-col min-w-0 relative z-10">
-              <div className="flex items-center gap-1.5 sm:gap-2 mb-1 md:mb-2">
-                <span className="w-2 h-2 rounded-full bg-[#e84393] animate-pulse" />
-                <span className="text-[#e84393] font-bold text-[9px] md:text-[10px] uppercase tracking-widest tabular-nums">
-                  Ends in {countdown}
-                </span>
+            {/* Geometric Gold Diamond Decorative Lines on Left */}
+            <svg className="absolute -left-4 -top-6 w-44 h-44 sm:w-56 sm:h-56 text-[#d5b577]/30 pointer-events-none z-0" viewBox="0 0 100 100" fill="none" stroke="currentColor" strokeWidth="1">
+              <polygon points="50,5 95,50 50,95 5,50" />
+              <polygon points="50,15 85,50 50,85 15,50" />
+              <circle cx="50" cy="50" r="42" strokeDasharray="2,3" />
+            </svg>
+
+            {/* Subtle Tech Circuit / Wave Watermark on Right */}
+            <svg className="absolute right-12 top-0 w-64 h-full text-[#d5b577]/20 pointer-events-none z-0" viewBox="0 0 200 100" fill="none" stroke="currentColor" strokeWidth="0.8">
+              <path d="M0,80 Q50,20 100,70 T200,40" />
+              <path d="M20,90 Q70,30 120,80 T200,60" />
+              <line x1="80" y1="10" x2="80" y2="40" strokeDasharray="2,2" />
+              <line x1="120" y1="15" x2="120" y2="55" strokeDasharray="2,2" />
+            </svg>
+
+            {/* Top Timer Plaque / Tab */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 sm:left-auto sm:translate-x-0 sm:left-[30%] md:left-[35%] z-20 bg-gradient-to-b from-[#f3e8d2] to-[#e8d7b5] border-b border-x border-[#d5b577] px-3 sm:px-4 py-0.5 sm:py-1 rounded-b-xl sm:rounded-b-2xl flex items-center gap-1.5 sm:gap-2 shadow-sm">
+              <span className="font-['Plus_Jakarta_Sans',sans-serif] font-black text-[#0d1f4d] text-[9px] sm:text-[10px] md:text-xs tracking-wider uppercase">
+                ENDS IN
+              </span>
+              <div className="flex items-center gap-0.5 sm:gap-1 text-white font-mono text-[9px] sm:text-[11px] md:text-xs font-black">
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.h[0]}</span>
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.h[1]}</span>
+                <span className="text-[#0d1f4d] font-black leading-tight">:</span>
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.m[0]}</span>
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.m[1]}</span>
+                <span className="text-[#0d1f4d] font-black leading-tight">:</span>
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.s[0]}</span>
+                <span className="bg-[#1f242d] px-1 py-0.5 rounded-[3px] shadow-sm leading-tight">{countdown.s[1]}</span>
               </div>
-              <h2 className="font-['Bebas_Neue'] text-2xl sm:text-3xl text-foreground leading-none" style={titleStyle("flash", flashCfg.textStyle)}>
-                {flashCfg.title || "Flash Sale Deals"}
+            </div>
+
+            {/* Left Main Title & Subtitle */}
+            <div className="flex flex-col min-w-0 relative z-10 pt-3 sm:pt-4 md:pt-2">
+              <h2
+                className="font-['Bebas_Neue'] text-3xl sm:text-4xl md:text-5xl lg:text-[3.25rem] text-[#0d1f4d] leading-[0.88] tracking-tight drop-shadow-sm group-hover:text-orange-600 transition-colors"
+                style={titleStyle("flash", flashCfg.textStyle)}
+              >
+                {flashCfg.title || "FLASH SALE DEALS"}
               </h2>
-              <p className="text-muted-foreground font-bold uppercase tracking-wider text-xs mt-0.5" style={subtitleStyle("flash", flashCfg.textStyle)}>
-                {flashCfg.subtitle || "Up to 70% Off"}
+              <p
+                className="text-[#0d1f4d] font-extrabold uppercase tracking-wider sm:tracking-widest text-[10px] sm:text-xs md:text-sm mt-1 sm:mt-2"
+                style={subtitleStyle("flash", flashCfg.textStyle)}
+              >
+                {flashCfg.subtitle || "UP TO 70% OFF"}
               </p>
             </div>
-            <div className="flex gap-1.5 sm:gap-2 md:gap-3 shrink-0 relative z-10">
-              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-muted rounded-xl sm:rounded-2xl overflow-hidden shadow-md">
-                <img src={flashItems[0]?.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop"} alt="Flash Item" className="w-full h-full object-cover" />
+
+            {/* Right Product Thumbnails & Bottom CTA */}
+            <div className="flex flex-col items-end shrink-0 relative z-10">
+              <div className="flex gap-1.5 sm:gap-2.5 md:gap-3 mb-1">
+                <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-md border border-[#decab0] p-0.5 group-hover:scale-105 transition-transform duration-300">
+                  <img
+                    src={flashItems[0]?.image || "https://images.unsplash.com/photo-1602810318383-e386cc2a3ccf?w=200&h=200&fit=crop"}
+                    alt="Flash Item 1"
+                    className="w-full h-full object-cover rounded-[10px] sm:rounded-[14px]"
+                  />
+                </div>
+                <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-white rounded-xl sm:rounded-2xl overflow-hidden shadow-md border border-[#decab0] p-0.5 group-hover:scale-105 transition-transform duration-300 hidden sm:block">
+                  <img
+                    src={flashItems[1]?.image || "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=200&h=200&fit=crop"}
+                    alt="Flash Item 2"
+                    className="w-full h-full object-cover rounded-[10px] sm:rounded-[14px]"
+                  />
+                </div>
               </div>
-              <div className="w-12 h-12 sm:w-16 sm:h-16 md:w-20 md:h-20 bg-muted rounded-xl sm:rounded-2xl overflow-hidden shadow-md hidden sm:block">
-                <img src={flashItems[1]?.image || "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=200&h=200&fit=crop"} alt="Flash Item" className="w-full h-full object-cover" />
+
+              {/* Glowing CTA Button */}
+              <div className="inline-flex items-center gap-1.5 bg-gradient-to-r from-[#ff8a00] via-[#ff6a00] to-[#f24e00] text-white px-2.5 sm:px-3.5 py-0.5 sm:py-1 rounded-full shadow-lg shadow-orange-500/25 border border-white/50 group-hover:scale-105 transition-transform">
+                <div className="flex flex-col text-left leading-none">
+                  <span className="text-[7px] sm:text-[8px] font-black italic text-amber-200 uppercase tracking-wider">
+                    FLASH SALE
+                  </span>
+                  <span className="text-[8px] sm:text-[10px] font-black text-white uppercase tracking-wider">
+                    SHOP NOW
+                  </span>
+                </div>
+                <ShoppingCart className="w-3 h-3 sm:w-3.5 sm:h-3.5 text-cyan-300 fill-cyan-300/30" />
               </div>
             </div>
           </Link>
