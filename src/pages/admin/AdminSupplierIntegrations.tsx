@@ -17,10 +17,18 @@ import {
   CheckCircle2, XCircle, AlertCircle, Trash2, Edit, 
   Plus, RefreshCw, Play, Link2, ShieldCheck, HelpCircle,
   TrendingUp, Clock, AlertTriangle, ArrowRight, ArrowLeft,
-  Terminal, ShieldAlert, Cpu, Sparkles, Check, Database, Eye
+  Terminal, ShieldAlert, Cpu, Sparkles, Check, Database, Eye,
+  Loader2, Calculator, Save
 } from "lucide-react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { adminDb } from "@/lib/adminDb";
+import { 
+  getPricingMarginConfig, 
+  savePricingMarginConfig, 
+  syncPricingMarginFromDb, 
+  calculateProductPrice,
+  type PricingMarginConfig 
+} from "@/utils/pricingMargin";
 
 interface SupplierIntegration {
   id: string;
@@ -121,9 +129,33 @@ export default function AdminSupplierIntegrations() {
   const [pinging, setPinging] = useState<Record<string, boolean>>({});
   const [syncing, setSyncing] = useState<Record<string, boolean>>({});
 
+  // Pricing Margin State for supplier integration tab
+  const [pricingMargin, setPricingMargin] = useState<PricingMarginConfig>(getPricingMarginConfig());
+  const [savingPricing, setSavingPricing] = useState(false);
+  const [simBasePrice, setSimBasePrice] = useState<number>(950);
+
   useEffect(() => {
     fetchData();
+    syncPricingMarginFromDb().then(cfg => {
+      if (cfg) setPricingMargin(cfg);
+    });
   }, []);
+
+  const handlePricingSave = async () => {
+    setSavingPricing(true);
+    const success = await savePricingMarginConfig(pricingMargin);
+    if (success) {
+      toast({
+        title: "Profit Margin Settings Saved!",
+        description: pricingMargin.enabled
+          ? `Active margin: ${pricingMargin.type === 'percentage' ? `+${pricingMargin.marginValue}%` : `+৳${pricingMargin.marginValue}`} applied to all supplier products.`
+          : "Profit margin disabled. Store will show direct supplier cost prices.",
+      });
+    } else {
+      toast({ variant: "destructive", title: "Error", description: "Failed to save profit margin settings." });
+    }
+    setSavingPricing(false);
+  };
 
   const fetchData = async () => {
     setLoading(true);
@@ -672,6 +704,9 @@ export default function AdminSupplierIntegrations() {
                 <TabsTrigger value="suppliers" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-none rounded-none px-0 py-3 font-semibold text-xs gap-2">
                   <Globe className="h-4 w-4" /> Supplier Channels
                 </TabsTrigger>
+                <TabsTrigger value="pricing" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-none rounded-none px-0 py-3 font-semibold text-xs gap-2">
+                  <Percent className="h-4 w-4" /> Pricing & Profit Margin
+                </TabsTrigger>
                 <TabsTrigger value="logs" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-orange-500 data-[state=active]:shadow-none rounded-none px-0 py-3 font-semibold text-xs gap-2">
                   <Activity className="h-4 w-4" /> Live Sync Logs
                 </TabsTrigger>
@@ -767,7 +802,329 @@ export default function AdminSupplierIntegrations() {
               )}
             </TabsContent>
 
-            {/* 2. Logs Tab */}
+            {/* 2. Pricing & Profit Margin Tab */}
+            <TabsContent value="pricing" className="m-0 p-6 space-y-6">
+              <div className="grid gap-6 lg:grid-cols-3">
+                {/* Left Column: Margin Configuration (2 cols) */}
+                <div className="lg:col-span-2 space-y-6">
+                  <Card className="border-primary/20 shadow-sm">
+                    <CardHeader className="bg-muted/30 pb-4">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Percent className="h-5 w-5 text-primary" />
+                            Supplier Product Profit Margin Controls
+                          </CardTitle>
+                          <CardDescription>
+                            Add your desired profit margin on top of supplier/API product prices across your entire store.
+                          </CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 bg-background px-3 py-1.5 rounded-full border shadow-sm">
+                          <Label htmlFor="supplier-margin-toggle" className="text-xs font-semibold cursor-pointer">
+                            {pricingMargin.enabled ? "Margin ACTIVE" : "Direct Cost (OFF)"}
+                          </Label>
+                          <Switch
+                            id="supplier-margin-toggle"
+                            checked={pricingMargin.enabled}
+                            onCheckedChange={(checked) => setPricingMargin({ ...pricingMargin, enabled: checked })}
+                          />
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-6 pt-6">
+                      {/* Margin Mode Selection */}
+                      <div className="space-y-3">
+                        <Label className="text-sm font-semibold">Margin Calculation Type</Label>
+                        <div className="grid grid-cols-2 gap-3">
+                          <button
+                            type="button"
+                            onClick={() => setPricingMargin({ ...pricingMargin, type: "percentage" })}
+                            className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all ${
+                              pricingMargin.type === "percentage"
+                                ? "border-primary bg-primary/10 ring-1 ring-primary text-foreground"
+                                : "border-border hover:border-muted-foreground/40 bg-card text-muted-foreground"
+                            }`}
+                          >
+                            <div>
+                              <div className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
+                                <Percent className="h-4 w-4 text-primary" />
+                                Percentage Markup (%)
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                Add a percentage on top of base cost (e.g. +20%)
+                              </div>
+                            </div>
+                            {pricingMargin.type === "percentage" && (
+                              <CheckCircle2 className="h-4 w-4 text-primary shrink-0 ml-2" />
+                            )}
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => setPricingMargin({ ...pricingMargin, type: "fixed" })}
+                            className={`flex items-center justify-between p-3.5 rounded-xl border text-left transition-all ${
+                              pricingMargin.type === "fixed"
+                                ? "border-primary bg-primary/10 ring-1 ring-primary text-foreground"
+                                : "border-border hover:border-muted-foreground/40 bg-card text-muted-foreground"
+                            }`}
+                          >
+                            <div>
+                              <div className="font-semibold text-sm flex items-center gap-1.5 text-foreground">
+                                <DollarSign className="h-4 w-4 text-primary" />
+                                Fixed Amount (৳)
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-0.5">
+                                Add a fixed profit amount (e.g. +৳150 / product)
+                              </div>
+                            </div>
+                            {pricingMargin.type === "fixed" && (
+                              <CheckCircle2 className="h-4 w-4 text-primary shrink-0 ml-2" />
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* Margin Value Input */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="supplier-margin-value" className="text-sm font-semibold">
+                            Profit Margin Value ({pricingMargin.type === "percentage" ? "%" : "৳"})
+                          </Label>
+                          <span className="text-xs text-muted-foreground">
+                            {pricingMargin.type === "percentage"
+                              ? `Increases prices by +${pricingMargin.marginValue}%`
+                              : `Adds +৳${pricingMargin.marginValue} to each product`}
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            id="supplier-margin-value"
+                            type="number"
+                            min="0"
+                            step={pricingMargin.type === "percentage" ? "1" : "10"}
+                            value={pricingMargin.marginValue}
+                            onChange={(e) =>
+                              setPricingMargin({
+                                ...pricingMargin,
+                                marginValue: Math.max(0, parseFloat(e.target.value) || 0),
+                              })
+                            }
+                            className="text-lg font-bold pl-3 pr-12 h-11"
+                            placeholder="0"
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                            {pricingMargin.type === "percentage" ? "%" : "৳"}
+                          </div>
+                        </div>
+
+                        {/* Quick Preset Buttons */}
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <span className="text-xs text-muted-foreground self-center mr-1">Quick Presets:</span>
+                          {pricingMargin.type === "percentage" ? (
+                            <>
+                              {[0, 10, 15, 20, 25, 30, 40, 50].map((pct) => (
+                                <button
+                                  key={pct}
+                                  type="button"
+                                  onClick={() => setPricingMargin({ ...pricingMargin, marginValue: pct })}
+                                  className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
+                                    pricingMargin.marginValue === pct
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-muted/50 hover:bg-muted text-foreground border-border"
+                                  }`}
+                                >
+                                  {pct === 0 ? "0% (Direct Cost)" : `+${pct}%`}
+                                </button>
+                              ))}
+                            </>
+                          ) : (
+                            <>
+                              {[0, 50, 100, 150, 200, 300, 500].map((amt) => (
+                                <button
+                                  key={amt}
+                                  type="button"
+                                  onClick={() => setPricingMargin({ ...pricingMargin, marginValue: amt })}
+                                  className={`px-2.5 py-1 text-xs font-medium rounded-lg border transition-all ${
+                                    pricingMargin.marginValue === amt
+                                      ? "bg-primary text-primary-foreground border-primary"
+                                      : "bg-muted/50 hover:bg-muted text-foreground border-border"
+                                  }`}
+                                >
+                                  {amt === 0 ? "৳0 (Direct)" : `+৳${amt}`}
+                                </button>
+                              ))}
+                            </>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Strikethrough Regular Price Markup */}
+                      <div className="space-y-2 pt-2 border-t">
+                        <div className="flex items-center justify-between">
+                          <Label htmlFor="supplier-regular-markup" className="text-sm font-semibold">
+                            Regular / Strike-through Comparison Markup (%)
+                          </Label>
+                          <span className="text-xs text-muted-foreground">
+                            Creates crossed-out original price & discount badge
+                          </span>
+                        </div>
+                        <div className="relative">
+                          <Input
+                            id="supplier-regular-markup"
+                            type="number"
+                            min="0"
+                            max="200"
+                            value={pricingMargin.regularPriceMarkupPercent}
+                            onChange={(e) =>
+                              setPricingMargin({
+                                ...pricingMargin,
+                                regularPriceMarkupPercent: Math.max(0, parseFloat(e.target.value) || 0),
+                              })
+                            }
+                            className="pl-3 pr-12"
+                          />
+                          <div className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                            %
+                          </div>
+                        </div>
+                        <p className="text-xs text-muted-foreground">
+                          Example: At 35%, a ৳1,000 product will show regular price ৳1,350 with a -26% discount badge.
+                        </p>
+                      </div>
+
+                      {/* Psychological Rounding Toggle */}
+                      <div className="flex items-center justify-between pt-2 border-t">
+                        <div className="space-y-0.5">
+                          <Label htmlFor="supplier-rounding-toggle" className="text-sm font-semibold cursor-pointer">
+                            Psychological Price Rounding (ends in 9 or 90)
+                          </Label>
+                          <p className="text-xs text-muted-foreground">
+                            Automatically rounds prices (e.g. ৳494 → ৳499) for better marketing appeal.
+                          </p>
+                        </div>
+                        <Switch
+                          id="supplier-rounding-toggle"
+                          checked={pricingMargin.roundTo99}
+                          onCheckedChange={(checked) => setPricingMargin({ ...pricingMargin, roundTo99: checked })}
+                        />
+                      </div>
+
+                      <div className="pt-4">
+                        <Button onClick={handlePricingSave} disabled={savingPricing} className="w-full sm:w-auto h-11 px-6 bg-orange-600 hover:bg-orange-500 text-white">
+                          {savingPricing ? (
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                          ) : (
+                            <Save className="h-4 w-4 mr-2" />
+                          )}
+                          Save & Apply Profit Margin Across Store
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Right Column: Live Price Simulator Card (1 col) */}
+                <div className="space-y-6">
+                  <Card className="border-primary/30 bg-gradient-to-br from-card via-card to-primary/5 shadow-md">
+                    <CardHeader className="pb-3 border-b">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <Calculator className="h-5 w-5 text-primary" />
+                        Live Price Simulator
+                      </CardTitle>
+                      <CardDescription className="text-xs">
+                        See exactly how products will appear to customers with current margin.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4 pt-4">
+                      <div>
+                        <Label htmlFor="supplier-sim-price" className="text-xs font-semibold">
+                          Supplier / Base Cost (৳)
+                        </Label>
+                        <div className="relative mt-1">
+                          <Input
+                            id="supplier-sim-price"
+                            type="number"
+                            value={simBasePrice}
+                            onChange={(e) => setSimBasePrice(Math.max(0, parseFloat(e.target.value) || 0))}
+                            className="font-semibold pl-8"
+                          />
+                          <div className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                            ৳
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Calculated Outcome */}
+                      {(() => {
+                        const outcome = calculateProductPrice(simBasePrice, pricingMargin);
+                        const profit = outcome.price - simBasePrice;
+                        const discountPct = outcome.originalPrice > outcome.price
+                          ? Math.round((1 - outcome.price / outcome.originalPrice) * 100)
+                          : 0;
+
+                        return (
+                          <div className="rounded-xl bg-muted/60 p-4 space-y-3 border">
+                            <div className="flex justify-between items-center text-xs text-muted-foreground pb-2 border-b border-border/50">
+                              <span>Supplier Cost:</span>
+                              <span className="font-semibold text-foreground">৳{simBasePrice.toLocaleString()}</span>
+                            </div>
+
+                            <div className="flex justify-between items-center text-xs text-muted-foreground pb-2 border-b border-border/50">
+                              <span>Added Profit Margin:</span>
+                              <span className={`font-semibold ${profit > 0 ? "text-green-600" : "text-foreground"}`}>
+                                {profit > 0 ? `+৳${profit.toLocaleString()}` : "৳0 (Direct)"}
+                              </span>
+                            </div>
+
+                            {/* Customer Price Display */}
+                            <div className="pt-1">
+                              <span className="text-xs font-medium text-muted-foreground block mb-1">
+                                Displayed Customer Price:
+                              </span>
+                              <div className="flex items-baseline gap-2 flex-wrap">
+                                <span className="text-2xl font-black text-orange-600">
+                                  ৳{outcome.price.toLocaleString()}
+                                </span>
+                                {outcome.originalPrice > outcome.price && (
+                                  <>
+                                    <span className="text-sm text-muted-foreground line-through">
+                                      ৳{outcome.originalPrice.toLocaleString()}
+                                    </span>
+                                    <span className="text-xs font-bold px-1.5 py-0.5 rounded bg-red-500 text-white">
+                                      -{discountPct}%
+                                    </span>
+                                  </>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Profit Highlight Badge */}
+                            <div className="mt-2 pt-2 border-t flex items-center justify-between text-xs">
+                              <span className="font-medium text-muted-foreground">Net Margin Per Sale:</span>
+                              <span className="font-bold text-green-600 bg-green-500/10 px-2 py-0.5 rounded">
+                                {profit >= 0 ? `+৳${profit.toLocaleString()} Profit` : `৳0`}
+                              </span>
+                            </div>
+                          </div>
+                        );
+                      })()}
+
+                      <div className="rounded-lg bg-orange-500/10 p-3 text-xs text-muted-foreground space-y-1">
+                        <div className="flex items-center gap-1.5 font-semibold text-orange-600">
+                          <Sparkles className="h-3.5 w-3.5" />
+                          Automatic Consistency
+                        </div>
+                        <p>
+                          Once saved, this margin applies immediately across the Home page, Category pages, Search, Product Details, and Checkout.
+                        </p>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </div>
+              </div>
+            </TabsContent>
+
+            {/* 3. Logs Tab */}
             <TabsContent value="logs" className="m-0 p-6 space-y-4">
               <div className="rounded-xl border border-border/40 bg-zinc-950 font-mono text-[11px] leading-relaxed text-zinc-300 overflow-hidden">
                 <div className="bg-zinc-900 px-4 py-2 border-b border-zinc-800 flex items-center justify-between">
