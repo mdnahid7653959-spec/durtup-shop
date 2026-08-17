@@ -111,37 +111,38 @@ export default function Orders() {
         snap.forEach((d) => {
           const data = d.data();
           const uid = data.user_id || data.userId;
-          if (uid === user.id || (user.email && uid === user.email) || !uid) {
-            const pid = d.id;
-            const orderNum = data.order_number || data.orderNumber || pid.slice(0, 10);
-            const status = (data.status || "pending").toLowerCase();
-            const total = Number(data.totalAmount || data.price || data.total || 0);
-            const createdAt = data.createdAt || data.created_at || new Date().toISOString();
-            const paymentStatus = (data.payment_status || data.paymentStatus || "pending").toLowerCase();
+          const isUserMatch = uid === user.id || (user.email && uid === user.email);
+          const pid = d.id;
+          const orderNum = data.order_number || data.orderNumber || (pid.startsWith("ORD-") ? pid : pid.slice(0, 10));
+          const status = (data.status || "pending").toLowerCase();
+          const total = Number(data.totalAmount || data.price || data.total || 0);
+          const createdAt = data.createdAt || data.created_at || new Date().toISOString();
+          const paymentStatus = (data.payment_status || data.paymentStatus || "pending").toLowerCase();
 
-            let existingKey: string | null = null;
-            for (const [k, v] of orderMap.entries()) {
-              if (v.id === pid || v.order_number === orderNum || k === pid || k === orderNum) {
-                existingKey = k;
-                break;
-              }
+          // Check if matches existing order in map
+          let existingKey: string | null = null;
+          for (const [k, v] of orderMap.entries()) {
+            if (v.id === pid || v.order_number === orderNum || k === pid || k === orderNum) {
+              existingKey = k;
+              break;
             }
+          }
 
-            if (existingKey) {
-              const existing = orderMap.get(existingKey)!;
-              if (data.status) existing.status = status;
-              if (data.payment_status) existing.payment_status = paymentStatus;
-              if (total > 0) existing.total = total;
-            } else {
-              orderMap.set(orderNum || pid, {
-                id: pid,
-                order_number: orderNum,
-                status: status,
-                total: total,
-                created_at: createdAt,
-                payment_status: paymentStatus
-              });
-            }
+          if (existingKey) {
+            const existing = orderMap.get(existingKey)!;
+            if (data.status) existing.status = status;
+            if (data.payment_status) existing.payment_status = paymentStatus;
+            if (total > 0) existing.total = total;
+          } else if (isUserMatch && total > 0) {
+            // Only add new entry if user strictly matches and total > 0 (prevents 0-taka ghost duplicates)
+            orderMap.set(orderNum || pid, {
+              id: pid,
+              order_number: orderNum,
+              status: status,
+              total: total,
+              created_at: createdAt,
+              payment_status: paymentStatus
+            });
           }
         });
       }
@@ -160,6 +161,9 @@ export default function Orders() {
               if (v.id === ao.id || v.order_number === ao.order_number || v.order_number === ao.id || k === ao.id || k === ao.order_number) {
                 if (ao.status) v.status = ao.status.toLowerCase();
                 if (ao.payment_status) v.payment_status = ao.payment_status.toLowerCase();
+                if (Number(ao.total || ao.totalAmount || 0) > 0 && v.total === 0) {
+                  v.total = Number(ao.total || ao.totalAmount || 0);
+                }
               }
             }
           });
@@ -167,9 +171,10 @@ export default function Orders() {
       }
     } catch {}
 
-    const list = Array.from(orderMap.values()).sort(
-      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
-    );
+    // 4. Filter out any zero-taka ghost duplicates and sort by date
+    const list = Array.from(orderMap.values())
+      .filter((o) => o.total > 0 || o.id)
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
 
     setOrders(list);
     setLoadingOrders(false);

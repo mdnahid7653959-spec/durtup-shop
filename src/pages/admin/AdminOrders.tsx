@@ -370,18 +370,11 @@ export default function AdminOrders() {
             totalAmount: order.total,
             courier_name: order.courier_name || null,
             tracking_number: order.tracking_number || null,
+            user_id: order.user_id || undefined,
+            customer_name: order.customer_name || undefined,
+            customer_phone: order.customer_phone || undefined,
             updated_at: nowIso
           }, { merge: true });
-
-          if (order.order_number && order.order_number !== order.id) {
-            await setDoc(doc(db, "orders", order.order_number), {
-              status: order.status,
-              payment_status: order.payment_status,
-              courier_name: order.courier_name || null,
-              tracking_number: order.tracking_number || null,
-              updated_at: nowIso
-            }, { merge: true });
-          }
         } catch (err) {
           console.warn(`Firestore save error for order ${order.id}:`, err);
         }
