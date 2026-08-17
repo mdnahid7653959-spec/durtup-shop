@@ -1,17 +1,28 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { Package, ChevronRight, Search, Filter, Clock, CheckCircle, Truck, XCircle } from "lucide-react";
+import { Package, ChevronRight, Search, Clock, CheckCircle, Truck, XCircle, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, onSnapshot } from "firebase/firestore";
+import { collection, getDocs, onSnapshot, doc, deleteDoc } from "firebase/firestore";
 
 interface Order {
   id: string;
@@ -52,7 +63,7 @@ export default function Orders() {
         fetchOrders();
       }, () => {});
 
-      // Storage event listener for cross-tab admin updates
+      // Storage event listener for cross-tab updates
       const onStorage = () => fetchOrders();
       window.addEventListener("storage", onStorage);
 
@@ -108,7 +119,6 @@ export default function Orders() {
             const createdAt = data.createdAt || data.created_at || new Date().toISOString();
             const paymentStatus = (data.payment_status || data.paymentStatus || "pending").toLowerCase();
 
-            // Check if exists by order_number or ID
             let existingKey: string | null = null;
             for (const [k, v] of orderMap.entries()) {
               if (v.id === pid || v.order_number === orderNum || k === pid || k === orderNum) {
@@ -165,12 +175,126 @@ export default function Orders() {
     setLoadingOrders(false);
   };
 
+  const handleDeleteOrder = async (orderId: string, orderNumber: string) => {
+    try {
+      // 1. Optimistically remove from state
+      setOrders(prev => prev.filter(o => o.id !== orderId && o.order_number !== orderNumber));
+
+      // 2. Delete from Firestore
+      try {
+        await deleteDoc(doc(db, "orders", orderId));
+        if (orderNumber && orderNumber !== orderId) {
+          await deleteDoc(doc(db, "orders", orderNumber));
+        }
+      } catch (e) {
+        console.warn("Firestore delete order error:", e);
+      }
+
+      // 3. Delete from Supabase
+      try {
+        await supabase.from("orders").delete().eq("id", orderId);
+        if (orderNumber) {
+          await supabase.from("orders").delete().eq("order_number", orderNumber);
+        }
+      } catch (e) {
+        console.warn("Supabase delete order error:", e);
+      }
+
+      // 4. Delete from localStorage
+      try {
+        const removeMatching = (storageKey: string) => {
+          const raw = localStorage.getItem(storageKey);
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              const filtered = list.filter((o: any) => o.id !== orderId && o.order_number !== orderNumber && o.order_number !== orderId);
+              localStorage.setItem(storageKey, JSON.stringify(filtered));
+            }
+          }
+        };
+        removeMatching("enterprise_admin_orders");
+        removeMatching("local_orders");
+      } catch {}
+    } catch (err) {
+      console.error("Delete order failed:", err);
+    }
+  };
+
   const filteredOrders = orders.filter(order =>
     order.order_number.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const getStatusInfo = (status: string) => {
     return statusConfig[status] || statusConfig.pending;
+  };
+
+  const renderOrderCard = (order: Order) => {
+    const statusInfo = getStatusInfo(order.status || "pending");
+    const StatusIcon = statusInfo.icon;
+    return (
+      <Card key={order.id} className="hover:shadow-md transition-shadow border">
+        <CardContent className="p-4 sm:p-6">
+          <div className="space-y-3">
+            <div className="flex items-center justify-between gap-2 flex-wrap">
+              <div className="flex items-center gap-2.5 flex-wrap">
+                <span className="font-bold text-sm sm:text-base text-foreground">#{order.order_number}</span>
+                <Badge className={statusInfo.color}>
+                  <StatusIcon className="w-3 h-3 mr-1" />
+                  {statusInfo.label}
+                </Badge>
+              </div>
+
+              {/* Delete Button with Modal Confirmation */}
+              <AlertDialog>
+                <AlertDialogTrigger asChild>
+                  <Button 
+                    variant="ghost" 
+                    size="sm" 
+                    className="h-8 px-2.5 text-muted-foreground hover:text-destructive hover:bg-destructive/10 text-xs font-semibold flex items-center gap-1.5 ml-auto rounded-lg transition-colors"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </Button>
+                </AlertDialogTrigger>
+                <AlertDialogContent>
+                  <AlertDialogHeader>
+                    <AlertDialogTitle>Delete Order #{order.order_number}?</AlertDialogTitle>
+                    <AlertDialogDescription>
+                      Are you sure you want to delete this order? It will be permanently removed from your account.
+                    </AlertDialogDescription>
+                  </AlertDialogHeader>
+                  <AlertDialogFooter>
+                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                    <AlertDialogAction 
+                      onClick={() => handleDeleteOrder(order.id, order.order_number)}
+                      className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                    >
+                      Delete Order
+                    </AlertDialogAction>
+                  </AlertDialogFooter>
+                </AlertDialogContent>
+              </AlertDialog>
+            </div>
+
+            <p className="text-xs sm:text-sm text-muted-foreground">
+              Placed on {new Date(order.created_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+              })}
+            </p>
+
+            <div className="flex items-center justify-between pt-3 border-t">
+              <p className="font-black text-base sm:text-lg text-foreground">৳{order.total.toFixed(2)}</p>
+              <Button variant="ghost" size="sm" asChild className="text-primary hover:text-primary font-semibold text-xs sm:text-sm">
+                <Link to={`/orders/${order.id}`}>
+                  View Details <ChevronRight className="w-4 h-4 ml-1" />
+                </Link>
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
   };
 
   if (loading) {
@@ -238,40 +362,7 @@ export default function Orders() {
                   </CardContent>
                 </Card>
               ) : (
-                filteredOrders.map((order) => {
-                  const statusInfo = getStatusInfo(order.status || "pending");
-                  const StatusIcon = statusInfo.icon;
-                  return (
-                    <Card key={order.id} className="hover:shadow-md transition-shadow">
-                      <CardContent className="p-6">
-                        <div className="space-y-3">
-                          <div className="flex items-center gap-3">
-                            <span className="font-semibold">#{order.order_number}</span>
-                            <Badge className={statusInfo.color}>
-                              <StatusIcon className="w-3 h-3 mr-1" />
-                              {statusInfo.label}
-                            </Badge>
-                          </div>
-                          <p className="text-sm text-muted-foreground">
-                            Placed on {new Date(order.created_at).toLocaleDateString('en-US', {
-                              year: 'numeric',
-                              month: 'long',
-                              day: 'numeric'
-                            })}
-                          </p>
-                          <div className="flex items-center justify-between pt-2 border-t">
-                            <p className="font-bold text-lg">৳{order.total.toFixed(2)}</p>
-                            <Button variant="ghost" size="sm" asChild>
-                              <Link to={`/orders/${order.id}`}>
-                                View Details <ChevronRight className="w-4 h-4 ml-1" />
-                              </Link>
-                            </Button>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  );
-                })
+                filteredOrders.map(renderOrderCard)
               )}
             </TabsContent>
 
@@ -286,36 +377,7 @@ export default function Orders() {
                 ) : (
                   filteredOrders
                     .filter(o => o.status === status)
-                    .map((order) => {
-                      const statusInfo = getStatusInfo(order.status || "pending");
-                      const StatusIcon = statusInfo.icon;
-                      return (
-                        <Card key={order.id} className="hover:shadow-md transition-shadow">
-                          <CardContent className="p-6">
-                            <div className="space-y-3">
-                              <div className="flex items-center gap-3">
-                                <span className="font-semibold">#{order.order_number}</span>
-                                <Badge className={statusInfo.color}>
-                                  <StatusIcon className="w-3 h-3 mr-1" />
-                                  {statusInfo.label}
-                                </Badge>
-                              </div>
-                              <p className="text-sm text-muted-foreground">
-                                Placed on {new Date(order.created_at).toLocaleDateString()}
-                              </p>
-                              <div className="flex items-center justify-between pt-2 border-t">
-                                <p className="font-bold text-lg">৳{order.total.toFixed(2)}</p>
-                                <Button variant="ghost" size="sm" asChild>
-                                  <Link to={`/orders/${order.id}`}>
-                                    View Details <ChevronRight className="w-4 h-4 ml-1" />
-                                  </Link>
-                                </Button>
-                              </div>
-                            </div>
-                          </CardContent>
-                        </Card>
-                      );
-                    })
+                    .map(renderOrderCard)
                 )}
               </TabsContent>
             ))}

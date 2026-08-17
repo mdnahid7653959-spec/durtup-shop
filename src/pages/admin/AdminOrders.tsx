@@ -17,12 +17,13 @@ import {
   Save,
   CheckCircle2,
   ExternalLink,
-  Edit
+  Edit,
+  Trash2
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, doc, setDoc } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 
@@ -453,6 +454,45 @@ export default function AdminOrders() {
     }
   };
 
+  const handleDeleteOrder = async (id: string, order_number: string) => {
+    if (!window.confirm(`Are you sure you want to permanently delete order #${order_number || id}?`)) {
+      return;
+    }
+    try {
+      setOrders(prev => prev.filter(o => o.id !== id && o.order_number !== order_number));
+      try {
+        await deleteDoc(doc(db, "orders", id));
+        if (order_number && order_number !== id) {
+          await deleteDoc(doc(db, "orders", order_number));
+        }
+      } catch {}
+      try {
+        await supabase.from("orders").delete().eq("id", id);
+        if (order_number) {
+          await supabase.from("orders").delete().eq("order_number", order_number);
+        }
+      } catch {}
+      try {
+        const removeMatching = (storageKey: string) => {
+          const raw = localStorage.getItem(storageKey);
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              const filtered = list.filter((o: any) => o.id !== id && o.order_number !== order_number && o.order_number !== id);
+              localStorage.setItem(storageKey, JSON.stringify(filtered));
+            }
+          }
+        };
+        removeMatching("enterprise_admin_orders");
+        removeMatching("local_orders");
+      } catch {}
+      toast({ title: "Order deleted", description: `Order #${order_number} has been removed` });
+      invalidateOrders();
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to delete order" });
+    }
+  };
+
   const handleSaveCourierTracking = async () => {
     if (!selectedOrder) return;
     setSavingCourier(true);
@@ -871,6 +911,13 @@ export default function AdminOrders() {
                           }}>
                             <Tag className="h-4 w-4 mr-2" />
                             Print Shipping Label
+                          </DropdownMenuItem>
+                          <DropdownMenuItem 
+                            onClick={() => handleDeleteOrder(order.id, order.order_number)}
+                            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete Order
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
