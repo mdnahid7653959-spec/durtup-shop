@@ -16,6 +16,8 @@ import {
   CheckCircle2
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
+import { db } from "@/integrations/firebase/client";
+import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -133,8 +135,35 @@ export default function OrderDetail() {
             };
           }));
 
+          let latestStatus = (orderData.status || "pending").toLowerCase();
+          let latestPaymentStatus = (orderData.payment_status || "pending").toLowerCase();
+
+          try {
+            const docRef = doc(db, "orders", id);
+            const docSnap = await getDoc(docRef);
+            if (docSnap.exists()) {
+              const raw = docSnap.data();
+              if (raw.status) latestStatus = raw.status.toLowerCase();
+              if (raw.payment_status) latestPaymentStatus = raw.payment_status.toLowerCase();
+            }
+          } catch {}
+
+          try {
+            const adminOrdersRaw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
+            if (adminOrdersRaw) {
+              const adminOrders = JSON.parse(adminOrdersRaw);
+              const found = adminOrders.find((o: any) => o.id === id || o.order_number === id);
+              if (found) {
+                if (found.status) latestStatus = found.status.toLowerCase();
+                if (found.payment_status) latestPaymentStatus = found.payment_status.toLowerCase();
+              }
+            }
+          } catch {}
+
           setOrder({
             ...orderData,
+            status: latestStatus,
+            payment_status: latestPaymentStatus,
             order_items: formattedItems
           });
           setIsLoading(false);
@@ -146,11 +175,26 @@ export default function OrderDetail() {
         const docSnap = await getDoc(docRef);
         if (docSnap.exists()) {
           const raw = docSnap.data();
+          let latestStatus = (raw.status || "pending").toLowerCase();
+          let latestPaymentStatus = (raw.payment_status || raw.paymentStatus || "pending").toLowerCase();
+
+          try {
+            const adminOrdersRaw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
+            if (adminOrdersRaw) {
+              const adminOrders = JSON.parse(adminOrdersRaw);
+              const found = adminOrders.find((o: any) => o.id === id || o.order_number === id);
+              if (found) {
+                if (found.status) latestStatus = found.status.toLowerCase();
+                if (found.payment_status) latestPaymentStatus = found.payment_status.toLowerCase();
+              }
+            }
+          } catch {}
+
           const formatted: Order = {
             id: docSnap.id,
             order_number: raw.order_number || raw.orderNumber || docSnap.id.slice(0, 10),
-            status: (raw.status || "pending").toLowerCase(),
-            payment_status: (raw.payment_status || raw.paymentStatus || "pending").toLowerCase(),
+            status: latestStatus,
+            payment_status: latestPaymentStatus,
             payment_method: raw.payment_method || raw.paymentMethod || "cod",
             subtotal: Number(raw.subtotal || raw.totalAmount || 0),
             shipping_cost: Number(raw.shipping_cost || raw.shippingCost || 0),
@@ -183,6 +227,23 @@ export default function OrderDetail() {
     };
 
     fetchOrder();
+
+    // Realtime Firestore updates
+    const unsub = onSnapshot(doc(db, "orders", id), (docSnap) => {
+      if (docSnap.exists()) {
+        const raw = docSnap.data();
+        setOrder((prev) => {
+          if (!prev) return null;
+          return {
+            ...prev,
+            status: (raw.status || prev.status).toLowerCase(),
+            payment_status: (raw.payment_status || prev.payment_status).toLowerCase()
+          };
+        });
+      }
+    }, () => {});
+
+    return () => unsub();
   }, [id, user]);
 
   const handleCopyTracking = () => {

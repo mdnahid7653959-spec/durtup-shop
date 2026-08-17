@@ -22,7 +22,7 @@ import {
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 
@@ -353,15 +353,23 @@ export default function AdminOrders() {
 
       // Optimistically update React state and LocalStorage immediately
       setOrders((prevOrders) => {
-        const updated = prevOrders.map((o) => (o.id === id ? { ...o, status: newStatus, updated_at: nowIso } : o));
+        const updated = prevOrders.map((o) => (o.id === id || o.order_number === id ? { ...o, status: newStatus, updated_at: nowIso } : o));
         try {
           localStorage.setItem("enterprise_admin_orders", JSON.stringify(updated));
+          localStorage.setItem("local_orders", JSON.stringify(updated));
         } catch {}
         return updated;
       });
 
-      if (selectedOrder && selectedOrder.id === id) {
+      if (selectedOrder && (selectedOrder.id === id || selectedOrder.order_number === id)) {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
+      }
+
+      // Direct Firestore update
+      try {
+        await setDoc(doc(db, "orders", id), { status: newStatus, updated_at: nowIso }, { merge: true });
+      } catch (e) {
+        console.warn("Firestore direct setDoc error:", e);
       }
 
       // 1. Invoke function or fallback to DB update
@@ -406,15 +414,23 @@ export default function AdminOrders() {
       const nowIso = new Date().toISOString();
 
       setOrders((prevOrders) => {
-        const updated = prevOrders.map((o) => (o.id === id ? { ...o, payment_status, updated_at: nowIso } : o));
+        const updated = prevOrders.map((o) => (o.id === id || o.order_number === id ? { ...o, payment_status, updated_at: nowIso } : o));
         try {
           localStorage.setItem("enterprise_admin_orders", JSON.stringify(updated));
+          localStorage.setItem("local_orders", JSON.stringify(updated));
         } catch {}
         return updated;
       });
 
-      if (selectedOrder && selectedOrder.id === id) {
+      if (selectedOrder && (selectedOrder.id === id || selectedOrder.order_number === id)) {
         setSelectedOrder({ ...selectedOrder, payment_status });
+      }
+
+      // Direct Firestore update
+      try {
+        await setDoc(doc(db, "orders", id), { payment_status, updated_at: nowIso }, { merge: true });
+      } catch (e) {
+        console.warn("Firestore direct setDoc error:", e);
       }
 
       if (admin?.id) {

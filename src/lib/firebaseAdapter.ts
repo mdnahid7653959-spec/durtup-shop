@@ -195,12 +195,32 @@ class FirebaseQueryBuilder {
 
       if (this.updateData) {
         const snapshot = await this.executeFetch();
+        let updatedCount = 0;
         for (const d of snapshot.docs) {
-          await updateDoc(doc(db, this.colName, d.id), {
-            ...this.updateData,
-            updated_at: new Date().toISOString()
-          });
+          try {
+            await setDoc(doc(db, this.colName, d.id), {
+              ...this.updateData,
+              updated_at: new Date().toISOString()
+            }, { merge: true });
+            updatedCount++;
+          } catch {}
         }
+
+        // If not found in query, check if any condition was on id or order_number and setDoc directly
+        for (const cond of this.conditions) {
+          try {
+            const rawCond = cond as any;
+            const field = rawCond?._field?.segments?.[0] || rawCond?.field;
+            const val = rawCond?._value?.value || rawCond?.val || rawCond?.value;
+            if (field === "id" && val) {
+              await setDoc(doc(db, this.colName, val.toString()), {
+                ...this.updateData,
+                updated_at: new Date().toISOString()
+              }, { merge: true });
+            }
+          } catch {}
+        }
+
         resolve({ data: this.updateData, error: null });
         return;
       }

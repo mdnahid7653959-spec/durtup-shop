@@ -11,7 +11,7 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs } from "firebase/firestore";
+import { collection, getDocs, onSnapshot } from "firebase/firestore";
 
 interface Order {
   id: string;
@@ -46,13 +46,27 @@ export default function Orders() {
   useEffect(() => {
     if (user) {
       fetchOrders();
+
+      // Realtime listener for Firestore orders
+      const unsub = onSnapshot(collection(db, "orders"), () => {
+        fetchOrders();
+      }, () => {});
+
+      // Storage event listener for cross-tab admin updates
+      const onStorage = () => fetchOrders();
+      window.addEventListener("storage", onStorage);
+
+      return () => {
+        unsub();
+        window.removeEventListener("storage", onStorage);
+      };
     }
   }, [user]);
 
   const fetchOrders = async () => {
     if (!user) return;
     setLoadingOrders(true);
-    let orderList: Order[] = [];
+    let orderMap = new Map<string, Order>();
 
     // 1. Query Supabase DB
     try {
@@ -63,30 +77,59 @@ export default function Orders() {
         .order("created_at", { ascending: false });
 
       if (!error && data && data.length > 0) {
-        orderList = data as Order[];
+        data.forEach((o: any) => {
+          const key = o.order_number || o.id;
+          orderMap.set(key, {
+            id: o.id,
+            order_number: o.order_number || o.id.slice(0, 10),
+            status: (o.status || "pending").toLowerCase(),
+            total: Number(o.total || o.totalAmount || 0),
+            created_at: o.created_at || new Date().toISOString(),
+            payment_status: (o.payment_status || "pending").toLowerCase()
+          });
+        });
       }
     } catch (error) {
       console.warn("Error fetching Supabase orders:", error);
     }
 
-    // 2. Query Firestore DB for user orders
+    // 2. Query Firestore DB for user orders & merge newest statuses
     try {
       const snap = await getDocs(collection(db, "orders"));
       if (!snap.empty) {
         snap.forEach((d) => {
           const data = d.data();
           const uid = data.user_id || data.userId;
-          if (uid === user.id || (user.email && uid === user.email)) {
+          if (uid === user.id || (user.email && uid === user.email) || !uid) {
             const pid = d.id;
             const orderNum = data.order_number || data.orderNumber || pid.slice(0, 10);
-            if (!orderList.some(o => o.id === pid || o.order_number === orderNum)) {
-              orderList.push({
+            const status = (data.status || "pending").toLowerCase();
+            const total = Number(data.totalAmount || data.price || data.total || 0);
+            const createdAt = data.createdAt || data.created_at || new Date().toISOString();
+            const paymentStatus = (data.payment_status || data.paymentStatus || "pending").toLowerCase();
+
+            // Check if exists by order_number or ID
+            let existingKey: string | null = null;
+            for (const [k, v] of orderMap.entries()) {
+              if (v.id === pid || v.order_number === orderNum || k === pid || k === orderNum) {
+                existingKey = k;
+                break;
+              }
+            }
+
+            if (existingKey) {
+              const existing = orderMap.get(existingKey)!;
+              if (data.status) existing.status = status;
+              if (data.payment_status) existing.payment_status = paymentStatus;
+              if (total > 0) existing.total = total;
+            } else {
+              orderMap.set(orderNum || pid, {
                 id: pid,
                 order_number: orderNum,
-                status: (data.status || "pending").toLowerCase(),
-                total: Number(data.totalAmount || data.price || data.total || 0),
-                created_at: data.createdAt || data.created_at || new Date().toISOString(),
-                payment_status: (data.payment_status || data.paymentStatus || "pending").toLowerCase()
+                status: status,
+                total: total,
+                created_at: createdAt,
+                payment_status: paymentStatus
               });
             }
           }
@@ -96,7 +139,29 @@ export default function Orders() {
       console.warn("Error fetching Firestore orders:", fsErr);
     }
 
-    setOrders(orderList);
+    // 3. Merge latest statuses from LocalStorage (enterprise_admin_orders & local_orders)
+    try {
+      const adminOrdersRaw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
+      if (adminOrdersRaw) {
+        const adminOrders = JSON.parse(adminOrdersRaw);
+        if (Array.isArray(adminOrders)) {
+          adminOrders.forEach((ao: any) => {
+            for (const [k, v] of orderMap.entries()) {
+              if (v.id === ao.id || v.order_number === ao.order_number || v.order_number === ao.id || k === ao.id || k === ao.order_number) {
+                if (ao.status) v.status = ao.status.toLowerCase();
+                if (ao.payment_status) v.payment_status = ao.payment_status.toLowerCase();
+              }
+            }
+          });
+        }
+      }
+    } catch {}
+
+    const list = Array.from(orderMap.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
+
+    setOrders(list);
     setLoadingOrders(false);
   };
 
@@ -150,6 +215,7 @@ export default function Orders() {
                 <TabsTrigger value="processing" className="text-xs sm:text-sm">Processing</TabsTrigger>
                 <TabsTrigger value="shipped" className="text-xs sm:text-sm">Shipped</TabsTrigger>
                 <TabsTrigger value="delivered" className="text-xs sm:text-sm">Delivered</TabsTrigger>
+                <TabsTrigger value="cancelled" className="text-xs sm:text-sm text-destructive font-semibold">Cancelled</TabsTrigger>
               </TabsList>
             </div>
 
@@ -209,7 +275,7 @@ export default function Orders() {
               )}
             </TabsContent>
 
-            {["pending", "processing", "shipped", "delivered"].map((status) => (
+            {["pending", "processing", "shipped", "delivered", "cancelled"].map((status) => (
               <TabsContent key={status} value={status} className="space-y-4">
                 {filteredOrders.filter(o => o.status === status).length === 0 ? (
                   <Card>
