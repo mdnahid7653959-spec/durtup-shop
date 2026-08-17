@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/lib/firebaseAdapter";
 import type { Product } from "@/components/products/ProductCard";
+import { calculateProductPrice } from "@/utils/pricingMargin";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop",
@@ -163,12 +164,13 @@ function mapSupplierProduct(p: any, index: number): Product {
     price = Number(p.discount_price || p.price || 0);
     originalPrice = p.originalPrice || p.regular_price ? Number(p.originalPrice || p.regular_price) : undefined;
   } else {
-    // Exact retail price from supplier website (p.price)
+    // Base supplier price from API (p.price or p.sale_price)
     const exactRetailPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
     const rawRegularPrice = parseFloat(p.regular_price) || 0;
 
-    price = exactRetailPrice;
-    originalPrice = rawRegularPrice > price ? rawRegularPrice : Math.round(price * 1.35);
+    const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
+    price = calc.price;
+    originalPrice = calc.originalPrice;
   }
 
   return {

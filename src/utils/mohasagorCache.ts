@@ -1,4 +1,5 @@
 import type { Product } from "@/components/products/ProductCard";
+import { calculateProductPrice } from "@/utils/pricingMargin";
 
 const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v5";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300,000ms)
@@ -76,12 +77,14 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
       ? resolveUrl(p.product_images[0].product_image)
       : p.thumbnail_img ? resolveUrl(p.thumbnail_img) : resolveUrl("");
 
-    // Exact retail price from supplier website (p.price)
+    // Base supplier price from API (p.price or p.sale_price)
     const exactRetailPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
     const rawRegularPrice = parseFloat(p.regular_price) || 0;
 
-    const price = exactRetailPrice;
-    const originalPrice = rawRegularPrice > price ? rawRegularPrice : Math.round(price * 1.35);
+    // Dynamically calculate price with Admin Profit Margin settings
+    const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
+    const price = calc.price;
+    const originalPrice = calc.originalPrice;
 
     const allImages = p.product_images && p.product_images.length > 0
       ? p.product_images.map((imgObj: any) => resolveUrl(imgObj.product_image || imgObj.image || imgObj.url))
@@ -106,8 +109,8 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
       product_images: formattedImgList,
       price,
       originalPrice: originalPrice > price ? originalPrice : undefined,
-      regular_price: originalPrice > price ? originalPrice : price,
-      discount_price: price,
+      regular_price: calc.regularPrice,
+      discount_price: calc.discountPrice,
       rating: 4.8,
       reviews: 15,
       sold: parseInt(p.sold) || 45,

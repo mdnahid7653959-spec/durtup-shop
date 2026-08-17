@@ -18,6 +18,7 @@ import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductReviews } from "@/components/products/ProductReviews";
 import { StoreDetails } from "@/components/products/StoreDetails";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
@@ -331,12 +332,13 @@ export default function ProductDetail() {
       sellingPrice = Number(raw.discount_price || raw.price || 0);
       regularPrice = raw.originalPrice || raw.regular_price ? Number(raw.originalPrice || raw.regular_price) : null;
     } else {
-      // Direct raw API object - use exact retail price from supplier website (raw.price)
+      // Direct raw API object - calculate with dynamic margin
       const exactRetailPrice = parseFloat(raw.price) || parseFloat(raw.sale_price) || 0;
       const rawRegularPrice = parseFloat(raw.regular_price) || 0;
 
-      sellingPrice = exactRetailPrice;
-      regularPrice = rawRegularPrice > sellingPrice ? rawRegularPrice : Math.round(sellingPrice * 1.35);
+      const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
+      sellingPrice = calc.price;
+      regularPrice = calc.regularPrice;
     }
 
     const variants = (raw.product_variants || []).map((v: any) => ({
