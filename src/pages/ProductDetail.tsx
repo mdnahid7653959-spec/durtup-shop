@@ -324,25 +324,29 @@ export default function ProductDetail() {
   // Helper to map supplier product to Product interface (Price MUST match card price exactly)
   const mapSupplierProduct = (raw: any, productSlug: string, imagesArr: ProductImage[]): Product => {
     let sellingPrice = 0;
-    let regularPrice = 0;
+    let regularPrice: number | null = null;
 
     // Check if product is already processed with final price (e.g. from mohasagorCache or home products)
-    if (raw.discount_price || (raw.price && raw.originalPrice)) {
+    if (raw.discount_price !== undefined || raw.originalPrice !== undefined) {
       sellingPrice = Number(raw.discount_price || raw.price || 0);
-      regularPrice = Number(raw.originalPrice || raw.regular_price || Math.round(sellingPrice * 1.30));
-    } else if (raw.sale_price !== undefined || raw.price !== undefined) {
-      const API_PROFIT_MARGIN = 1.30; // 30% profit margin
-      const rawSalePrice = parseFloat(raw.sale_price) || parseFloat(raw.discount_price) || 0;
-      const rawRegularPrice = parseFloat(raw.price) || parseFloat(raw.regular_price) || rawSalePrice;
-      
-      const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawRegularPrice;
-      sellingPrice = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
-
-      const baseRegularPrice = rawRegularPrice > baseSellingPrice ? rawRegularPrice : Math.round(baseSellingPrice * 1.30);
-      regularPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+      regularPrice = raw.originalPrice || raw.regular_price ? Number(raw.originalPrice || raw.regular_price) : null;
     } else {
-      sellingPrice = Number(raw.price || 0);
-      regularPrice = Number(raw.regular_price || raw.originalPrice || sellingPrice);
+      // Direct raw API object
+      const rawSalePrice = parseFloat(raw.sale_price) || parseFloat(raw.discount_price) || 0;
+      const rawPrice = parseFloat(raw.price) || parseFloat(raw.regular_price) || 0;
+
+      if (rawSalePrice > 0 && rawPrice > 0 && rawPrice > rawSalePrice) {
+        sellingPrice = rawSalePrice;
+        regularPrice = rawPrice;
+      } else if (rawSalePrice > 0) {
+        sellingPrice = rawSalePrice;
+        regularPrice = rawPrice > 0 ? rawPrice : null;
+      } else if (rawPrice > 0) {
+        sellingPrice = rawPrice;
+        regularPrice = null;
+      } else {
+        sellingPrice = parseFloat(raw.price) || 0;
+      }
     }
 
     const variants = (raw.product_variants || []).map((v: any) => ({
@@ -358,8 +362,8 @@ export default function ProductDetail() {
       slug: productSlug,
       short_description: raw.short_description || null,
       description: raw.details || raw.description || "High quality product.",
-      regular_price: regularPrice > sellingPrice ? regularPrice : sellingPrice,
-      discount_price: regularPrice > sellingPrice ? sellingPrice : null,
+      regular_price: (regularPrice && regularPrice > sellingPrice) ? regularPrice : sellingPrice,
+      discount_price: (regularPrice && regularPrice > sellingPrice) ? sellingPrice : null,
       stock_quantity: parseInt(raw.stock_quantity) || parseInt(raw.stock) || 50,
       free_shipping: true,
       rating_average: Number(raw.rating_average || 4.8),

@@ -1,6 +1,6 @@
 import type { Product } from "@/components/products/ProductCard";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v2";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v4";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300,000ms)
 
 let inMemoryProductsCache: Product[] | null = null;
@@ -76,15 +76,25 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
       ? resolveUrl(p.product_images[0].product_image)
       : p.thumbnail_img ? resolveUrl(p.thumbnail_img) : resolveUrl("");
 
-    const API_PROFIT_MARGIN = 1.30; // 30% profit margin
+    // Exact direct API prices without any markup
     const rawSalePrice = parseFloat(p.sale_price) || parseFloat(p.discount_price) || 0;
-    const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || rawSalePrice;
-    
-    const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawPrice;
-    const price = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
+    const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || 0;
 
-    const baseRegularPrice = rawPrice > baseSellingPrice ? rawPrice : Math.round(baseSellingPrice * 1.30);
-    const originalPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+    let price = 0;
+    let originalPrice: number | undefined = undefined;
+
+    if (rawSalePrice > 0 && rawPrice > 0 && rawPrice > rawSalePrice) {
+      price = rawSalePrice;
+      originalPrice = rawPrice;
+    } else if (rawSalePrice > 0) {
+      price = rawSalePrice;
+      originalPrice = rawPrice > 0 ? rawPrice : undefined;
+    } else if (rawPrice > 0) {
+      price = rawPrice;
+      originalPrice = undefined;
+    } else {
+      price = parseFloat(p.price) || 0;
+    }
 
     const allImages = p.product_images && p.product_images.length > 0
       ? p.product_images.map((imgObj: any) => resolveUrl(imgObj.product_image || imgObj.image || imgObj.url))
@@ -108,9 +118,9 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
       images: allImages,
       product_images: formattedImgList,
       price,
-      originalPrice: originalPrice > price ? originalPrice : undefined,
-      regular_price: originalPrice > price ? originalPrice : price,
-      discount_price: originalPrice > price ? price : null,
+      originalPrice: (originalPrice && originalPrice > price) ? originalPrice : undefined,
+      regular_price: (originalPrice && originalPrice > price) ? originalPrice : price,
+      discount_price: (originalPrice && originalPrice > price) ? price : null,
       rating: 4.8,
       reviews: 15,
       sold: parseInt(p.sold) || 45,

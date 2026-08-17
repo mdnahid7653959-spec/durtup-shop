@@ -159,19 +159,26 @@ function mapSupplierProduct(p: any, index: number): Product {
   let price = 0;
   let originalPrice: number | undefined = undefined;
 
-  if (p.discount_price || (p.price && p.originalPrice)) {
+  if (p.discount_price !== undefined || p.originalPrice !== undefined) {
     price = Number(p.discount_price || p.price || 0);
-    originalPrice = Number(p.originalPrice || p.regular_price || 0);
+    originalPrice = p.originalPrice || p.regular_price ? Number(p.originalPrice || p.regular_price) : undefined;
   } else {
-    const API_PROFIT_MARGIN = 1.30; // 30% profit margin
+    // Exact direct API prices without markup
     const rawSalePrice = parseFloat(p.sale_price) || parseFloat(p.discount_price) || 0;
-    const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || rawSalePrice;
+    const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || 0;
     
-    const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawPrice;
-    price = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
-
-    const baseRegularPrice = rawPrice > baseSellingPrice ? rawPrice : Math.round(baseSellingPrice * 1.30);
-    originalPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+    if (rawSalePrice > 0 && rawPrice > 0 && rawPrice > rawSalePrice) {
+      price = rawSalePrice;
+      originalPrice = rawPrice;
+    } else if (rawSalePrice > 0) {
+      price = rawSalePrice;
+      originalPrice = rawPrice > 0 ? rawPrice : undefined;
+    } else if (rawPrice > 0) {
+      price = rawPrice;
+      originalPrice = undefined;
+    } else {
+      price = parseFloat(p.price) || 0;
+    }
   }
 
   return {
@@ -253,7 +260,7 @@ function buildSections(products: Product[]) {
   };
 }
 
-const CACHE_KEY = "mohasagor_cached_home_products_v3";
+const CACHE_KEY = "mohasagor_cached_home_products_v4";
 
 function preloadImages(products: Product[]) {
   if (typeof window === "undefined") return;
