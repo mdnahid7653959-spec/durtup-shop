@@ -232,37 +232,6 @@ const Categories = () => {
           <div className="flex-1 overflow-y-auto p-2">
             {selectedCategory && (
               <>
-                {/* Category Header */}
-                <div className="flex items-center justify-between p-2 mb-2 bg-gradient-to-r from-primary/10 to-primary/5 rounded-xl">
-                  <div className="flex items-center gap-2">
-                    {selectedCategory.image_url ? (
-                      <img
-                        src={selectedCategory.image_url}
-                        alt={selectedCategory.name}
-                        className="w-10 h-10 rounded-lg object-cover"
-                      />
-                    ) : (
-                      (() => {
-                        const IconComponent = getCategoryIcon(selectedCategory.slug);
-                        return (
-                          <div className="w-10 h-10 rounded-lg bg-primary/20 flex items-center justify-center">
-                            <IconComponent className="h-5 w-5 text-primary" />
-                          </div>
-                        );
-                      })()
-                    )}
-                    <div className="text-left">
-                      <h2 className="font-semibold text-sm">{selectedCategory.name}</h2>
-                    </div>
-                  </div>
-                  <Link 
-                    to={`/category/${selectedCategory.slug}`}
-                    className="text-xs text-primary font-medium flex items-center gap-0.5"
-                  >
-                    All <ChevronRight className="h-3 w-3" />
-                  </Link>
-                </div>
-
                 {/* Products Grid */}
                 {productsLoading ? (
                   <div className="flex items-center justify-center py-8">
