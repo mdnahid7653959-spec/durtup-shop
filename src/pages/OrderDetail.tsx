@@ -50,6 +50,8 @@ import {
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { useToast } from "@/hooks/use-toast";
 
+import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+
 interface OrderItem {
   id: string;
   product_name: string;
@@ -102,8 +104,16 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const normalizeString = (str: string) => {
+  return (str || "")
+    .toLowerCase()
+    .replace(/[’'"“”()\-–\[\]:,.]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+};
+
 const resolveOrderItemImage = async (it: any): Promise<string | null> => {
-  // 1. Check direct image properties
+  // 1. Direct image field
   let img = it.product_image || it.image || it.product?.image || it.product?.image_url || null;
   if (Array.isArray(it.product?.images) && it.product.images.length > 0) {
     img = it.product.images[0];
@@ -112,10 +122,42 @@ const resolveOrderItemImage = async (it: any): Promise<string | null> => {
     return img;
   }
 
-  const prodId = it.product_id || it.product?.id || it.id;
+  const prodId = String(it.product_id || it.product?.id || it.id || "");
   const prodName = it.product_name || it.product?.name || it.name || "";
+  const normTarget = normalizeString(prodName);
+  const targetTokens = normTarget.split(" ").filter((t) => t.length > 2);
 
-  // 2. Query Supabase product table
+  // 2. Query Mohasagor & Supplier catalog
+  try {
+    const mohasagorProducts = await getCachedMohasagorProducts().catch(() => []);
+    if (Array.isArray(mohasagorProducts) && mohasagorProducts.length > 0) {
+      // Exact ID match
+      const idMatch = mohasagorProducts.find(p => String(p.id) === prodId || String(p.slug) === prodId);
+      if (idMatch?.image) return idMatch.image;
+
+      // Exact normalized title match
+      const exactTitleMatch = mohasagorProducts.find(p => normalizeString(p.name || p.title) === normTarget);
+      if (exactTitleMatch?.image) return exactTitleMatch.image;
+
+      // Token overlap match
+      let bestMohasagor: any = null;
+      let maxScore = 0;
+      for (const p of mohasagorProducts) {
+        const pNorm = normalizeString(p.name || p.title);
+        let score = 0;
+        for (const token of targetTokens) {
+          if (pNorm.includes(token)) score++;
+        }
+        if (score > maxScore && score >= 2) {
+          maxScore = score;
+          bestMohasagor = p;
+        }
+      }
+      if (bestMohasagor?.image) return bestMohasagor.image;
+    }
+  } catch {}
+
+  // 3. Query Supabase products table
   if (prodId) {
     try {
       const { data: prodData } = await supabase
@@ -143,7 +185,7 @@ const resolveOrderItemImage = async (it: any): Promise<string | null> => {
     } catch {}
   }
 
-  // 3. Query Supabase by product title/name keyword
+  // 4. Query Supabase by product title/name keyword
   if (prodName) {
     try {
       const cleanTitle = prodName.replace(/\[CJ\]/gi, "").trim();
@@ -164,38 +206,52 @@ const resolveOrderItemImage = async (it: any): Promise<string | null> => {
     } catch {}
   }
 
-  // 4. Query Firestore products collection
+  // 5. Query Firestore products collection
   try {
     const snap = await getDocs(collection(db, "products"));
     if (!snap.empty) {
-      const matched = snap.docs.find(d => {
-        const dData = d.data();
-        if (prodId && (d.id === prodId || dData.id === prodId || dData.slug === prodId)) return true;
-        if (prodName) {
-          const dName = (dData.name || dData.title || "").toLowerCase();
-          const pName = prodName.toLowerCase();
-          if ((dName && pName.includes(dName.slice(0, 8))) || (pName && dName.includes(pName.slice(0, 8)))) return true;
-        }
-        return false;
-      });
+      let bestFirestore: any = null;
+      let maxScore = 0;
 
-      if (matched) {
-        const dData = matched.data();
-        const found = dData.image_url || dData.image || (Array.isArray(dData.images) && dData.images[0]);
-        if (found) return found;
+      for (const d of snap.docs) {
+        const dData = d.data();
+        if (prodId && (d.id === prodId || String(dData.id) === prodId || dData.slug === prodId)) {
+          const imgUrl = dData.image_url || dData.image || (Array.isArray(dData.images) && dData.images[0]);
+          if (imgUrl) return imgUrl;
+        }
+
+        const dNorm = normalizeString(dData.name || dData.title || "");
+        if (normTarget && dNorm === normTarget) {
+          const imgUrl = dData.image_url || dData.image || (Array.isArray(dData.images) && dData.images[0]);
+          if (imgUrl) return imgUrl;
+        }
+
+        let score = 0;
+        for (const token of targetTokens) {
+          if (dNorm.includes(token)) score++;
+        }
+        if (score > maxScore && score >= 2) {
+          maxScore = score;
+          bestFirestore = dData;
+        }
+      }
+
+      if (bestFirestore) {
+        const imgUrl = bestFirestore.image_url || bestFirestore.image || (Array.isArray(bestFirestore.images) && bestFirestore.images[0]);
+        if (imgUrl) return imgUrl;
       }
     }
   } catch {}
 
-  // 5. Query LocalStorage / Cache
+  // 6. Query LocalStorage / Cache
   try {
     const localProdsRaw = localStorage.getItem("enterprise_admin_products") || localStorage.getItem("local_products");
     if (localProdsRaw) {
       const prods = JSON.parse(localProdsRaw);
       if (Array.isArray(prods)) {
         const matched = prods.find((p: any) => 
-          (prodId && (p.id === prodId || p.slug === prodId)) ||
-          (prodName && (p.name || p.title || "").toLowerCase().includes(prodName.toLowerCase().slice(0, 8)))
+          (prodId && (String(p.id) === prodId || p.slug === prodId)) ||
+          (normTarget && normalizeString(p.name || p.title) === normTarget)
         );
         if (matched) {
           const imgUrl = matched.image_url || matched.image || (Array.isArray(matched.images) && matched.images[0]);
