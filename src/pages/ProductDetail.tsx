@@ -923,16 +923,6 @@ export default function ProductDetail() {
                   </button>
                 )}
               </div>
-
-              {/* Product Ratings & Reviews in Left Column */}
-              <div className="mt-4">
-                <ProductReviews
-                  productId={product.id}
-                  ratingAverage={product.rating_average}
-                  ratingCount={product.rating_count}
-                  productName={product.name}
-                />
-              </div>
             </div>
 
 
@@ -1147,8 +1137,9 @@ export default function ProductDetail() {
               )}
 
               {/* Description */}
-              {product.description && <div className="pt-4 border-t">
-                  <h3 className="font-bold text-lg text-foreground mb-3 flex items-center gap-2">
+              {product.description && (
+                <div className="pt-5 border-t">
+                  <h3 className="font-bold text-base sm:text-lg text-foreground mb-3 flex items-center gap-2">
                     <span className="w-1 h-5 bg-gradient-to-b from-primary to-warning rounded-full" />
                     Description
                   </h3>
@@ -1158,14 +1149,41 @@ export default function ProductDetail() {
                         [&_img]:max-w-full [&_img]:rounded-lg [&_table]:w-full [&_table]:border-collapse
                         [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2
                         [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
-                      dangerouslySetInnerHTML={{ __html: product.description }}
+                      dangerouslySetInnerHTML={{
+                        __html: product.description
+                          .replace(/&nbsp;/gi, " ")
+                          .replace(/&amp;/gi, "&")
+                          .replace(/&lt;/gi, "<")
+                          .replace(/&gt;/gi, ">")
+                          .replace(/&quot;/gi, '"')
+                          .replace(/&#39;/gi, "'"),
+                      }}
                     />
                   ) : (
-                    <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">{product.description}</p>
+                    <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
+                      {product.description
+                        .replace(/&nbsp;/gi, " ")
+                        .replace(/&amp;/gi, "&")
+                        .replace(/&lt;/gi, "<")
+                        .replace(/&gt;/gi, ">")
+                        .replace(/&quot;/gi, '"')
+                        .replace(/&#39;/gi, "'")}
+                    </p>
                   )}
-                </div>}
+                </div>
+              )}
 
             </div>
+          </div>
+
+          {/* Product Ratings & Reviews Section (Directly Below Description) */}
+          <div className="mt-8">
+            <ProductReviews
+              productId={product.id}
+              ratingAverage={product.rating_average}
+              ratingCount={product.rating_count}
+              productName={product.name}
+            />
           </div>
 
           {/* Store Information */}
