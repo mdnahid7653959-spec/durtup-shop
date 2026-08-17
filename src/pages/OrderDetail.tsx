@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
-import { doc, getDoc, onSnapshot, setDoc } from "firebase/firestore";
+import { doc, getDoc, onSnapshot, setDoc, getDocs, collection } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
@@ -57,7 +57,7 @@ interface OrderItem {
   quantity: number;
   unit_price: number;
   total_price: number;
-  product_image?: string;
+  product_image?: string | null;
   total?: number;
   price?: number;
   product_id?: string | null;
@@ -102,6 +102,112 @@ const getStatusColor = (status: string) => {
   }
 };
 
+const resolveOrderItemImage = async (it: any): Promise<string | null> => {
+  // 1. Check direct image properties
+  let img = it.product_image || it.image || it.product?.image || it.product?.image_url || null;
+  if (Array.isArray(it.product?.images) && it.product.images.length > 0) {
+    img = it.product.images[0];
+  }
+  if (img && typeof img === "string" && img.length > 5 && !img.includes("undefined") && !img.includes("null")) {
+    return img;
+  }
+
+  const prodId = it.product_id || it.product?.id || it.id;
+  const prodName = it.product_name || it.product?.name || it.name || "";
+
+  // 2. Query Supabase product table
+  if (prodId) {
+    try {
+      const { data: prodData } = await supabase
+        .from("products")
+        .select("image_url, images")
+        .or(`id.eq.${prodId},slug.eq.${prodId}`)
+        .maybeSingle();
+
+      if (prodData) {
+        if (prodData.image_url) return prodData.image_url;
+        if (Array.isArray(prodData.images) && prodData.images.length > 0) return prodData.images[0];
+      }
+    } catch {}
+
+    try {
+      const { data: prodImgs } = await supabase
+        .from("product_images")
+        .select("image_url, is_primary")
+        .eq("product_id", prodId);
+
+      if (prodImgs && prodImgs.length > 0) {
+        const primary = prodImgs.find((p: any) => p.is_primary) || prodImgs[0];
+        if (primary?.image_url) return primary.image_url;
+      }
+    } catch {}
+  }
+
+  // 3. Query Supabase by product title/name keyword
+  if (prodName) {
+    try {
+      const cleanTitle = prodName.replace(/\[CJ\]/gi, "").trim();
+      const firstWord = cleanTitle.split(" ")[0];
+      if (firstWord && firstWord.length > 2) {
+        const { data: nameMatch } = await supabase
+          .from("products")
+          .select("image_url, images")
+          .ilike("title", `%${firstWord}%`)
+          .limit(1)
+          .maybeSingle();
+
+        if (nameMatch) {
+          if (nameMatch.image_url) return nameMatch.image_url;
+          if (Array.isArray(nameMatch.images) && nameMatch.images.length > 0) return nameMatch.images[0];
+        }
+      }
+    } catch {}
+  }
+
+  // 4. Query Firestore products collection
+  try {
+    const snap = await getDocs(collection(db, "products"));
+    if (!snap.empty) {
+      const matched = snap.docs.find(d => {
+        const dData = d.data();
+        if (prodId && (d.id === prodId || dData.id === prodId || dData.slug === prodId)) return true;
+        if (prodName) {
+          const dName = (dData.name || dData.title || "").toLowerCase();
+          const pName = prodName.toLowerCase();
+          if ((dName && pName.includes(dName.slice(0, 8))) || (pName && dName.includes(pName.slice(0, 8)))) return true;
+        }
+        return false;
+      });
+
+      if (matched) {
+        const dData = matched.data();
+        const found = dData.image_url || dData.image || (Array.isArray(dData.images) && dData.images[0]);
+        if (found) return found;
+      }
+    }
+  } catch {}
+
+  // 5. Query LocalStorage / Cache
+  try {
+    const localProdsRaw = localStorage.getItem("enterprise_admin_products") || localStorage.getItem("local_products");
+    if (localProdsRaw) {
+      const prods = JSON.parse(localProdsRaw);
+      if (Array.isArray(prods)) {
+        const matched = prods.find((p: any) => 
+          (prodId && (p.id === prodId || p.slug === prodId)) ||
+          (prodName && (p.name || p.title || "").toLowerCase().includes(prodName.toLowerCase().slice(0, 8)))
+        );
+        if (matched) {
+          const imgUrl = matched.image_url || matched.image || (Array.isArray(matched.images) && matched.images[0]);
+          if (imgUrl) return imgUrl;
+        }
+      }
+    }
+  } catch {}
+
+  return null;
+};
+
 export default function OrderDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -141,21 +247,7 @@ export default function OrderDetail() {
             .eq("order_id", id);
             
           const formattedItems = await Promise.all((itemsData || []).map(async (it: any) => {
-            let product_image = it.product_image || it.image || null;
-            
-            if (!product_image && it.product_id) {
-              try {
-                const { data: images } = await supabase
-                  .from("product_images")
-                  .select("image_url, is_primary")
-                  .eq("product_id", it.product_id);
-
-                if (images && images.length > 0) {
-                  const primaryImage = images.find((img: any) => img.is_primary);
-                  product_image = primaryImage?.image_url || images[0]?.image_url || null;
-                }
-              } catch {}
-            }
+            const product_image = await resolveOrderItemImage(it);
 
             return {
               id: it.id,
@@ -224,6 +316,21 @@ export default function OrderDetail() {
             }
           } catch {}
 
+          const rawItemList = Array.isArray(raw.items) ? raw.items : [];
+          const formattedItems = await Promise.all(rawItemList.map(async (it: any, idx: number) => {
+            const product_image = await resolveOrderItemImage(it);
+            return {
+              id: it.id || `item-${idx}`,
+              product_name: it.product?.name || it.name || "Product",
+              variant_name: it.variant_name || null,
+              quantity: Number(it.quantity || 1),
+              unit_price: Number(it.price || it.unit_price || 0),
+              total_price: Number((it.price || it.unit_price || 0) * (it.quantity || 1)),
+              product_image: product_image,
+              product_id: it.product_id || it.product?.id || null
+            };
+          }));
+
           const formatted: Order = {
             id: docSnap.id,
             order_number: raw.order_number || raw.orderNumber || docSnap.id.slice(0, 10),
@@ -239,16 +346,7 @@ export default function OrderDetail() {
             tracking_number: raw.tracking_number || raw.trackingNumber,
             courier_name: raw.courier_name || raw.courierName,
             created_at: raw.createdAt || raw.created_at || new Date().toISOString(),
-            order_items: Array.isArray(raw.items) ? raw.items.map((it: any, idx: number) => ({
-              id: it.id || `item-${idx}`,
-              product_name: it.product?.name || it.name || "Product",
-              variant_name: it.variant_name || null,
-              quantity: Number(it.quantity || 1),
-              unit_price: Number(it.price || it.unit_price || 0),
-              total_price: Number((it.price || it.unit_price || 0) * (it.quantity || 1)),
-              product_image: it.image || it.product?.image,
-              product_id: it.product_id || it.product?.id || null
-            })) : []
+            order_items: formattedItems
           };
           setOrder(formatted);
           setIsLoading(false);
@@ -507,15 +605,20 @@ export default function OrderDetail() {
             <CardContent className="space-y-3">
               {order.order_items.map((item) => (
                 <div key={item.id} className="flex gap-3 p-3 bg-muted/50 rounded-xl items-center border">
-                  <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border">
+                  <div className="w-16 h-16 bg-muted/60 rounded-xl flex-shrink-0 overflow-hidden flex items-center justify-center border relative shadow-sm">
                     {item.product_image ? (
                       <img 
                         src={item.product_image} 
                         alt={item.product_name}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-cover rounded-lg"
+                        onError={(e) => {
+                          (e.target as HTMLElement).style.display = "none";
+                        }}
                       />
                     ) : (
-                      <Package className="h-6 w-6 text-muted-foreground" />
+                      <div className="flex items-center justify-center w-full h-full bg-primary/10 text-primary">
+                        <Package className="h-6 w-6" />
+                      </div>
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
