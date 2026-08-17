@@ -5,6 +5,7 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { StaffProvider } from "@/contexts/StaffContext";
@@ -93,10 +94,11 @@ const App = () => (
         <Sonner />
         <BrowserRouter>
           <NativeAppProvider>
-            <ThemeProvider>
-              <AdminAuthProvider>
-                <StaffProvider>
-                  <Suspense fallback={<PageLoader />}>
+            <AuthProvider>
+              <ThemeProvider>
+                <AdminAuthProvider>
+                  <StaffProvider>
+                    <Suspense fallback={<PageLoader />}>
                     <Routes>
                       {/* Public Auth */}
                       <Route path="/login" element={<AdminLogin />} />
@@ -225,6 +227,7 @@ const App = () => (
                 </StaffProvider>
               </AdminAuthProvider>
             </ThemeProvider>
+            </AuthProvider>
           </NativeAppProvider>
         </BrowserRouter>
       </TooltipProvider>
