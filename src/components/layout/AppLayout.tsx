@@ -20,14 +20,16 @@ const EXCLUDED_PATHS = [
 
 export function AppLayout({ children }: AppLayoutProps) {
   const location = useLocation();
+  const path = location.pathname.toLowerCase();
   
-  // Check if current path should exclude mobile nav
-  const shouldShowMobileNav = !EXCLUDED_PATHS.some((path) => {
-    if (path.endsWith("/")) {
-      return location.pathname.startsWith(path);
-    }
-    return location.pathname === path || location.pathname.startsWith(path + "/");
-  });
+  // Specific checks to exclude mobile bottom nav
+  const isProductDetail = path.startsWith("/product/") || path.startsWith("/cj-product") || path === "/product";
+  const isCart = path === "/cart" || path.startsWith("/cart/");
+  const isCheckout = path === "/checkout" || path.startsWith("/checkout/");
+  const isAdmin = path.startsWith("/admin");
+  const isSeller = path.startsWith("/seller");
+
+  const shouldShowMobileNav = !isProductDetail && !isCart && !isCheckout && !isAdmin && !isSeller;
 
   return (
     <>
