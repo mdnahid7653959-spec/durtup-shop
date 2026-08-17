@@ -17,6 +17,7 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
 import { doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
+import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 
 
 interface AppliedCoupon {
@@ -553,6 +554,38 @@ export default function Checkout() {
         }
       } catch (forwardErr) {
         console.error("Failed to check or forward dropship orders:", forwardErr);
+      }
+
+      // Send Instant Telegram Notification directly to Admin's phone
+      try {
+        const itemSummary = [
+          ...regularItems.map(i => ({
+            name: i.product.name,
+            quantity: i.quantity,
+            price: i.product.discount_price || i.product.regular_price
+          })),
+          ...cjItems.map(i => ({
+            name: `[CJ] ${i.name}${i.variant ? ` (${i.variant})` : ''}`,
+            quantity: i.quantity,
+            price: i.price
+          }))
+        ];
+
+        sendTelegramOrderNotification({
+          orderNumber: orderNumber,
+          customerName: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
+          phone: shippingInfo.phone,
+          email: shippingInfo.email,
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          paymentMethod: paymentMethod,
+          total: total,
+          items: itemSummary
+        }).catch(err => {
+          console.warn("Telegram order notification failed:", err);
+        });
+      } catch (tgErr) {
+        console.warn("Telegram trigger error:", tgErr);
       }
 
       // Clear both carts

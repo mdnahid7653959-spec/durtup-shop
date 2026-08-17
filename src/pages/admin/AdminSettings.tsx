@@ -20,6 +20,13 @@ import {
   calculateProductPrice,
   type PricingMarginConfig 
 } from "@/utils/pricingMargin";
+import {
+  getTelegramConfig,
+  saveTelegramConfig,
+  sendTelegramMessage,
+  type TelegramConfig
+} from "@/utils/telegramNotifier";
+import { Send, Smartphone, MessageSquareCode, CheckCircle } from "lucide-react";
 
 export default function AdminSettings() {
   const { admin, changePassword } = useAdminAuth();
@@ -80,6 +87,15 @@ export default function AdminSettings() {
     newUsers: false,
   });
 
+  // Telegram Notifications State
+  const [telegramConfig, setTelegramConfig] = useState<TelegramConfig>({
+    enabled: true,
+    bot_token: "",
+    chat_id: "",
+  });
+  const [savingTelegram, setSavingTelegram] = useState(false);
+  const [testingTelegram, setTestingTelegram] = useState(false);
+
   const [autoReply, setAutoReply] = useState({
     enabled: true,
     timeout_minutes: 10,
@@ -103,7 +119,7 @@ export default function AdminSettings() {
     }
   }, [settings]);
 
-  // Load auto-reply and pricing margin config from site_settings
+  // Load auto-reply, pricing margin, and telegram config
   useEffect(() => {
     (async () => {
       const { data } = await supabase
@@ -116,10 +132,61 @@ export default function AdminSettings() {
       }
     })();
 
+    getTelegramConfig().then(cfg => {
+      if (cfg) setTelegramConfig(cfg);
+    });
+
     syncPricingMarginFromDb().then(cfg => {
       if (cfg) setPricingMargin(cfg);
     });
   }, []);
+
+  const handleSaveTelegram = async () => {
+    setSavingTelegram(true);
+    const success = await saveTelegramConfig(telegramConfig);
+    if (success) {
+      toast({
+        title: "Telegram Settings Saved! 🚀",
+        description: "Your Telegram bot notification settings have been updated.",
+      });
+    } else {
+      toast({
+        title: "Save Failed",
+        description: "Failed to save Telegram settings.",
+        variant: "destructive",
+      });
+    }
+    setSavingTelegram(false);
+  };
+
+  const handleTestTelegram = async () => {
+    if (!telegramConfig.bot_token || !telegramConfig.chat_id) {
+      toast({
+        title: "Bot Token বা Chat ID ফাঁকা!",
+        description: "অনুগ্রহ করে প্রথমে Bot Token এবং Chat ID লিখুন।",
+        variant: "destructive",
+      });
+      return;
+    }
+    setTestingTelegram(true);
+    const res = await sendTelegramMessage(
+      `🔔 <b>Durtup Test Order Notification!</b> 🎉\n━━━━━━━━━━━━━━━━━━━━━━\n✅ <b>আপনার টেলিগ্রাম বট সফলভাবে কানেক্ট হয়েছে!</b>\n\nএখন থেকে ওয়েবসাইটে যেকোনো কাস্টমার নতুন অর্ডার দেওয়া মাত্রই আপনার ফোনে সাথে সাথে শব্দ সহ সম্পূর্ণ অর্ডারের মেসেজ চলে আসবে।\n━━━━━━━━━━━━━━━━━━━━━━\n⚡️ <a href="https://durtup-shop-c3fa.vercel.app/admin/orders">Durtup Admin Panel</a>`,
+      telegramConfig
+    );
+    if (res.success) {
+      toast({
+        title: "Test Message Sent! 📱",
+        description: "আপনার টেলিগ্রাম অ্যাপ চেক করুন। টেস্ট মেসেজ পৌঁছে গেছে!",
+      });
+    } else {
+      toast({
+        title: "Test Failed",
+        description: res.error || "Please check your Bot Token and Chat ID.",
+        variant: "destructive",
+      });
+    }
+    setTestingTelegram(false);
+  };
 
   const handlePricingSave = async () => {
     setSavingPricing(true);
@@ -697,6 +764,106 @@ export default function AdminSettings() {
                   <Save className="h-4 w-4 mr-2" />
                   Save Preferences
                 </Button>
+              </CardContent>
+            </Card>
+
+            {/* Telegram Bot Order Alerts Card */}
+            <Card className="border-2 border-primary/20 bg-gradient-to-br from-primary/5 via-card to-background shadow-md">
+              <CardHeader className="pb-3 border-b bg-primary/10">
+                <div className="flex items-center justify-between flex-wrap gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-9 h-9 rounded-xl bg-primary text-primary-foreground flex items-center justify-center font-bold text-sm shadow-sm">
+                      <Send className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                        Telegram Order Alerts (টেলিগ্রাম অর্ডার নোটিফিকেশন)
+                      </CardTitle>
+                      <CardDescription className="text-xs sm:text-sm">
+                        ওয়েবসাইটে নতুন অর্ডার আসলে সাথে সাথে আপনার ফোনের টেলিগ্রামে অটোমেটিক মেসেজ ও সাউন্ড নোটিফিকেশন যাবে
+                      </CardDescription>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="tg-enable" className="text-xs font-semibold">Active</Label>
+                    <Switch
+                      id="tg-enable"
+                      checked={telegramConfig.enabled}
+                      onCheckedChange={(c) => setTelegramConfig({ ...telegramConfig, enabled: c })}
+                    />
+                  </div>
+                </div>
+              </CardHeader>
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="grid sm:grid-cols-2 gap-4">
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tg-bot-token" className="text-xs font-bold text-foreground">
+                      Telegram Bot Token *
+                    </Label>
+                    <Input
+                      id="tg-bot-token"
+                      type="password"
+                      placeholder="e.g. 7123456789:AAHKlOPQ..."
+                      value={telegramConfig.bot_token}
+                      onChange={(e) => setTelegramConfig({ ...telegramConfig, bot_token: e.target.value })}
+                      className="font-mono text-xs h-10"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      টেলিগ্রামে <b>@BotFather</b> থেকে তৈরি করা বটের API Token দিন।
+                    </p>
+                  </div>
+
+                  <div className="space-y-1.5">
+                    <Label htmlFor="tg-chat-id" className="text-xs font-bold text-foreground">
+                      Telegram Chat ID (আপনার চ্যাট আইডি) *
+                    </Label>
+                    <Input
+                      id="tg-chat-id"
+                      placeholder="e.g. 1234567890"
+                      value={telegramConfig.chat_id}
+                      onChange={(e) => setTelegramConfig({ ...telegramConfig, chat_id: e.target.value })}
+                      className="font-mono text-xs h-10"
+                    />
+                    <p className="text-[11px] text-muted-foreground">
+                      টেলিগ্রামে <b>@userinfobot</b> বা <b>@GetIDsBot</b> থেকে আপনার Chat ID পাবেন।
+                    </p>
+                  </div>
+                </div>
+
+                {/* Setup Guide Box */}
+                <div className="p-3.5 bg-muted/60 border rounded-xl space-y-2 text-xs text-foreground/90">
+                  <p className="font-bold flex items-center gap-1.5 text-primary">
+                    <Smartphone className="h-4 w-4" /> টেলিগ্রাম নোটিফিকেশন চালু করার সহজ ৩টি ধাপ:
+                  </p>
+                  <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                    <li>টেলিগ্রাম অ্যাপে গিয়ে <b>@BotFather</b> সার্চ করে <code>/newbot</code> লিখে একটি ফ্রি বট তৈরি করে <b>API Token</b> কপি করুন।</li>
+                    <li>আপনার নতুন তৈরি করা বটে গিয়ে <b>/start</b> প্রেস করুন।</li>
+                    <li>টেলিগ্রামে <b>@userinfobot</b> সার্চ করে আপনার ব্যক্তিগত <b>Id (Chat ID)</b> সংগ্রহ করে উপরের ঘরে বসিয়ে <b>"Save Settings"</b> দিন।</li>
+                  </ol>
+                </div>
+
+                <div className="flex items-center gap-3 pt-2 flex-wrap">
+                  <Button
+                    type="button"
+                    onClick={handleSaveTelegram}
+                    disabled={savingTelegram}
+                    className="h-10 px-5 font-bold"
+                  >
+                    {savingTelegram ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Save className="h-4 w-4 mr-2" />}
+                    Save Telegram Settings
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={handleTestTelegram}
+                    disabled={testingTelegram || !telegramConfig.bot_token || !telegramConfig.chat_id}
+                    className="h-10 px-4 font-semibold text-primary border-primary/30 hover:bg-primary/10"
+                  >
+                    {testingTelegram ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Send className="h-4 w-4 mr-2" />}
+                    Send Test Notification to My Phone
+                  </Button>
+                </div>
               </CardContent>
             </Card>
           </TabsContent>
