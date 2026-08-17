@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight } from "lucide-react";
+import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight, Copy } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -36,6 +36,10 @@ export default function Checkout() {
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
+
+  // bKash payment inputs
+  const [bkashNumber, setBkashNumber] = useState("");
+  const [bkashTrxId, setBkashTrxId] = useState("");
 
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
@@ -288,10 +292,34 @@ export default function Checkout() {
       return;
     }
 
+    if (paymentMethod === "bkash") {
+      if (!bkashNumber.trim()) {
+        toast({
+          variant: "destructive",
+          title: "bKash Number Required",
+          description: "Please enter the bKash mobile number you sent the payment from.",
+        });
+        return;
+      }
+      if (!bkashTrxId.trim()) {
+        toast({
+          variant: "destructive",
+          title: "Transaction ID Required",
+          description: "Please enter your bKash Transaction ID (TrxID).",
+        });
+        return;
+      }
+    }
+
     setLoading(true);
 
     try {
       const orderNumber = `ORD-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}`;
+
+      const notesCombined = [
+        appliedCoupon ? `Coupon: ${appliedCoupon.code}` : null,
+        paymentMethod === "bkash" ? `bKash Sender: ${bkashNumber} | TrxID: ${bkashTrxId}` : null
+      ].filter(Boolean).join(" | ") || null;
 
       const { data: order, error: orderError } = await supabase
         .from("orders")
@@ -316,7 +344,7 @@ export default function Checkout() {
             country: shippingInfo.country,
             phone: shippingInfo.phone
           },
-          notes: appliedCoupon ? `Coupon: ${appliedCoupon.code}` : null
+          notes: notesCombined
         })
         .select()
         .single();
@@ -348,7 +376,8 @@ export default function Checkout() {
             country: shippingInfo.country,
             phone: shippingInfo.phone
           },
-          notes: appliedCoupon ? `Coupon: ${appliedCoupon.code}` : null,
+          notes: notesCombined,
+          bkash_details: paymentMethod === "bkash" ? { sender_number: bkashNumber, trx_id: bkashTrxId } : null,
           created_at: new Date().toISOString()
         };
         setDoc(doc(db, "orders", order.id), firestoreOrderDoc, { merge: true }).catch(() => {});
@@ -900,17 +929,106 @@ export default function Checkout() {
                         onClick={() => setPaymentMethod("bkash")}
                         className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                           paymentMethod === "bkash" 
-                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                            : "border-border hover:border-primary/40 bg-card"
+                            ? "border-[#E2136E] bg-[#E2136E]/5 shadow-sm ring-1 ring-[#E2136E]/20" 
+                            : "border-border hover:border-[#E2136E]/40 bg-card"
                         }`}
                       >
                         <RadioGroupItem value="bkash" id="page-bkash" />
                         <Label htmlFor="page-bkash" className="flex-1 cursor-pointer">
-                          <span className="font-bold text-sm text-foreground block">bKash</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">Instant online payment via bKash Account</p>
+                          <span className="font-bold text-sm text-foreground block">bKash (বিকাশ)</span>
+                          <p className="text-xs text-muted-foreground mt-0.5">Send Money / Make payment via bKash</p>
                         </Label>
-                        {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                        {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-[#E2136E] shrink-0" />}
                       </div>
+
+                      {/* bKash Payment Details Box */}
+                      {paymentMethod === "bkash" && (
+                        <div className="p-4 sm:p-5 rounded-2xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                          {/* bKash Header */}
+                          <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-10 h-10 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm">
+                                bKash
+                              </div>
+                              <div>
+                                <h4 className="font-bold text-sm text-foreground">bKash Payment Details</h4>
+                                <p className="text-[11px] text-muted-foreground">Personal / Merchant Account</p>
+                              </div>
+                            </div>
+                            <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5">
+                              Send Money
+                            </Badge>
+                          </div>
+
+                          {/* Instructions & Number */}
+                          <div className="p-3.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div>
+                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">bKash Number</p>
+                                <p className="text-base sm:text-lg font-black text-[#E2136E] tracking-wider">01622530550</p>
+                              </div>
+                              <Button
+                                type="button"
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  navigator.clipboard.writeText("01622530550");
+                                  toast({ title: "Copied!", description: "bKash number copied to clipboard" });
+                                }}
+                                className="h-8 px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10"
+                              >
+                                <Copy className="h-3.5 w-3.5 mr-1" /> Copy Number
+                              </Button>
+                            </div>
+
+                            <div className="pt-1 text-xs text-foreground/80 space-y-1">
+                              <p className="flex items-center gap-1.5 font-medium">
+                                <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">1</span>
+                                বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।
+                              </p>
+                              <p className="flex items-center gap-1.5 font-medium">
+                                <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">2</span>
+                                টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{total.toLocaleString()}</strong>
+                              </p>
+                              <p className="flex items-center gap-1.5 font-medium">
+                                <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">3</span>
+                                পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Inputs for verification */}
+                          <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                            <div className="space-y-1.5">
+                              <Label htmlFor="bkashNumber" className="text-xs font-bold text-foreground">
+                                Sender bKash Number (আপনার বিকাশ নাম্বার) *
+                              </Label>
+                              <Input
+                                id="bkashNumber"
+                                placeholder="e.g. 01XXXXXXXXX"
+                                value={bkashNumber}
+                                onChange={(e) => setBkashNumber(e.target.value)}
+                                className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E]"
+                                required={paymentMethod === "bkash"}
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <Label htmlFor="bkashTrxId" className="text-xs font-bold text-foreground">
+                                Transaction ID (TrxID / ট্রানজেকশন আইডি) *
+                              </Label>
+                              <Input
+                                id="bkashTrxId"
+                                placeholder="e.g. 9M7A8X9K2"
+                                value={bkashTrxId}
+                                onChange={(e) => setBkashTrxId(e.target.value.toUpperCase())}
+                                className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono"
+                                required={paymentMethod === "bkash"}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      )}
                     </RadioGroup>
                   </CardContent>
                 </Card>
