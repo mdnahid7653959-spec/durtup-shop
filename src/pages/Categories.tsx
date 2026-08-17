@@ -253,9 +253,6 @@ const Categories = () => {
                     )}
                     <div className="text-left">
                       <h2 className="font-semibold text-sm">{selectedCategory.name}</h2>
-                      <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
-                        {products.length} Products
-                      </Badge>
                     </div>
                   </div>
                   <Link 
