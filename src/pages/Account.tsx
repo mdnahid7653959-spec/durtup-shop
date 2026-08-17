@@ -237,66 +237,13 @@ export default function Account() {
         <div className="container max-w-4xl px-3 sm:px-4">
           <h1 className="text-xl sm:text-2xl lg:text-3xl font-bold mb-4 sm:mb-6 lg:mb-8">Account Settings</h1>
 
-          {/* Seller Status Card */}
-          <Card className="mb-6 border-0 sm:border shadow-sm">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3">
-                  <div className={`p-2 rounded-full ${isApprovedSeller ? 'bg-green-100 dark:bg-green-900/30' : isPendingSeller ? 'bg-yellow-100 dark:bg-yellow-900/30' : 'bg-muted'}`}>
-                    <Store className={`h-5 w-5 ${isApprovedSeller ? 'text-green-600' : isPendingSeller ? 'text-yellow-600' : 'text-muted-foreground'}`} />
-                  </div>
-                  <div>
-                    <h3 className="font-semibold text-sm sm:text-base">
-                      {isApprovedSeller ? 'Seller Account' : isPendingSeller ? 'Seller Application Pending' : 'Become a Seller'}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-muted-foreground">
-                      {isApprovedSeller 
-                        ? `Shop: ${sellerInfo?.shop_name}` 
-                        : isPendingSeller 
-                          ? 'Your application is under review'
-                          : 'Start selling on our marketplace'}
-                    </p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-2 w-full sm:w-auto">
-                  {isApprovedSeller ? (
-                    <Button asChild className="w-full sm:w-auto">
-                      <Link to="/seller">
-                        <Store className="h-4 w-4 mr-2" />
-                        Seller Dashboard
-                      </Link>
-                    </Button>
-                  ) : isPendingSeller ? (
-                    <Badge variant="secondary" className="flex items-center gap-1">
-                      <Clock className="h-3 w-3" />
-                      Pending Review
-                    </Badge>
-                  ) : hasApplied && sellerStatus === "rejected" ? (
-                    <div className="flex items-center gap-2">
-                      <Badge variant="destructive">Rejected</Badge>
-                      <Button asChild variant="outline" size="sm">
-                        <Link to="/seller/register">Reapply</Link>
-                      </Button>
-                    </div>
-                  ) : (
-                    <Button asChild variant="outline" className="w-full sm:w-auto">
-                      <Link to="/seller/register">
-                        <Store className="h-4 w-4 mr-2" />
-                        Apply Now
-                      </Link>
-                    </Button>
-                  )}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">
             {/* Mobile-friendly horizontal scroll tabs */}
             <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="grid w-full grid-cols-2 min-w-[240px] h-10 sm:h-11">
+              <TabsList className="grid w-full grid-cols-3 min-w-[280px] h-10 sm:h-11">
                 <TabsTrigger value="profile" className="text-[11px] sm:text-sm px-2 sm:px-4">Profile</TabsTrigger>
                 <TabsTrigger value="address" className="text-[11px] sm:text-sm px-2 sm:px-4">Address</TabsTrigger>
+                <TabsTrigger value="password" className="text-[11px] sm:text-sm px-2 sm:px-4">Password</TabsTrigger>
               </TabsList>
             </div>
 
@@ -498,6 +445,72 @@ export default function Account() {
                     <Save className="w-4 h-4 mr-2" />
                     {savingAddress ? "Saving..." : "Save Address"}
                   </Button>
+                </CardContent>
+              </Card>
+            </TabsContent>
+
+            {/* Password Tab */}
+            <TabsContent value="password">
+              <Card className="border-0 sm:border shadow-sm">
+                <CardHeader className="p-4 sm:p-6">
+                  <CardTitle className="text-base sm:text-lg">Change Password</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">
+                    Ensure your account is using a secure password (at least 6 characters).
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
+                  <div className="grid gap-3 sm:gap-4 max-w-md">
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="newPassword" className="text-xs sm:text-sm font-medium">New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="newPassword"
+                          type={showPasswords ? "text" : "password"}
+                          value={newPassword}
+                          onChange={(e) => setNewPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-11 sm:h-10 text-sm pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswords(!showPasswords)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                        >
+                          {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="space-y-1.5 sm:space-y-2">
+                      <Label htmlFor="confirmPassword" className="text-xs sm:text-sm font-medium">Confirm New Password</Label>
+                      <div className="relative">
+                        <Input
+                          id="confirmPassword"
+                          type={showPasswords ? "text" : "password"}
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          placeholder="••••••••"
+                          className="h-11 sm:h-10 text-sm pr-10"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPasswords(!showPasswords)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                        >
+                          {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                        </button>
+                      </div>
+                    </div>
+
+                    <Button
+                      onClick={handleChangePassword}
+                      className="w-full sm:w-auto h-11 sm:h-10 text-sm touch-manipulation active:scale-[0.98] mt-2"
+                      disabled={changingPassword || !newPassword || !confirmPassword}
+                    >
+                      <Lock className="w-4 h-4 mr-2" />
+                      {changingPassword ? "Updating..." : "Update Password"}
+                    </Button>
+                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
