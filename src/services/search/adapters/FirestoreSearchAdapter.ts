@@ -641,11 +641,16 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
     } else {
       filtered.sort((a, b) => {
         if (sortBy === "relevance") return b.score - a.score;
-        if (sortBy === "popularity") return b.sold - a.sold;
+        if (sortBy === "popularity") return (b.sold || 0) - (a.sold || 0);
         if (sortBy === "price_asc") return a.price - b.price;
         if (sortBy === "price_desc") return b.price - a.price;
-        if (sortBy === "rating") return b.rating - a.rating;
-        if (sortBy === "newest") return b.isNew ? 1 : -1;
+        if (sortBy === "rating") return (b.rating || 0) - (a.rating || 0);
+        if (sortBy === "newest") {
+          const idA = parseInt(a.id) || 0;
+          const idB = parseInt(b.id) || 0;
+          if (idA && idB) return idB - idA;
+          return b.isNew ? 1 : -1;
+        }
         return b.score - a.score;
       });
     }

@@ -39,14 +39,16 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       brand: params.brand,
       minPrice: params.minPrice,
       maxPrice: params.maxPrice,
-      sortBy: (params.sort === "price-low"
+      sortBy: (params.sort === "price-low" || params.sort === "price_asc"
         ? "price_asc"
-        : params.sort === "price-high"
+        : params.sort === "price-high" || params.sort === "price_desc"
         ? "price_desc"
         : params.sort === "rating"
         ? "rating"
         : params.sort === "newest"
         ? "newest"
+        : params.sort === "trending" || params.sort === "popular" || params.sort === "popularity"
+        ? "popularity"
         : "relevance") as any,
       page: params.page || 1,
       limit: 1000
@@ -71,14 +73,38 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       matchType: p.matchType
     }));
 
-    if (params.filter) {
-      if (params.filter === "flash-sale" || params.filter === "featured") {
-        mapped = mapped.filter((p) => p.isBestSeller || p.originalPrice);
+    // Post-filter by Special Filter Type
+    if (params.filter && params.filter !== "all") {
+      if (params.filter === "flash-sale" || params.filter === "featured" || params.filter === "on-sale") {
+        mapped = mapped.filter((p) => (p.originalPrice && p.originalPrice > p.price) || p.isBestSeller);
       } else if (params.filter === "new") {
         mapped = mapped.filter((p) => p.isNew);
       } else if (params.filter === "free-shipping") {
         mapped = mapped.filter((p) => p.freeShipping);
+      } else if (params.filter === "in-stock") {
+        mapped = mapped.filter((p) => (p as any).stock !== 0);
       }
+    }
+
+    // Price Bounds
+    if (params.minPrice !== undefined && !isNaN(params.minPrice)) {
+      mapped = mapped.filter((p) => p.price >= params.minPrice!);
+    }
+    if (params.maxPrice !== undefined && !isNaN(params.maxPrice)) {
+      mapped = mapped.filter((p) => p.price <= params.maxPrice!);
+    }
+
+    // Post-sort guarantee
+    if (params.sort === "price-low" || params.sort === "price_asc") {
+      mapped.sort((a, b) => a.price - b.price);
+    } else if (params.sort === "price-high" || params.sort === "price_desc") {
+      mapped.sort((a, b) => b.price - a.price);
+    } else if (params.sort === "rating") {
+      mapped.sort((a, b) => (b.rating || 0) - (a.rating || 0));
+    } else if (params.sort === "trending" || params.sort === "popular" || params.sort === "popularity") {
+      mapped.sort((a, b) => (b.sold || 0) - (a.sold || 0));
+    } else if (params.sort === "newest") {
+      mapped.sort((a, b) => (parseInt(b.id) || 0) - (parseInt(a.id) || 0));
     }
 
     return mapped;
