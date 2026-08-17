@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Star, Check, X, MoreHorizontal, Trash2, Search, RefreshCw, Bot, ShieldAlert, Sparkles, AlertTriangle, CheckCircle } from "lucide-react";
+import { Star, Check, X, MoreHorizontal, Trash2, Search, RefreshCw, Bot, ShieldAlert, Sparkles, AlertTriangle, CheckCircle, ThumbsUp } from "lucide-react";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,8 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { adminDb } from "@/lib/adminDb";
 import { supabase } from "@/lib/firebaseAdapter";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, onSnapshot, doc, setDoc, deleteDoc } from "firebase/firestore";
 
 export interface ReviewModerationLog {
   id: string;
@@ -60,434 +62,397 @@ export default function AdminReviews() {
 
   const fetchReviews = async () => {
     setLoading(true);
+    let reviewMap = new Map<string, Review>();
+
+    // 1. Fetch from Supabase / adminDb
     try {
-      // 1. Fetch reviews
-      const { data: reviewsData, error } = await adminDb.select<Review>("reviews", {
+      const { data: reviewsData } = await adminDb.select<Review>("reviews", {
         columns: "*",
         orderBy: { col: "created_at", ascending: false },
       });
-
-      if (error) {
-        console.error(error);
-        toast({ variant: "destructive", title: "Error", description: "Failed to fetch reviews" });
-        setReviews([]);
-        setLoading(false);
-        return;
+      if (reviewsData && reviewsData.length > 0) {
+        reviewsData.forEach(r => reviewMap.set(r.id, r));
       }
+    } catch (e) {}
 
-      const list = reviewsData || [];
-
-      // 2. Fetch review_moderation_logs
-      const reviewIds = list.map((r) => r.id);
-      let logsMap = new Map<string, ReviewModerationLog>();
-
-      if (reviewIds.length > 0) {
-        const { data: logs, error: logsErr } = await adminDb.select<ReviewModerationLog>("review_moderation_logs", {
-          filters: [{ col: "review_id", op: "in", value: reviewIds }],
+    // 2. Fetch from Firestore reviews collection
+    try {
+      const snap = await getDocs(collection(db, "reviews"));
+      if (!snap.empty) {
+        snap.forEach(d => {
+          const data = d.data();
+          const key = d.id;
+          reviewMap.set(key, {
+            id: key,
+            product_id: data.product_id || "general",
+            user_id: data.user_id || "",
+            rating: Number(data.rating || 5),
+            title: data.title || null,
+            comment: data.comment || "",
+            is_approved: data.is_approved !== false,
+            created_at: data.created_at || new Date().toISOString(),
+            user_name: data.user_name || "Customer",
+            product_title: data.product_title || data.product_name || `Product #${(data.product_id || key).slice(0, 8)}`
+          });
         });
+      }
+    } catch (fsErr) {
+      console.warn("Firestore reviews fetch notice:", fsErr);
+    }
 
-        if (!logsErr && logs) {
-          logs.forEach((log) => logsMap.set(log.review_id, log));
+    // 3. Fetch from LocalStorage
+    try {
+      const adminRevRaw = localStorage.getItem("enterprise_admin_reviews");
+      if (adminRevRaw) {
+        const localList = JSON.parse(adminRevRaw);
+        if (Array.isArray(localList)) {
+          localList.forEach((r: any) => {
+            const key = r.id || `rev-${r.created_at}`;
+            if (!reviewMap.has(key)) {
+              reviewMap.set(key, {
+                id: key,
+                product_id: r.product_id || "general",
+                user_id: r.user_id || "",
+                rating: Number(r.rating || 5),
+                title: r.title || null,
+                comment: r.comment || "",
+                is_approved: r.is_approved !== false,
+                created_at: r.created_at || new Date().toISOString(),
+                user_name: r.user_name || "Customer",
+                product_title: r.product_title || `Product #${(r.product_id || key).slice(0, 8)}`
+              });
+            }
+          });
         }
       }
 
-      // Fetch user profile and product titles if available
-      const userIds = Array.from(new Set(list.map((r) => r.user_id).filter(Boolean)));
-      const productIds = Array.from(new Set(list.map((r) => r.product_id).filter(Boolean)));
-
-      const usersMap = new Map<string, any>();
-      const productsMap = new Map<string, any>();
-
-      if (userIds.length > 0) {
-        const { data: profiles } = await supabase.from("profiles").select("id, full_name").in("id", userIds);
-        (profiles || []).forEach((p) => usersMap.set(p.id, p));
+      // Check product-specific local reviews
+      for (let i = 0; i < localStorage.length; i++) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith("local_reviews_")) {
+          const prodId = k.replace("local_reviews_", "");
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const parsed = JSON.parse(raw);
+            if (Array.isArray(parsed)) {
+              parsed.forEach((r: any) => {
+                const revKey = r.id || `rev-${prodId}-${r.created_at}`;
+                if (!reviewMap.has(revKey)) {
+                  reviewMap.set(revKey, {
+                    id: revKey,
+                    product_id: prodId,
+                    user_id: r.user_id || "",
+                    rating: Number(r.rating || 5),
+                    title: r.title || null,
+                    comment: r.comment || "",
+                    is_approved: r.is_approved !== false,
+                    created_at: r.created_at || new Date().toISOString(),
+                    user_name: r.user_name || "Customer",
+                    product_title: `Product #${prodId.slice(0, 8)}`
+                  });
+                }
+              });
+            }
+          }
+        }
       }
+    } catch {}
 
-      if (productIds.length > 0) {
-        const { data: products } = await supabase.from("products").select("id, title").in("id", productIds);
-        (products || []).forEach((p) => productsMap.set(p.id, p));
-      }
+    const list = Array.from(reviewMap.values()).sort(
+      (a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+    );
 
-      const enriched: Review[] = list.map((item) => {
-        const usr = usersMap.get(item.user_id);
-        const prod = productsMap.get(item.product_id);
-        const log = logsMap.get(item.id);
-
-        return {
-          ...item,
-          user_name: usr?.full_name || "Anonymous",
-          product_title: prod?.title || `Product #${item.product_id.slice(0, 8)}`,
-          moderation_log: log || null,
-        };
-      });
-
-      setReviews(enriched);
-    } catch (err: any) {
-      console.error(err);
-      toast({ variant: "destructive", title: "Error", description: err?.message || "Failed to load reviews" });
-    } finally {
-      setLoading(false);
-    }
+    setReviews(list);
+    setLoading(false);
   };
 
   useEffect(() => {
     fetchReviews();
+
+    // Realtime listeners
+    const unsub = onSnapshot(collection(db, "reviews"), () => fetchReviews(), () => {});
+    const onStorage = () => fetchReviews();
+    window.addEventListener("storage", onStorage);
+
+    return () => {
+      unsub();
+      window.removeEventListener("storage", onStorage);
+    };
   }, []);
 
   const handleRefresh = async () => {
     setRefreshing(true);
     await fetchReviews();
-    toast({ title: "Reviews refreshed" });
     setRefreshing(false);
+    toast({ title: "Reviews refreshed" });
   };
 
-  const updateApproval = async (id: string, is_approved: boolean) => {
-    const { error } = await adminDb.update("reviews", { is_approved }, { id });
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      toast({ title: `Review ${is_approved ? "approved" : "rejected"}` });
-      fetchReviews();
+  const handleApprove = async (id: string) => {
+    try {
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, is_approved: true } : r));
+      try {
+        await setDoc(doc(db, "reviews", id), { is_approved: true, updated_at: new Date().toISOString() }, { merge: true });
+      } catch {}
+      try {
+        await supabase.from("reviews").update({ is_approved: true }).eq("id", id);
+      } catch {}
+      toast({ title: "Review Approved", description: "The review is now publicly visible." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to approve review" });
+    }
+  };
+
+  const handleReject = async (id: string) => {
+    try {
+      setReviews(prev => prev.map(r => r.id === id ? { ...r, is_approved: false } : r));
+      try {
+        await setDoc(doc(db, "reviews", id), { is_approved: false, updated_at: new Date().toISOString() }, { merge: true });
+      } catch {}
+      try {
+        await supabase.from("reviews").update({ is_approved: false }).eq("id", id);
+      } catch {}
+      toast({ title: "Review Rejected", description: "The review has been hidden." });
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to reject review" });
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm("Are you sure you want to delete this review?")) return;
-
-    const { error } = await adminDb.remove("reviews", { id });
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      toast({ title: "Review deleted successfully" });
-      fetchReviews();
-    }
-  };
-
-  const handleRunAiModeration = async (review: Review) => {
+    if (!window.confirm("Are you sure you want to permanently delete this review?")) return;
     try {
-      const text = `${review.title || ""} ${review.comment || ""}`.toLowerCase();
-
-      // Basic heuristic calculation if external AI unavailable
-      const spamKeywords = ["free", "buy now", "click here", "discount", "promo", "cheap", "http", "www"];
-      const toxicKeywords = ["hate", "scam", "fraud", "fake", "bad", "terrible", "worst", "garbage", "trash"];
-
-      const foundSpam = spamKeywords.filter((k) => text.includes(k));
-      const foundToxic = toxicKeywords.filter((k) => text.includes(k));
-      const flagged = Array.from(new Set([...foundSpam, ...foundToxic]));
-
-      const toxicityScore = Number((foundToxic.length * 0.35 + (review.rating <= 2 ? 0.2 : 0)).toFixed(2));
-      const spamScore = Number((foundSpam.length * 0.4).toFixed(2));
-
-      let autoAction = "passed";
-      let sentiment = "positive";
-      if (review.rating <= 2 || toxicityScore > 0.4) sentiment = "negative";
-      else if (review.rating === 3) sentiment = "neutral";
-
-      if (toxicityScore > 0.5 || spamScore > 0.5) autoAction = "auto_rejected";
-      else if (toxicityScore > 0.2 || spamScore > 0.2 || flagged.length > 0) autoAction = "flagged_for_review";
-      else autoAction = "approved";
-
-      const logPayload = {
-        review_id: review.id,
-        ai_sentiment: sentiment,
-        toxicity_score: toxicityScore,
-        spam_score: spamScore,
-        auto_action: autoAction,
-        flagged_keywords: flagged,
-        moderated_at: new Date().toISOString(),
-      };
-
-      const { error } = await adminDb.upsert("review_moderation_logs", logPayload);
-      if (error) throw error;
-
-      toast({ title: "AI Moderation Completed", description: `Log created for review #${review.id.slice(0, 8)}.` });
-      fetchReviews();
+      setReviews(prev => prev.filter(r => r.id !== id));
+      try {
+        await deleteDoc(doc(db, "reviews", id));
+      } catch {}
+      try {
+        await supabase.from("reviews").delete().eq("id", id);
+      } catch {}
+      try {
+        const raw = localStorage.getItem("enterprise_admin_reviews");
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            const filtered = list.filter((r: any) => r.id !== id);
+            localStorage.setItem("enterprise_admin_reviews", JSON.stringify(filtered));
+          }
+        }
+      } catch {}
+      toast({ title: "Review Deleted", description: "The review has been removed." });
     } catch (err: any) {
-      console.error(err);
-      toast({ variant: "destructive", title: "AI Moderation Failed", description: err.message });
+      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to delete review" });
     }
   };
 
-  const renderStars = (rating: number) => (
-    <div className="flex items-center">
-      {[...Array(5)].map((_, i) => (
-        <Star
-          key={i}
-          className={`h-3.5 w-3.5 ${
-            i < rating ? "fill-amber-400 text-amber-400" : "fill-muted text-muted"
-          }`}
-        />
-      ))}
-    </div>
-  );
-
-  // Filter Logic
+  // Filter reviews based on tabs & search query
   const filteredReviews = reviews.filter((r) => {
-    const q = searchQuery.toLowerCase().trim();
-    const matchesSearch =
-      !q ||
-      (r.title && r.title.toLowerCase().includes(q)) ||
-      (r.comment && r.comment.toLowerCase().includes(q)) ||
-      (r.user_name && r.user_name.toLowerCase().includes(q)) ||
-      (r.product_title && r.product_title.toLowerCase().includes(q));
-
-    if (!matchesSearch) return false;
-
-    if (filterTab === "flagged") {
-      return (
-        r.moderation_log?.auto_action === "flagged_for_review" ||
-        r.moderation_log?.auto_action === "auto_rejected" ||
-        (r.moderation_log?.flagged_keywords && r.moderation_log.flagged_keywords.length > 0)
-      );
+    if (filterTab === "approved" && !r.is_approved) return false;
+    if (filterTab === "pending" && r.is_approved) return false;
+    if (searchQuery) {
+      const q = searchQuery.toLowerCase();
+      const matchComment = r.comment?.toLowerCase().includes(q);
+      const matchTitle = r.title?.toLowerCase().includes(q);
+      const matchUser = r.user_name?.toLowerCase().includes(q);
+      const matchProduct = r.product_title?.toLowerCase().includes(q);
+      return matchComment || matchTitle || matchUser || matchProduct;
     }
-    if (filterTab === "pending") return !r.is_approved;
-    if (filterTab === "approved") return r.is_approved;
-
     return true;
   });
 
-  // Calculate Metrics
-  const totalCount = reviews.length;
-  const flaggedCount = reviews.filter(
-    (r) =>
-      r.moderation_log?.auto_action === "flagged_for_review" ||
-      r.moderation_log?.auto_action === "auto_rejected" ||
-      (r.moderation_log?.flagged_keywords && r.moderation_log.flagged_keywords.length > 0)
-  ).length;
+  const totalReviews = reviews.length;
+  const approvedCount = reviews.filter((r) => r.is_approved).length;
+  const pendingCount = reviews.filter((r) => !r.is_approved).length;
+  const avgRating = totalReviews > 0 ? (reviews.reduce((acc, r) => acc + r.rating, 0) / totalReviews).toFixed(1) : "5.0";
 
   return (
-    <AdminLayout title="Reviews & AI Moderation">
+    <AdminLayout title="Reviews">
       <div className="space-y-6">
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-foreground flex items-center gap-2">
-              <Bot className="h-6 w-6 text-primary" />
-              Customer Reviews & AI Moderation Logs
+              <Star className="h-6 w-6 text-warning fill-warning" />
+              Customer Reviews & Moderation
             </h1>
             <p className="text-sm text-muted-foreground">
-              Monitor customer product reviews with live AI sentiment analysis, toxicity scoring, spam detection, and automated flagging.
+              Monitor, approve, and manage customer product ratings & feedback
             </p>
           </div>
           <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
             <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-            Refresh Reviews
+            Refresh Data
           </Button>
         </div>
 
-        {/* AI Overview Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-muted-foreground">Total Reviews</CardTitle>
-              <Star className="h-4 w-4 text-amber-400" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">{totalCount}</div>
-              <p className="text-xs text-muted-foreground">All store reviews</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-amber-600">AI Flagged / Toxic</CardTitle>
-              <ShieldAlert className="h-4 w-4 text-amber-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-amber-600">{flaggedCount}</div>
-              <p className="text-xs text-muted-foreground">Flagged by auto-moderator</p>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between pb-2">
-              <CardTitle className="text-sm font-medium text-emerald-600">Approved Reviews</CardTitle>
-              <CheckCircle className="h-4 w-4 text-emerald-600" />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">
-                {reviews.filter((r) => r.is_approved).length}
+        {/* Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card className="border">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-muted-foreground font-medium">Total Reviews</p>
+                <h3 className="text-2xl font-bold text-foreground mt-1">{totalReviews}</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Across all products</p>
               </div>
-              <p className="text-xs text-muted-foreground">Live on product detail pages</p>
+              <div className="w-10 h-10 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                <Star className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-emerald-600 font-medium">Average Rating</p>
+                <h3 className="text-2xl font-bold text-emerald-600 mt-1">{avgRating} ★</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Customer satisfaction</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
+                <ThumbsUp className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-blue-600 font-medium">Approved Reviews</p>
+                <h3 className="text-2xl font-bold text-blue-600 mt-1">{approvedCount}</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Live in storefront</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
+                <CheckCircle className="h-5 w-5" />
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div>
+                <p className="text-xs text-amber-600 font-medium">Pending Moderation</p>
+                <h3 className="text-2xl font-bold text-amber-600 mt-1">{pendingCount}</h3>
+                <p className="text-[11px] text-muted-foreground mt-0.5">Awaiting review</p>
+              </div>
+              <div className="w-10 h-10 rounded-xl bg-amber-500/10 text-amber-600 flex items-center justify-center">
+                <ShieldAlert className="h-5 w-5" />
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        {/* Filter and Search Bar */}
-        <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+        {/* Filter Controls & Search */}
+        <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
           <Tabs value={filterTab} onValueChange={setFilterTab} className="w-full sm:w-auto">
-            <TabsList className="grid grid-cols-4">
-              <TabsTrigger value="all">All ({totalCount})</TabsTrigger>
-              <TabsTrigger value="flagged" className="gap-1 text-amber-600">
-                <AlertTriangle className="h-3.5 w-3.5" /> AI Flagged ({flaggedCount})
-              </TabsTrigger>
-              <TabsTrigger value="pending">Pending</TabsTrigger>
-              <TabsTrigger value="approved">Approved</TabsTrigger>
+            <TabsList className="grid grid-cols-3 w-full sm:w-auto">
+              <TabsTrigger value="all" className="text-xs">All Reviews</TabsTrigger>
+              <TabsTrigger value="approved" className="text-xs">Approved</TabsTrigger>
+              <TabsTrigger value="pending" className="text-xs">Pending</TabsTrigger>
             </TabsList>
           </Tabs>
 
           <div className="relative w-full sm:w-72">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Search reviews, comments, users..."
+              placeholder="Search by comment, user, product..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-9 text-xs h-9"
+              className="pl-9 text-xs"
             />
           </div>
         </div>
 
         {/* Reviews Table */}
-        <div className="border rounded-lg bg-card overflow-hidden">
+        <div className="border rounded-xl bg-card overflow-hidden">
           <Table>
             <TableHeader>
-              <TableRow>
-                <TableHead>Product & Review</TableHead>
-                <TableHead>Rating</TableHead>
-                <TableHead>AI Moderation Logs</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Date</TableHead>
-                <TableHead className="text-right">Actions</TableHead>
+              <TableRow className="bg-muted/40">
+                <TableHead className="text-xs">Rating</TableHead>
+                <TableHead className="text-xs">Customer</TableHead>
+                <TableHead className="text-xs">Product</TableHead>
+                <TableHead className="text-xs">Comment</TableHead>
+                <TableHead className="text-xs">Status</TableHead>
+                <TableHead className="text-xs">Date</TableHead>
+                <TableHead className="text-xs text-right">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                    <RefreshCw className="h-5 w-5 animate-spin mx-auto mb-2" />
-                    Loading customer reviews and moderation logs...
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    <RefreshCw className="h-6 w-6 animate-spin mx-auto mb-2 text-primary" />
+                    Loading reviews...
                   </TableCell>
                 </TableRow>
               ) : filteredReviews.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
-                    No customer reviews found.
+                  <TableCell colSpan={7} className="text-center py-12 text-muted-foreground">
+                    No reviews found matching your search.
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredReviews.map((review) => {
-                  const log = review.moderation_log;
-                  return (
-                    <TableRow key={review.id}>
-                      <TableCell className="max-w-xs">
-                        <div className="space-y-1">
-                          <p className="text-[11px] font-semibold text-primary truncate">{review.product_title}</p>
-                          {review.title && <p className="font-medium text-xs text-foreground">{review.title}</p>}
-                          {review.comment && <p className="text-xs text-muted-foreground line-clamp-2">{review.comment}</p>}
-                          <p className="text-[10px] text-muted-foreground font-mono">By: {review.user_name}</p>
-                        </div>
-                      </TableCell>
-
-                      <TableCell>{renderStars(review.rating)}</TableCell>
-
-                      {/* Bound AI Moderation Logs Display */}
-                      <TableCell className="max-w-xs">
-                        {log ? (
-                          <div className="space-y-1.5 text-xs">
-                            <div className="flex items-center gap-1.5 flex-wrap">
-                              {/* Sentiment */}
-                              <Badge
-                                variant="outline"
-                                className={
-                                  log.ai_sentiment === "positive"
-                                    ? "bg-emerald-500/10 text-emerald-600 border-emerald-500/30 text-[10px] uppercase font-mono"
-                                    : log.ai_sentiment === "negative"
-                                    ? "bg-destructive/10 text-destructive border-destructive/30 text-[10px] uppercase font-mono"
-                                    : "bg-muted text-muted-foreground text-[10px] uppercase font-mono"
-                                }
-                              >
-                                {log.ai_sentiment || "Neutral"}
-                              </Badge>
-
-                              {/* Auto Action */}
-                              <Badge
-                                variant="outline"
-                                className={
-                                  log.auto_action === "auto_rejected"
-                                    ? "bg-destructive/10 text-destructive border-destructive/30 text-[10px]"
-                                    : log.auto_action === "flagged_for_review"
-                                    ? "bg-amber-500/10 text-amber-600 border-amber-500/30 text-[10px]"
-                                    : "bg-blue-500/10 text-blue-600 border-blue-500/30 text-[10px]"
-                                }
-                              >
-                                {log.auto_action ? log.auto_action.replace(/_/g, " ") : "Passed"}
-                              </Badge>
-                            </div>
-
-                            {/* Scores */}
-                            <div className="text-[11px] text-muted-foreground flex gap-2">
-                              <span>Toxicity: <strong className="text-foreground">{Math.round((log.toxicity_score || 0) * 100)}%</strong></span>
-                              <span>Spam: <strong className="text-foreground">{Math.round((log.spam_score || 0) * 100)}%</strong></span>
-                            </div>
-
-                            {/* Flagged Keywords */}
-                            {log.flagged_keywords && log.flagged_keywords.length > 0 && (
-                              <div className="flex flex-wrap gap-1">
-                                {log.flagged_keywords.map((kw, i) => (
-                                  <span key={i} className="px-1.5 py-0.5 rounded bg-amber-500/15 text-amber-700 dark:text-amber-300 text-[10px] font-mono">
-                                    ⚠️ {kw}
-                                  </span>
-                                ))}
-                              </div>
-                            )}
-                          </div>
+                filteredReviews.map((r) => (
+                  <TableRow key={r.id} className="hover:bg-muted/20">
+                    <TableCell>
+                      <div className="flex items-center gap-1">
+                        <span className="font-bold text-sm">{r.rating}</span>
+                        <Star className="h-3.5 w-3.5 fill-warning text-warning" />
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-xs font-semibold text-foreground">
+                      {r.user_name || "Customer"}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground max-w-[150px] truncate">
+                      {r.product_title || `Product #${r.product_id.slice(0, 8)}`}
+                    </TableCell>
+                    <TableCell className="text-xs max-w-[280px]">
+                      {r.title && <p className="font-semibold text-foreground truncate">{r.title}</p>}
+                      <p className="text-muted-foreground line-clamp-2">{r.comment}</p>
+                    </TableCell>
+                    <TableCell className="text-xs">
+                      {r.is_approved ? (
+                        <Badge className="bg-emerald-500/10 text-emerald-600 border-emerald-500/30 font-medium">
+                          Live / Approved
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-500/10 text-amber-600 border-amber-500/30 font-medium">
+                          Pending Moderation
+                        </Badge>
+                      )}
+                    </TableCell>
+                    <TableCell className="text-xs text-muted-foreground">
+                      {new Date(r.created_at).toLocaleDateString()}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {!r.is_approved ? (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleApprove(r.id)}
+                            className="h-7 px-2 text-xs text-emerald-600 hover:bg-emerald-50"
+                          >
+                            <Check className="h-3.5 w-3.5 mr-1" /> Approve
+                          </Button>
                         ) : (
                           <Button
                             size="sm"
-                            variant="ghost"
-                            onClick={() => handleRunAiModeration(review)}
-                            className="text-[11px] h-7 text-primary hover:bg-primary/10 gap-1"
+                            variant="outline"
+                            onClick={() => handleReject(r.id)}
+                            className="h-7 px-2 text-xs text-amber-600 hover:bg-amber-50"
                           >
-                            <Sparkles className="h-3 w-3" /> Run AI Analysis
+                            <X className="h-3.5 w-3.5 mr-1" /> Hide
                           </Button>
                         )}
-                      </TableCell>
-
-                      <TableCell>
-                        <Badge variant={review.is_approved ? "default" : "secondary"} className="text-xs">
-                          {review.is_approved ? "Approved" : "Pending"}
-                        </Badge>
-                      </TableCell>
-
-                      <TableCell className="text-xs text-muted-foreground">
-                        {new Date(review.created_at).toLocaleDateString()}
-                      </TableCell>
-
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            {!review.is_approved ? (
-                              <DropdownMenuItem onClick={() => updateApproval(review.id, true)}>
-                                <Check className="h-4 w-4 mr-2 text-emerald-600" />
-                                Approve Review
-                              </DropdownMenuItem>
-                            ) : (
-                              <DropdownMenuItem onClick={() => updateApproval(review.id, false)}>
-                                <X className="h-4 w-4 mr-2 text-amber-600" />
-                                Unapprove / Reject
-                              </DropdownMenuItem>
-                            )}
-
-                            <DropdownMenuItem onClick={() => handleRunAiModeration(review)}>
-                              <Sparkles className="h-4 w-4 mr-2 text-primary" />
-                              Re-Run AI Scan
-                            </DropdownMenuItem>
-
-                            <DropdownMenuItem className="text-destructive" onClick={() => handleDelete(review.id)}>
-                              <Trash2 className="h-4 w-4 mr-2" />
-                              Delete Review
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  );
-                })
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleDelete(r.id)}
+                          className="h-7 w-7 p-0 text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ))
               )}
             </TableBody>
           </Table>

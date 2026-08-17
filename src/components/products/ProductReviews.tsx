@@ -2,6 +2,8 @@ import { useState, useEffect } from "react";
 import { Star, ThumbsUp, User, MessageSquarePlus, CheckCircle2, Sparkles, X, ShieldCheck } from "lucide-react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/firebaseAdapter";
+import { db } from "@/integrations/firebase/client";
+import { doc, setDoc } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -160,6 +162,7 @@ export function ProductReviews({ productId, ratingAverage = 4.8, ratingCount = 1
       // 1. Save to Supabase / DB
       try {
         await supabase.from("reviews").insert({
+          id: newRev.id,
           product_id: productId,
           user_id: user?.id || `anon-${Date.now()}`,
           user_name: newRev.user_name,
@@ -173,10 +176,32 @@ export function ProductReviews({ productId, ratingAverage = 4.8, ratingCount = 1
         console.warn("Review insert DB notice:", dbErr);
       }
 
-      // 2. Save locally for instant persistence
+      // 2. Save to Firestore
+      try {
+        await setDoc(doc(db, "reviews", newRev.id), {
+          id: newRev.id,
+          product_id: productId,
+          user_id: user?.id || `anon-${Date.now()}`,
+          user_name: newRev.user_name,
+          rating: newRev.rating,
+          title: newRev.title || "",
+          comment: newRev.comment,
+          is_approved: true,
+          created_at: newRev.created_at
+        }, { merge: true });
+      } catch (fsErr) {
+        console.warn("Firestore review save error:", fsErr);
+      }
+
+      // 3. Save locally for instant persistence
       const updatedLocal = [newRev, ...localReviews];
       setLocalReviews(updatedLocal);
       localStorage.setItem(`local_reviews_${productId}`, JSON.stringify(updatedLocal));
+      try {
+        const adminRevRaw = localStorage.getItem("enterprise_admin_reviews") || "[]";
+        const adminRevs = JSON.parse(adminRevRaw);
+        localStorage.setItem("enterprise_admin_reviews", JSON.stringify([newRev, ...adminRevs]));
+      } catch {}
 
       toast({
         title: "Review submitted! ⭐",

@@ -305,15 +305,24 @@ export default function OrderDetail() {
     }
     setReturnSubmitting(true);
     const nowIso = new Date().toISOString();
+    const returnId = `RET-${order.id || Date.now()}`;
+    const customerName = `${order.shipping_address?.firstName || order.shipping_address?.name || "Customer"} ${order.shipping_address?.lastName || ""}`.trim();
+    const customerEmail = user?.email || order.shipping_address?.email || "";
+    
     const returnPayload = {
+      id: returnId,
       order_id: order.id,
-      order_number: order.order_number,
-      user_id: user?.id || null,
-      user_email: user?.email || null,
+      order_number: order.order_number || order.id.slice(0, 10),
+      user_id: user?.id || `user-${Date.now()}`,
+      customer_name: customerName,
+      customer_email: customerEmail,
       phone: returnPhone || (order.shipping_address?.phone || ""),
+      seller_id: null,
       reason: returnReason,
-      note: returnNote || "",
+      details: returnNote || returnReason,
       status: "pending",
+      refund_amount: Number(order.total || 0),
+      images: [],
       created_at: nowIso,
       items: order.order_items || []
     };
@@ -321,7 +330,8 @@ export default function OrderDetail() {
     try {
       // 1. Save to Firestore
       try {
-        await setDoc(doc(db, "returns", `RET-${order.id}`), returnPayload, { merge: true });
+        await setDoc(doc(db, "return_requests", returnId), returnPayload, { merge: true });
+        await setDoc(doc(db, "returns", returnId), returnPayload, { merge: true });
         await setDoc(doc(db, "orders", order.id), {
           return_requested: true,
           return_reason: returnReason,
@@ -335,6 +345,7 @@ export default function OrderDetail() {
 
       // 2. Save to Supabase
       try {
+        await supabase.from("return_requests" as any).insert(returnPayload);
         await supabase.from("returns" as any).insert(returnPayload);
         await supabase.from("orders").update({
           return_requested: true,
@@ -345,8 +356,10 @@ export default function OrderDetail() {
       // 3. Save to localStorage
       try {
         const existing = JSON.parse(localStorage.getItem("durtup_return_requests") || "[]");
-        existing.unshift(returnPayload);
-        localStorage.setItem("durtup_return_requests", JSON.stringify(existing));
+        const filtered = existing.filter((r: any) => r.id !== returnId && r.order_id !== order.id);
+        const updated = [returnPayload, ...filtered];
+        localStorage.setItem("durtup_return_requests", JSON.stringify(updated));
+        localStorage.setItem("enterprise_admin_returns", JSON.stringify(updated));
       } catch {}
 
       setReturnSuccess(true);
