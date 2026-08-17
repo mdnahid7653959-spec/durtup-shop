@@ -8,7 +8,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
 import { useToast } from "@/hooks/use-toast";
@@ -792,7 +791,6 @@ export default function ProductDetail() {
           </div>
         </main>
         <Footer />
-        <MobileBottomNav />
       </div>;
   }
   if (!product) {
@@ -809,7 +807,6 @@ export default function ProductDetail() {
           </div>
         </main>
         <Footer />
-        <MobileBottomNav />
       </div>;
   }
   const price = product.discount_price || product.regular_price;
@@ -1237,16 +1234,16 @@ export default function ProductDetail() {
         </div>
 
         {/* Mobile sticky bottom bar */}
-        <div className="md:hidden fixed bottom-16 left-0 right-0 z-40 bg-card border-t p-3 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-          <div className="flex items-center gap-2">
-            <Button variant={inWishlist ? "default" : "outline"} size="lg" className="h-12 w-12 shrink-0" onClick={handleWishlistToggle}>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-2.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+          <div className="flex items-center gap-2 max-w-lg mx-auto w-full">
+            <Button variant={inWishlist ? "default" : "outline"} size="lg" className="h-11 w-11 shrink-0 rounded-xl" onClick={handleWishlistToggle}>
               <Heart className={`h-5 w-5 ${inWishlist ? "fill-current" : ""}`} />
             </Button>
-            <Button variant="outline" size="lg" className="flex-1 h-12 text-sm font-semibold" onClick={handleAddToCart} disabled={addingToCart}>
+            <Button variant="outline" size="lg" className="flex-1 h-11 text-sm font-semibold rounded-xl" onClick={handleAddToCart} disabled={addingToCart}>
               {addingToCart ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <ShoppingCart className="h-4 w-4 mr-1" />}
               Cart
             </Button>
-            <Button size="lg" className="flex-1 h-12 text-sm font-semibold" onClick={handleBuyNow} disabled={buyingNow}>
+            <Button size="lg" className="flex-1 h-11 text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20" onClick={handleBuyNow} disabled={buyingNow}>
               {buyingNow ? <Loader2 className="h-4 w-4 mr-1 animate-spin" /> : <Zap className="h-4 w-4 mr-1" />}
               Buy Now
             </Button>
@@ -1334,6 +1331,5 @@ export default function ProductDetail() {
         </div>
       )}
       <Footer />
-      <MobileBottomNav />
     </div>;
 }

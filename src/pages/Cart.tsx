@@ -5,7 +5,6 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useCart } from "@/contexts/CartContext";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useState, useMemo } from "react";
@@ -58,7 +57,6 @@ export default function Cart() {
           </div>
         </main>
         <Footer />
-        <MobileBottomNav />
       </div>
     );
   }
@@ -83,7 +81,6 @@ export default function Cart() {
           </div>
         </main>
         <Footer />
-        <MobileBottomNav />
       </div>
     );
   }
@@ -259,39 +256,25 @@ export default function Cart() {
         </div>
 
         {/* Mobile sticky checkout bar */}
-        <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 bg-card border-t shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-          <div className="p-3 space-y-3">
-            {/* Coupon input - Mobile */}
-            <div className="flex gap-2">
-              <Input
-                placeholder="Coupon code"
-                value={couponCode}
-                onChange={(e) => setCouponCode(e.target.value)}
-                className="h-10"
-              />
-              <Button variant="outline" onClick={handleApplyCoupon} size="sm" className="h-10 px-4">Apply</Button>
+        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+          <div className="flex items-center justify-between gap-4 max-w-lg mx-auto w-full">
+            <div>
+              <p className="text-xs text-muted-foreground">Total ({totalItems} items)</p>
+              <p className="text-xl font-bold text-primary">৳{total.toLocaleString()}</p>
+              {shipping > 0 && (
+                <span className="text-[11px] text-muted-foreground">+ ৳{shipping.toLocaleString()} Delivery</span>
+              )}
             </div>
-            
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-muted-foreground">Total ({totalItems} items)</p>
-                <p className="text-xl font-bold text-primary">৳{total.toLocaleString()}</p>
-                {shipping > 0 && (
-                  <span className="text-xs text-muted-foreground">+ ৳{shipping.toLocaleString()} Delivery</span>
-                )}
-              </div>
-              <Link to="/checkout">
-                <Button size="lg" className="h-12 px-6 text-base font-semibold">
-                  Checkout
-                  <ArrowRight className="ml-2 h-5 w-5" />
-                </Button>
-              </Link>
-            </div>
+            <Link to="/checkout" className="flex-1 max-w-[180px]">
+              <Button size="lg" className="h-12 w-full px-5 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md shadow-primary/20">
+                Checkout
+                <ArrowRight className="ml-1.5 h-4 w-4" />
+              </Button>
+            </Link>
           </div>
         </div>
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

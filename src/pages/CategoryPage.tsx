@@ -3,7 +3,6 @@ import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/lib/firebaseAdapter";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { CombinedProductCard } from "@/components/products/CombinedProductCard";
 import { Badge } from "@/components/ui/badge";
@@ -216,7 +215,6 @@ export default function CategoryPage() {
         <main className="flex-1 flex items-center justify-center pb-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -297,7 +295,6 @@ export default function CategoryPage() {
         </div>
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

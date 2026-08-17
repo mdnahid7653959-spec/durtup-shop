@@ -5,7 +5,6 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -472,7 +471,6 @@ export default function BuyerMessages() {
         </div>
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

@@ -13,7 +13,6 @@ import { useSellerStatus } from "@/hooks/useSellerStatus";
 import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { supabase } from "@/lib/firebaseAdapter";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/integrations/firebase/client";
@@ -513,7 +512,6 @@ export default function Account() {
         </div>
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

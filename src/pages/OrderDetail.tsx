@@ -24,7 +24,6 @@ import { db } from "@/integrations/firebase/client";
 import { doc, getDoc, onSnapshot, setDoc, getDocs, collection } from "firebase/firestore";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -545,7 +544,6 @@ export default function OrderDetail() {
         <main className="flex-1 flex items-center justify-center">
           <p>Please log in to view order details.</p>
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -557,7 +555,6 @@ export default function OrderDetail() {
         <main className="flex-1 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -575,7 +572,6 @@ export default function OrderDetail() {
             </Button>
           </div>
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -945,8 +941,6 @@ export default function OrderDetail() {
           </div>
         </DialogContent>
       </Dialog>
-
-      <MobileBottomNav />
     </div>
   );
 }

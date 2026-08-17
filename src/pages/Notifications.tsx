@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/firebaseAdapter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useToast } from "@/hooks/use-toast";
@@ -156,7 +155,6 @@ export default function Notifications() {
             <Button onClick={() => navigate("/login")}>Login</Button>
           </div>
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -255,8 +253,6 @@ export default function Notifications() {
           )}
         </div>
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

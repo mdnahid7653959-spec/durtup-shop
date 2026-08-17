@@ -1160,8 +1160,8 @@ export default function Checkout() {
             </div>
 
             {/* Mobile Place Order Bar */}
-            <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 bg-card border-t p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-              <div className="flex items-center justify-between gap-4">
+            <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border p-3 sm:p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.08)]" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+              <div className="flex items-center justify-between gap-4 max-w-lg mx-auto w-full">
                 <div>
                   <p className="text-xs text-muted-foreground">Total Payable</p>
                   <p className="text-xl font-black text-primary">৳{total.toLocaleString()}</p>
@@ -1169,7 +1169,7 @@ export default function Checkout() {
                     <p className="text-[11px] text-success font-semibold">Saved ৳{couponDiscount.toLocaleString()}</p>
                   )}
                 </div>
-                <Button type="submit" size="lg" className="h-12 px-8 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[200px]" disabled={loading}>
+                <Button type="submit" size="lg" className="h-12 px-6 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[200px] shadow-md shadow-primary/20" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />

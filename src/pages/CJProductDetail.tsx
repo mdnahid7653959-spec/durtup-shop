@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useToast } from "@/hooks/use-toast";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
@@ -197,7 +196,6 @@ export default function CJProductDetail() {
           </div>
         </main>
         <Footer />
-        <MobileBottomNav />
       </div>
     );
   }
@@ -216,7 +214,6 @@ export default function CJProductDetail() {
           </div>
         </main>
         <Footer />
-        <MobileBottomNav />
       </div>
     );
   }
@@ -549,20 +546,20 @@ export default function CJProductDetail() {
         </div>
 
         {/* Mobile sticky bottom bar - Enhanced */}
-        <div className="fixed bottom-16 md:bottom-0 left-0 right-0 bg-background/95 backdrop-blur-md border-t shadow-lg p-3 sm:hidden z-40 safe-area-pb">
-          <div className="flex items-center gap-2">
+        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3 sm:hidden z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+          <div className="flex items-center gap-2 max-w-lg mx-auto w-full">
             {/* Mini Quantity */}
-            <div className="flex items-center border rounded-lg overflow-hidden bg-muted/50 shrink-0">
+            <div className="flex items-center border rounded-xl overflow-hidden bg-muted/50 shrink-0">
               <button
                 onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                className="w-9 h-10 flex items-center justify-center active:bg-muted"
+                className="w-9 h-11 flex items-center justify-center active:bg-muted"
               >
                 <Minus className="h-3.5 w-3.5" />
               </button>
               <span className="w-8 text-center font-semibold text-sm">{quantity}</span>
               <button
                 onClick={() => setQuantity(quantity + 1)}
-                className="w-9 h-10 flex items-center justify-center active:bg-muted"
+                className="w-9 h-11 flex items-center justify-center active:bg-muted"
               >
                 <Plus className="h-3.5 w-3.5" />
               </button>
@@ -571,7 +568,7 @@ export default function CJProductDetail() {
             <Button 
               variant="outline"
               size="lg" 
-              className="flex-1 h-11 text-sm font-medium border-primary text-primary active:scale-[0.98]" 
+              className="flex-1 h-11 text-sm font-medium border-primary text-primary active:scale-[0.98] rounded-xl" 
               onClick={handleAddToCart}
               disabled={addingToCart || !product.inStock}
             >
@@ -584,7 +581,7 @@ export default function CJProductDetail() {
             </Button>
             <Button 
               size="lg" 
-              className="flex-1 h-11 text-sm font-semibold bg-gradient-to-r from-primary to-primary/80 active:scale-[0.98]" 
+              className="flex-1 h-11 text-sm font-semibold bg-gradient-to-r from-primary to-primary/80 active:scale-[0.98] rounded-xl shadow-md shadow-primary/20" 
               onClick={handleBuyNow}
               disabled={buyingNow || !product.inStock}
             >
@@ -593,13 +590,12 @@ export default function CJProductDetail() {
               ) : (
                 <Zap className="h-4 w-4 mr-1" />
               )}
-              Buy
+              Buy Now
             </Button>
           </div>
         </div>
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

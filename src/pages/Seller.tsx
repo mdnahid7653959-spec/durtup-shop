@@ -4,7 +4,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/firebaseAdapter";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Store, TrendingUp, Globe, Package, Shield, Headphones, ChevronRight, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
@@ -153,7 +152,6 @@ export default function Seller() {
         </div>
       </main>
       <Footer />
-      <MobileBottomNav />
     </div>
   );
 }

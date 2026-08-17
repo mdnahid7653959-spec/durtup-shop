@@ -4,7 +4,6 @@ import { useNavigate } from "react-router-dom";
 import { supabase } from "@/lib/firebaseAdapter";
 import { useAuth } from "@/contexts/AuthContext";
 import { Header } from "@/components/layout/Header";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -63,7 +62,6 @@ export default function Wallet() {
             <Button onClick={() => navigate("/login")}>Login</Button>
           </div>
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -186,8 +184,6 @@ export default function Wallet() {
           </Card>
         </div>
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 }

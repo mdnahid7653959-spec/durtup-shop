@@ -2,7 +2,6 @@ import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 import { Header } from "@/components/layout/Header";
-import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { supabase } from "@/lib/firebaseAdapter";
 import { 
@@ -180,7 +179,6 @@ const Categories = () => {
         <main className="flex-1 flex items-center justify-center pb-20">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </main>
-        <MobileBottomNav />
       </div>
     );
   }
@@ -335,8 +333,6 @@ const Categories = () => {
           </div>
         </div>
       </main>
-
-      <MobileBottomNav />
     </div>
   );
 };
