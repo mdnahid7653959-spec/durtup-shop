@@ -255,8 +255,8 @@ export default function Cart() {
           </div>
         </div>
 
-        {/* Mobile sticky checkout bar */}
-        <div className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+        {/* Mobile sticky checkout bar (Positioned directly above MobileBottomNav) */}
+        <div className="lg:hidden fixed bottom-[60px] sm:bottom-16 left-0 right-0 z-30 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3">
           <div className="flex items-center justify-between gap-4 max-w-lg mx-auto w-full">
             <div>
               <p className="text-xs text-muted-foreground">Total ({totalItems} items)</p>
@@ -266,7 +266,7 @@ export default function Cart() {
               )}
             </div>
             <Link to="/checkout" className="flex-1 max-w-[180px]">
-              <Button size="lg" className="h-12 w-full px-5 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md shadow-primary/20">
+              <Button size="lg" className="h-11 w-full px-4 text-sm sm:text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md shadow-primary/20">
                 Checkout
                 <ArrowRight className="ml-1.5 h-4 w-4" />
               </Button>

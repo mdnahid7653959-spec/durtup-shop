@@ -8,14 +8,13 @@ interface AppLayoutProps {
 }
 
 // Pages where mobile bottom nav should NOT appear
-// (admin, seller dashboards, product details with dedicated sticky action bars, checkout, cart)
+// (admin, seller dashboards, product details with dedicated sticky action bars, checkout)
 const EXCLUDED_PATHS = [
   "/admin",
   "/seller",
   "/product/",
   "/cj-product",
   "/checkout",
-  "/cart",
 ];
 
 export function AppLayout({ children }: AppLayoutProps) {
@@ -24,12 +23,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   
   // Specific checks to exclude mobile bottom nav
   const isProductDetail = path.startsWith("/product/") || path.startsWith("/cj-product") || path === "/product";
-  const isCart = path === "/cart" || path.startsWith("/cart/");
   const isCheckout = path === "/checkout" || path.startsWith("/checkout/");
   const isAdmin = path.startsWith("/admin");
   const isSeller = path.startsWith("/seller");
 
-  const shouldShowMobileNav = !isProductDetail && !isCart && !isCheckout && !isAdmin && !isSeller;
+  const shouldShowMobileNav = !isProductDetail && !isCheckout && !isAdmin && !isSeller;
 
   return (
     <>
