@@ -452,12 +452,8 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
               {/* Dark Gradient Overlay for Maximum Readability */}
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-black/10 group-hover:via-black/20 transition-colors duration-300 pointer-events-none" />
 
-              {/* Top Accent Badge */}
-              <div className="relative z-10 flex justify-start">
-                <span className={`inline-flex items-center text-[7px] sm:text-[9px] font-black px-2 py-0.5 rounded-full border shadow-sm backdrop-blur-md ${badgeColor}`}>
-                  {c.badge || tag}
-                </span>
-              </div>
+              {/* Spacer */}
+              <div className="relative z-10" />
 
               {/* Bottom Professional Typography */}
               <div className="relative z-10">
