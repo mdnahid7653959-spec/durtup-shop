@@ -249,7 +249,7 @@ export default function CJProductDetail() {
               {/* Main Image - Full Width on Mobile */}
               <div 
                 ref={imageContainerRef}
-                className="aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-muted relative touch-pan-y"
+                className="aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/70 shadow-sm relative touch-pan-y"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -257,7 +257,7 @@ export default function CJProductDetail() {
                 <img 
                   src={images[selectedImage]} 
                   alt={product.nameEn || product.name}
-                  className="w-full h-full object-cover transition-opacity duration-300"
+                  className="w-full h-full object-contain p-2 sm:p-4 transition-opacity duration-300"
                   onError={(e) => {
                     e.currentTarget.src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop";
                   }}
@@ -316,7 +316,7 @@ export default function CJProductDetail() {
                     <button
                       key={i}
                       onClick={() => setSelectedImage(i)}
-                      className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-lg overflow-hidden border-2 transition-all active:scale-95 ${
+                      className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-lg overflow-hidden border-2 transition-all active:scale-95 bg-white dark:bg-card ${
                         selectedImage === i 
                           ? 'border-primary ring-2 ring-primary/30' 
                           : 'border-border hover:border-muted-foreground/50'
@@ -325,7 +325,7 @@ export default function CJProductDetail() {
                       <img 
                         src={img} 
                         alt={`View ${i + 1}`} 
-                        className="w-full h-full object-cover" 
+                        className="w-full h-full object-contain p-1" 
                         loading="lazy"
                         onError={(e) => { 
                           e.currentTarget.src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=100&h=100&fit=crop"; 

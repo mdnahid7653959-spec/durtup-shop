@@ -829,17 +829,40 @@ export default function ProductDetail() {
           <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
             {/* Product Images Section */}
             <div className="w-full">
-              {/* Main Image with premium gradient frame */}
+              {/* Main Image with clean, premium presentation */}
               <div className="flex justify-center mb-4">
-                <div className="relative w-full max-w-[320px] sm:max-w-[400px] lg:max-w-[480px]">
-                  {/* Decorative glow */}
-                  <div className="absolute -inset-1 bg-gradient-to-tr from-primary/30 via-warning/20 to-primary/30 rounded-3xl blur-xl opacity-60 pointer-events-none" />
-                  <div ref={imageContainerRef} className="relative aspect-square rounded-3xl overflow-hidden bg-gradient-to-br from-white via-muted/30 to-primary/5 border border-primary/10 shadow-[0_20px_60px_-20px_hsl(var(--primary)/0.35)] cursor-zoom-in group" onClick={() => !showVideo && setLightboxOpen(true)} onTouchStart={handleTouchStart} onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
-                    {/* Corner accents */}
-                    <div className="absolute top-0 left-0 w-16 h-16 border-t-2 border-l-2 border-primary/30 rounded-tl-3xl pointer-events-none" />
-                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-2 border-r-2 border-primary/30 rounded-br-3xl pointer-events-none" />
-
-                    {showVideo && product.video_url ? getYouTubeEmbedUrl(product.video_url) ? <iframe src={getYouTubeEmbedUrl(product.video_url) || ''} title="Product Video" className="w-full h-full" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" allowFullScreen /> : <video src={product.video_url} controls className="w-full h-full object-contain object-center bg-black/5" playsInline /> : <img src={images[selectedImage]} alt={product.name} className="w-full h-full object-contain object-center p-4 transition-transform duration-500 group-hover:scale-110" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = defaultImages[0]; }} />}
+                <div className="relative w-full max-w-[380px] sm:max-w-[440px] lg:max-w-[480px]">
+                  <div
+                    ref={imageContainerRef}
+                    className="relative aspect-square rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/70 shadow-sm cursor-zoom-in group"
+                    onClick={() => !showVideo && setLightboxOpen(true)}
+                    onTouchStart={handleTouchStart}
+                    onTouchMove={handleTouchMove}
+                    onTouchEnd={handleTouchEnd}
+                  >
+                    {showVideo && product.video_url ? (
+                      getYouTubeEmbedUrl(product.video_url) ? (
+                        <iframe
+                          src={getYouTubeEmbedUrl(product.video_url) || ''}
+                          title="Product Video"
+                          className="w-full h-full"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        />
+                      ) : (
+                        <video src={product.video_url} controls className="w-full h-full object-contain object-center bg-black/5" playsInline />
+                      )
+                    ) : (
+                      <img
+                        src={images[selectedImage]}
+                        alt={product.name}
+                        className="w-full h-full object-contain object-center p-2 sm:p-4 transition-transform duration-300 group-hover:scale-105"
+                        onError={(e) => {
+                          e.currentTarget.onerror = null;
+                          e.currentTarget.src = defaultImages[0];
+                        }}
+                      />
+                    )}
 
                     {/* Tap to Zoom Badge */}
                     {!showVideo && (
@@ -851,8 +874,6 @@ export default function ProductDetail() {
                       </button>
                     )}
 
-
-
                     {/* Featured badge */}
                     {product.is_featured && (
                       <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-warning to-primary text-white text-xs font-bold shadow-md">
@@ -862,64 +883,104 @@ export default function ProductDetail() {
                     )}
 
                     {/* Image Counter Badge */}
-                    <div className="absolute top-3 right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md">
+                    <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md">
                       {selectedImage + 1} / {(product as any).video_url ? images.length + 1 : images.length}
                     </div>
 
                     {/* Image navigation arrows */}
-                    <button onClick={() => {
-                      setSelectedImage(Math.max(0, selectedImage - 1));
-                      setShowVideo(false);
-                    }} className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 backdrop-blur shadow-lg flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white hover:scale-110 transition-all" disabled={selectedImage === 0}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedImage(Math.max(0, selectedImage - 1));
+                        setShowVideo(false);
+                      }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0"
+                      disabled={selectedImage === 0}
+                    >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
-                    <button onClick={() => {
-                      const totalImages = (product as any)?.video_url ? images.length : images.length - 1;
-                      if (selectedImage < totalImages) {
-                        setSelectedImage(selectedImage + 1);
-                        if (selectedImage === images.length - 1 && (product as any)?.video_url) {
-                          setShowVideo(true);
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        const totalImages = (product as any)?.video_url ? images.length : images.length - 1;
+                        if (selectedImage < totalImages) {
+                          setSelectedImage(selectedImage + 1);
+                          if (selectedImage === images.length - 1 && (product as any)?.video_url) {
+                            setShowVideo(true);
+                          }
                         }
-                      }
-                    }} className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-white/95 backdrop-blur shadow-lg flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white hover:scale-110 transition-all">
+                      }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all"
+                    >
                       <ChevronRight className="h-5 w-5" />
                     </button>
 
                     {/* Share button */}
-                    <button onClick={handleShare} className="absolute top-3 right-3 w-10 h-10 rounded-full bg-white/95 backdrop-blur shadow-lg flex items-center justify-center hover:bg-primary hover:text-white hover:scale-110 transition-all">
-                      <Share2 className="h-5 w-5" />
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                      className="absolute top-3 right-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all"
+                      aria-label="Share"
+                    >
+                      <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
 
                     {/* Image indicator dots */}
                     <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden">
                       {images.map((_, i) => (
-                        <div key={i} className={`h-2 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-primary w-6' : 'bg-white/70 w-2'}`} />
+                        <div key={i} className={`h-2 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-primary w-6' : 'bg-black/20 w-2'}`} />
                       ))}
-                      {product.video_url && <div className={`h-2 rounded-full transition-all ${showVideo ? 'bg-primary w-6' : 'bg-white/70 w-2'}`} />}
+                      {product.video_url && <div className={`h-2 rounded-full transition-all ${showVideo ? 'bg-primary w-6' : 'bg-black/20 w-2'}`} />}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Thumbnail strip */}
-              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center flex-wrap pl-2 sm:px-2">
+              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-1 px-1 no-scrollbar">
                 {images.map((img, i) => (
-                  <button key={i} onClick={() => {
-                    setSelectedImage(i);
-                    setShowVideo(false);
-                  }} className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all flex-shrink-0 hover:scale-105 ${selectedImage === i && !showVideo ? 'border-primary ring-2 ring-primary/40 shadow-lg shadow-primary/20' : 'border-muted hover:border-primary/50'}`}>
-                    <img src={img} alt="" className="w-full h-full object-cover" onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = defaultImages[0]; }} />
-
-
+                  <button
+                    key={i}
+                    onClick={() => {
+                      setSelectedImage(i);
+                      setShowVideo(false);
+                    }}
+                    className={`w-14 h-14 sm:w-18 sm:h-18 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white dark:bg-card hover:scale-105 ${
+                      selectedImage === i && !showVideo
+                        ? 'border-primary ring-2 ring-primary/30 shadow-md shadow-primary/10'
+                        : 'border-border/60 hover:border-primary/50'
+                    }`}
+                  >
+                    <img
+                      src={img}
+                      alt=""
+                      className="w-full h-full object-contain p-1"
+                      onError={(e) => {
+                        e.currentTarget.onerror = null;
+                        e.currentTarget.src = defaultImages[0];
+                      }}
+                    />
                   </button>
                 ))}
                 {/* Video thumbnail */}
                 {product.video_url && (
-                  <button onClick={() => setShowVideo(true)} className={`w-16 h-16 sm:w-20 sm:h-20 rounded-2xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${showVideo ? 'border-primary ring-2 ring-primary/40 shadow-lg' : 'border-muted hover:border-primary/50'}`}>
+                  <button
+                    onClick={() => setShowVideo(true)}
+                    className={`w-14 h-14 sm:w-18 sm:h-18 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
+                      showVideo ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border/60 hover:border-primary/50'
+                    }`}
+                  >
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
-                      <Play className="h-6 w-6 sm:h-8 sm:w-8 text-white fill-white" />
+                      <Play className="h-5 w-5 sm:h-7 sm:w-7 text-white fill-white" />
                     </div>
-                    {getYouTubeEmbedUrl(product.video_url) ? <img src={`https://img.youtube.com/vi/${product.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}/mqdefault.jpg`} alt="Video thumbnail" className="w-full h-full object-cover" /> : <video src={product.video_url} className="w-full h-full object-cover" muted playsInline />}
+                    {getYouTubeEmbedUrl(product.video_url) ? (
+                      <img
+                        src={`https://img.youtube.com/vi/${product.video_url.match(/(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/)?.[1]}/mqdefault.jpg`}
+                        alt="Video thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <video src={product.video_url} className="w-full h-full object-cover" muted playsInline />
+                    )}
                   </button>
                 )}
               </div>
