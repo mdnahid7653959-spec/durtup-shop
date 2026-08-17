@@ -176,21 +176,40 @@ export default function Checkout() {
   };
 
   const applyCoupon = async () => {
-    if (!couponCode.trim()) {
+    const rawCode = couponCode.trim().toUpperCase();
+    if (!rawCode) {
       toast({ variant: "destructive", title: "Error", description: "Please enter a coupon code" });
       return;
     }
 
     setApplyingCoupon(true);
     try {
-      const { data: coupon, error } = await supabase
-        .from("coupons")
-        .select("*")
-        .eq("code", couponCode.toUpperCase())
-        .eq("is_active", true)
-        .single();
+      let coupon: any = null;
 
-      if (error || !coupon) {
+      // 1. Special Promo Code: DURTUP2026 gives 20% discount!
+      if (rawCode === "DURTUP2026") {
+        coupon = {
+          code: "DURTUP2026",
+          discount_type: "percentage",
+          discount_value: 20,
+          max_discount_amount: null,
+          min_order_amount: 0,
+          is_active: true,
+        };
+      } else {
+        const { data, error } = await supabase
+          .from("coupons")
+          .select("*")
+          .eq("code", rawCode)
+          .eq("is_active", true)
+          .maybeSingle();
+
+        if (!error && data) {
+          coupon = data;
+        }
+      }
+
+      if (!coupon) {
         toast({ variant: "destructive", title: "Invalid coupon", description: "This coupon code is not valid" });
         return;
       }
@@ -224,12 +243,13 @@ export default function Checkout() {
         max_discount_amount: coupon.max_discount_amount
       });
 
+      const calculatedDiscount = coupon.discount_type === "percentage" 
+        ? Math.min(Math.round(subtotal * (coupon.discount_value / 100)), coupon.max_discount_amount || Infinity)
+        : coupon.discount_value;
+
       toast({ 
-        title: "Coupon applied!", 
-        description: `You saved ৳${coupon.discount_type === "percentage" 
-          ? Math.min(Math.round(subtotal * (coupon.discount_value / 100)), coupon.max_discount_amount || Infinity)
-          : coupon.discount_value
-        }` 
+        title: "Coupon applied! 🎉", 
+        description: `Coupon "${coupon.code}" applied! You got 20% discount (Saved ৳${calculatedDiscount.toLocaleString()})` 
       });
       setCouponCode("");
     } catch (error: any) {
