@@ -1,6 +1,6 @@
 import { memo } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Heart, Star, ShoppingCart, Zap } from "lucide-react";
+import { Heart, Star, ShoppingCart } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useCart } from "@/contexts/CartContext";
 import { useWishlist } from "@/contexts/WishlistContext";
@@ -142,10 +142,9 @@ function ProductCardComponent({ product }: ProductCardProps) {
       <div className="p-2.5 pt-0 mt-1 flex gap-1.5 items-center">
         <button
           onClick={handleBuyNow}
-          className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-[11px] sm:text-xs py-1.5 sm:py-2 px-2 rounded-lg flex items-center justify-center gap-1 shadow-sm active:scale-[0.97] transition-all"
+          className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-[11px] sm:text-xs py-1.5 sm:py-2 px-2 rounded-lg flex items-center justify-center shadow-sm active:scale-[0.97] transition-all"
         >
-          <Zap className="w-3.5 h-3.5 fill-white" />
-          অর্ডার করুন
+          Order Now
         </button>
         <button
           onClick={handleAddToCart}

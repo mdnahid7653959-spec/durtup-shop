@@ -759,10 +759,10 @@ export default function AdminMarketing() {
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="cover">Cover (ক্রপ করে ফিট)</SelectItem>
-                    <SelectItem value="contain">Contain (পুরো ছবি দেখায়)</SelectItem>
-                    <SelectItem value="fill">Fill (স্ট্রেচ করে ফিট)</SelectItem>
-                    <SelectItem value="none">None (আসল সাইজ)</SelectItem>
+                    <SelectItem value="cover">Cover (Crop to fit)</SelectItem>
+                    <SelectItem value="contain">Contain (Show full image)</SelectItem>
+                    <SelectItem value="fill">Fill (Stretch to fit)</SelectItem>
+                    <SelectItem value="none">None (Original size)</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -790,7 +790,7 @@ export default function AdminMarketing() {
             {/* Live Preview with Drag to Reposition */}
             {(bannerPreview || bannerForm.image_url) && (
               <div className="space-y-2">
-                <Label>Preview — ছবি ড্র্যাগ করে পজিশন সেট করুন</Label>
+                <Label>Preview — Drag image to set position</Label>
                 <div 
                   className="border rounded-lg overflow-hidden h-[140px] bg-muted relative cursor-grab active:cursor-grabbing select-none"
                   onMouseDown={(e) => {

@@ -37,7 +37,7 @@ export const EnterpriseUserControl: React.FC = () => {
   const [controls, setControls] = useState({
     // Maintenance Mode
     maintenanceMode: false,
-    maintenanceMessage: "ওয়েবসাইট সাময়িকভাবে রক্ষণাবেক্ষণের জন্য বন্ধ আছে। কিছুক্ষণের মধ্যেই আমরা ফিরে আসব!",
+    maintenanceMessage: "The website is temporarily under maintenance. We will be back shortly!",
     
     // User Auth & Signup
     allowRegistration: true,
@@ -46,7 +46,7 @@ export const EnterpriseUserControl: React.FC = () => {
     
     // Global Notice Banner
     showNoticeBanner: true,
-    noticeText: "⚡ সেরা অফারে কেনাকাটা করুন! সারা বাংলাদেশে ক্যাশ অন ডেলিভারি সুবিধা!",
+    noticeText: "⚡ Shop best deals! Cash on delivery available nationwide!",
     noticeLink: "/products",
     
     // Payment Methods for Users
@@ -112,13 +112,13 @@ export const EnterpriseUserControl: React.FC = () => {
       localStorage.setItem("user_panel_config", JSON.stringify(controls));
 
       toast({
-        title: "সেটিংস সংরক্ষিত হয়েছে!",
-        description: "ইউজার প্যানেলের নিয়ন্ত্রণ রিয়েল-টাইমে আপডেট করা হয়েছে।",
+        title: "Settings saved!",
+        description: "User panel controls updated in real-time.",
       });
     } catch (err: any) {
       toast({
-        title: "সংরক্ষণে ত্রুটি!",
-        description: err.message || "সেটিংস সংরক্ষণ করা সম্ভব হয়নি।",
+        title: "Save failed!",
+        description: err.message || "Unable to save settings.",
         variant: "destructive",
       });
     } finally {
@@ -139,12 +139,12 @@ export const EnterpriseUserControl: React.FC = () => {
       );
 
       toast({
-        title: !currentStatus ? "ইউজার ব্লক করা হয়েছে" : "ইউজার আনব্লক করা হয়েছে",
-        description: `ইউজার ID ${userId} আপডেট করা হয়েছে।`,
+        title: !currentStatus ? "User blocked" : "User unblocked",
+        description: `User ID ${userId} updated.`,
       });
     } catch (err: any) {
       toast({
-        title: "স্ট্যাটাস আপডেট ট্রুটি",
+        title: "Status update error",
         description: err.message,
         variant: "destructive",
       });
@@ -172,7 +172,7 @@ export const EnterpriseUserControl: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              অ্যাডমিন প্যানেল থেকে ইউজার প্যানেলের মেইনটেন্যান্স, রেজিস্ট্রেশন, পেমেন্ট অপশন, ব্যানার এবং ফিচার রিয়েল-টাইমে নিয়ন্ত্রণ করুন।
+              Control maintenance mode, registration policy, payment options, banners, and features in real-time.
             </p>
           </div>
 
@@ -183,7 +183,7 @@ export const EnterpriseUserControl: React.FC = () => {
               className="border-slate-300 dark:border-slate-700 text-xs font-bold gap-1.5"
             >
               <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-              রিফ্রেশ
+              Refresh
             </Button>
             <Button
               onClick={handleSaveSettings}
@@ -191,7 +191,7 @@ export const EnterpriseUserControl: React.FC = () => {
               className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs gap-2 shadow-md shadow-orange-600/20"
             >
               <Save className="h-4 w-4" />
-              {saving ? "সংরক্ষণ হচ্ছে..." : "সেটিংস সংরক্ষণ করুন"}
+              {saving ? "Saving..." : "Save Settings"}
             </Button>
           </div>
         </div>
@@ -203,7 +203,7 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <ShieldAlert className="h-4 w-4 text-rose-500" />
-                মেইনটেন্যান্স মোড ও সাইট অ্যাক্সেস
+                Maintenance Mode & Site Access
               </h2>
               <Switch
                 checked={controls.maintenanceMode}
@@ -214,19 +214,19 @@ export const EnterpriseUserControl: React.FC = () => {
             {controls.maintenanceMode && (
               <div className="p-3 bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/50 rounded-xl text-xs text-rose-700 dark:text-rose-300 font-semibold flex items-center gap-2">
                 <AlertTriangle className="h-4 w-4 shrink-0" />
-                মেইনটেন্যান্স মোড সক্রিয় আছে! সাধারণ ইউজারগণ সাইটে প্রবেশ করলে নোটিশ দেখতে পাবেন।
+                Maintenance mode is active! Users visiting the site will see the maintenance notice.
               </div>
             )}
 
             <div className="space-y-2">
               <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                মেইনটেন্যান্স মোড মেসেজ
+                Maintenance Notice Message
               </label>
               <Input
                 value={controls.maintenanceMessage}
                 onChange={(e) => setControls({ ...controls, maintenanceMessage: e.target.value })}
                 className="text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800"
-                placeholder="ইউজারদের জন্য মেইনটেন্যান্স মেসেজ লিখুন"
+                placeholder="Enter maintenance message for users"
               />
             </div>
           </div>
@@ -236,15 +236,15 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <UserCheck className="h-4 w-4 text-blue-500" />
-                রেজিস্ট্রেশন ও গেস্ট অ্যাকাউন্ট নীতি
+                Registration & Guest Account Policy
               </h2>
             </div>
 
             <div className="space-y-3">
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">নতুন অ্যাকাউন্ট রেজিস্ট্রেশন</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">নতুন সাইন আপ করার সুবিধা অন/অফ করুন</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">New User Registration</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Enable or disable new user signups</p>
                 </div>
                 <Switch
                   checked={controls.allowRegistration}
@@ -254,8 +254,8 @@ export const EnterpriseUserControl: React.FC = () => {
 
               <div className="flex items-center justify-between p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800">
                 <div>
-                  <p className="text-xs font-bold text-slate-900 dark:text-white">গেস্ট চেকআউট (Guest Checkout)</p>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">লগইন ছাড়া ইউজার অর্ডারের অনুমতি দিন</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">Guest Checkout</p>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Allow users to place orders without logging in</p>
                 </div>
                 <Switch
                   checked={controls.allowGuestCheckout}
@@ -270,7 +270,7 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <Megaphone className="h-4 w-4 text-amber-500" />
-                গ্লোবাল নোটিশ ব্যানার (Header Notice)
+                Global Notice Banner (Header Notice)
               </h2>
               <Switch
                 checked={controls.showNoticeBanner}
@@ -281,19 +281,19 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="space-y-3">
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  ব্যানার মেসেজ/টেক্সট
+                  Banner Message / Text
                 </label>
                 <Input
                   value={controls.noticeText}
                   onChange={(e) => setControls({ ...controls, noticeText: e.target.value })}
                   className="text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800"
-                  placeholder="যেমন: বিশেষ ছাড়! অর্ডারে ১০% ক্যাশব্যাক"
+                  placeholder="e.g. Special Offer! 10% Cashback on orders"
                 />
               </div>
 
               <div className="space-y-1.5">
                 <label className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  ব্যানার অ্যাকশন লিংক
+                  Banner Action Link
                 </label>
                 <Input
                   value={controls.noticeLink}
@@ -310,13 +310,13 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
                 <CreditCard className="h-4 w-4 text-emerald-500" />
-                ইউজার পেমেন্ট ও চেকআউট রুলস
+                Payment Methods & Checkout Rules
               </h2>
             </div>
 
             <div className="grid grid-cols-2 gap-3">
               <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">ক্যাশ অন ডেলিভারি (COD)</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Cash on Delivery (COD)</span>
                 <Switch
                   checked={controls.enableCOD}
                   onCheckedChange={(val) => setControls({ ...controls, enableCOD: val })}
@@ -324,7 +324,7 @@ export const EnterpriseUserControl: React.FC = () => {
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">বিকাশ (bKash)</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">bKash</span>
                 <Switch
                   checked={controls.enableBKash}
                   onCheckedChange={(val) => setControls({ ...controls, enableBKash: val })}
@@ -332,7 +332,7 @@ export const EnterpriseUserControl: React.FC = () => {
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">নগদ (Nagad)</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Nagad</span>
                 <Switch
                   checked={controls.enableNagad}
                   onCheckedChange={(val) => setControls({ ...controls, enableNagad: val })}
@@ -340,7 +340,7 @@ export const EnterpriseUserControl: React.FC = () => {
               </div>
 
               <div className="p-3 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">কার্ড পেমেন্ট</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Card Payment</span>
                 <Switch
                   checked={controls.enableCardPayment}
                   onCheckedChange={(val) => setControls({ ...controls, enableCardPayment: val })}
@@ -350,7 +350,7 @@ export const EnterpriseUserControl: React.FC = () => {
 
             <div className="grid grid-cols-2 gap-3 pt-2">
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">নূন্যতম অর্ডার (৳)</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Minimum Order (৳)</label>
                 <Input
                   type="number"
                   value={controls.minCheckoutAmount}
@@ -360,7 +360,7 @@ export const EnterpriseUserControl: React.FC = () => {
               </div>
 
               <div className="space-y-1">
-                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">ফ্রি শিপিং নূন্যতম অর্ডার (৳)</label>
+                <label className="text-[11px] font-bold text-slate-600 dark:text-slate-400">Free Shipping Min Order (৳)</label>
                 <Input
                   type="number"
                   value={controls.freeShippingThreshold}
@@ -377,7 +377,7 @@ export const EnterpriseUserControl: React.FC = () => {
           <div className="border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <LayoutGrid className="h-4 w-4 text-indigo-500" />
-              ইউজার প্যানেল ফিচার ভিজিবিলিটি (Sections Control)
+              User Panel Features & Section Visibility
             </h2>
           </div>
 
@@ -385,7 +385,7 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Gift className="h-4 w-4 text-orange-500" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">ফ্ল্যাশ সেল সেকশন</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Flash Sale Section</span>
               </div>
               <Switch
                 checked={controls.showFlashSale}
@@ -396,7 +396,7 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Truck className="h-4 w-4 text-blue-500" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">ফ্রি শিপিং ব্যানার</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">Free Shipping Banner</span>
               </div>
               <Switch
                 checked={controls.showFreeShippingBanner}
@@ -407,7 +407,7 @@ export const EnterpriseUserControl: React.FC = () => {
             <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Sparkles className="h-4 w-4 text-purple-500" />
-                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">AI প্রোডাক্ট রিকমেন্ডেশন</span>
+                <span className="text-xs font-bold text-slate-800 dark:text-slate-200">AI Product Recommendations</span>
               </div>
               <Switch
                 checked={controls.showAIRecommendations}
@@ -422,7 +422,7 @@ export const EnterpriseUserControl: React.FC = () => {
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
             <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
               <Users className="h-4 w-4 text-orange-600" />
-              লাইভ ইউজার একাউন্ট নিয়ন্ত্রণ ({users.length})
+              Live User Accounts ({users.length})
             </h2>
 
             <div className="relative w-full sm:w-64">
@@ -430,7 +430,7 @@ export const EnterpriseUserControl: React.FC = () => {
               <Input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="ইমেইল/নাম দিয়ে অনুসন্ধান..."
+                placeholder="Search by email / name..."
                 className="pl-8 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800 h-9"
               />
             </div>
@@ -451,7 +451,7 @@ export const EnterpriseUserControl: React.FC = () => {
                 {filteredUsers.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-6 text-center text-slate-500">
-                      কোন ইউজার পাওয়া যায়নি
+                      No users found
                     </td>
                   </tr>
                 ) : (
@@ -491,11 +491,11 @@ export const EnterpriseUserControl: React.FC = () => {
                         >
                           {u.isBlocked ? (
                             <>
-                              <Unlock className="h-3 w-3" /> আনব্লক করুন
+                              <Unlock className="h-3 w-3" /> Unblock
                             </>
                           ) : (
                             <>
-                              <Lock className="h-3 w-3" /> ব্লক করুন
+                              <Lock className="h-3 w-3" /> Block
                             </>
                           )}
                         </Button>

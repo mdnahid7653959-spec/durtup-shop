@@ -96,11 +96,11 @@ export const EnterpriseSupplierCenter: React.FC = () => {
       }, { merge: true });
 
       toast({
-        title: "সাপ্লায়ার API কনফিগারেশন সংরক্ষিত!",
-        description: "API ক্রেডেনশিয়াল ও মার্জিন রুলস ফায়ারস্টোরে আপডেট করা হয়েছে।",
+        title: "Supplier API Configuration Saved!",
+        description: "API credentials and margin rules updated in Firestore.",
       });
     } catch (err: any) {
-      toast({ title: "সংরক্ষণ ব্যর্থ", description: err.message, variant: "destructive" });
+      toast({ title: "Save Failed", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -120,16 +120,16 @@ export const EnterpriseSupplierCenter: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              API Keys, OAuth Tokens, Custom Endpoints, Webhooks এবং Multi-Tier Margin Control ইঞ্জিনের মাধ্যমে সাপ্লায়ার অটোমেশন।
+              Supplier automation with API Keys, OAuth Tokens, Custom Endpoints, Webhooks, and Multi-Tier Margin Control Engine.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5">
             <Button variant="outline" onClick={loadSupplierSettings} className="text-xs font-bold border-slate-300">
-              <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> রিফ্রেশ
+              <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
             <Button onClick={handleSaveConfig} disabled={saving} className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs gap-2">
-              <Save className="h-4 w-4" /> {saving ? "সংরক্ষণ হচ্ছে..." : "কনফিগারেশন সেভ করুন"}
+              <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Configuration"}
             </Button>
           </div>
         </div>
@@ -211,18 +211,18 @@ export const EnterpriseSupplierCenter: React.FC = () => {
 
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">গ্লোবাল প্রফিট মার্জিন (%)</label>
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">Global Profit Margin (%)</label>
               <Input
                 type="number"
                 value={margins.globalMarginValue}
                 onChange={(e) => setMargins({ ...margins, globalMarginValue: Number(e.target.value) })}
                 className="text-xs font-bold"
               />
-              <p className="text-[10px] text-slate-500">সব সাপ্লায়ার প্রোডাক্টের ওপর ডিফল্ট মার্জিন যোগ হবে।</p>
+              <p className="text-[10px] text-slate-500">Default margin added to all supplier products.</p>
             </div>
 
             <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">ইলেক্ট্রনিক্স ক্যাটাগরি মার্জিন (%)</label>
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">Electronics Category Margin (%)</label>
               <Input
                 type="number"
                 value={margins.categoryMargins.Electronics}
@@ -232,11 +232,11 @@ export const EnterpriseSupplierCenter: React.FC = () => {
                 })}
                 className="text-xs font-bold"
               />
-              <p className="text-[10px] text-slate-500">ইলেক্ট্রনিক্স পণ্যের জন্য নির্দিষ্ট মার্জিন রুল।</p>
+              <p className="text-[10px] text-slate-500">Specific margin rule for electronics products.</p>
             </div>
 
             <div className="p-4 bg-slate-50 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 space-y-2">
-              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">ফ্যাশন ক্যাটাগরি মার্জিন (%)</label>
+              <label className="text-xs font-bold text-slate-800 dark:text-slate-200">Fashion Category Margin (%)</label>
               <Input
                 type="number"
                 value={margins.categoryMargins.Fashion}
@@ -246,7 +246,7 @@ export const EnterpriseSupplierCenter: React.FC = () => {
                 })}
                 className="text-xs font-bold"
               />
-              <p className="text-[10px] text-slate-500">ফ্যাশন পণ্যের জন্য নির্দিষ্ট মার্জিন রুল।</p>
+              <p className="text-[10px] text-slate-500">Specific margin rule for fashion products.</p>
             </div>
           </div>
         </div>

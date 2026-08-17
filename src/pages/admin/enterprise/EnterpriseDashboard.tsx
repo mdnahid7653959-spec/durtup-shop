@@ -188,7 +188,7 @@ export const EnterpriseDashboard: React.FC = () => {
             className="border-slate-300 dark:border-slate-700 text-xs font-bold gap-1.5"
           >
             <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
-            রিফ্রেশ ডেটা
+            Refresh Data
           </Button>
         </div>
 
@@ -337,7 +337,7 @@ export const EnterpriseDashboard: React.FC = () => {
                 {recentOrders.length === 0 ? (
                   <tr>
                     <td colSpan={5} className="p-8 text-center text-slate-500 font-medium">
-                      কোনো লাইভ অর্ডার ফায়ারস্টোরে রেকর্ড পাওয়া যায়নি (Proper Empty State)
+                      No live orders recorded in Firestore yet
                     </td>
                   </tr>
                 ) : (

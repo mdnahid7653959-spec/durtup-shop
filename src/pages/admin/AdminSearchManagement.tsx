@@ -180,7 +180,7 @@ export default function AdminSearchManagement() {
         <TabsContent value="synonyms" className="space-y-4">
           <Card>
             <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Bilingual Synonym Dictionary (English & বাংলা)</CardTitle>
+              <CardTitle className="text-lg">Synonym Dictionary (English & Search Terms)</CardTitle>
               <CardDescription>
                 When a user searches for any synonym in a rule group, products matching the main term or related terms will automatically rank at the top.
               </CardDescription>
@@ -303,7 +303,7 @@ export default function AdminSearchManagement() {
                 </div>
                 <div className="p-4 border rounded-xl space-y-2 bg-muted/30">
                   <h4 className="font-semibold text-sm">Synonym Match Weight</h4>
-                  <p className="text-xs text-muted-foreground">Score assigned when term matches English/Bangla synonym dictionary.</p>
+                  <p className="text-xs text-muted-foreground">Score assigned when term matches synonym dictionary.</p>
                   <Badge variant="default" className="text-sm">+85 Points</Badge>
                 </div>
                 <div className="p-4 border rounded-xl space-y-2 bg-muted/30">
@@ -342,15 +342,15 @@ export default function AdminSearchManagement() {
 
             <div>
               <label className="text-xs font-semibold uppercase text-muted-foreground block mb-1">
-                Synonyms (Comma-separated in English or বাংলা)
+                Synonyms (Comma-separated)
               </label>
               <Input
-                placeholder="e.g. Bike, Motorbike, Two Wheeler, বাইক, মোটরসাইকেল"
+                placeholder="e.g. Bike, Motorbike, Two Wheeler"
                 value={synonymInput}
                 onChange={(e) => setSynonymInput(e.target.value)}
               />
               <p className="text-[11px] text-muted-foreground mt-1">
-                Separate multiple terms with commas. Include both English and Bangla equivalents!
+                Separate multiple terms with commas.
               </p>
             </div>
           </div>

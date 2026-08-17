@@ -309,7 +309,7 @@ export default function AdminPushNotifications() {
                 </Button>
                 {tokenStats.total === 0 && (
                   <p className="text-xs text-muted-foreground text-center mt-2">
-                    ⚠️ কোনো device registered নেই। ইউজাররা app এ login করলে তাদের device অটোমেটিক register হবে।
+                    ⚠️ No device registered yet. When users log in to the app, their devices will automatically be registered.
                   </p>
                 )}
               </form>

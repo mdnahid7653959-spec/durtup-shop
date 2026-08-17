@@ -190,12 +190,12 @@ export const EnterpriseProducts: React.FC = () => {
     e.preventDefault();
     if (!formData.title || formData.title.trim() === "") {
       setActiveTab("general");
-      toast({ title: "প্রোডাক্টের নাম লিখুন", description: "Product Title দেওয়া বাধ্যতামূলক।", variant: "destructive" });
+      toast({ title: "Enter product title", description: "Product Title is required.", variant: "destructive" });
       return;
     }
     if (!formData.price || formData.price <= 0) {
       setActiveTab("pricing");
-      toast({ title: "বিক্রয় মূল্য লিখুন", description: "Selling Price / MRP দেওয়া বাধ্যতামূলক।", variant: "destructive" });
+      toast({ title: "Enter selling price", description: "Selling Price / MRP is required.", variant: "destructive" });
       return;
     }
 
@@ -277,8 +277,8 @@ export const EnterpriseProducts: React.FC = () => {
       setShowModal(false);
 
       toast({
-        title: isEditing ? "প্রোডাক্ট আপডেট সফল!" : "প্রোডাক্ট আপলোড সফল!",
-        description: `${formData.title} সফলভাবে প্রোডাক্ট ক্যাটালগে সেভ করা হয়েছে।`
+        title: isEditing ? "Product updated successfully!" : "Product uploaded successfully!",
+        description: `${formData.title} saved to product catalog.`
       });
 
       // Background non-blocking sync
@@ -314,34 +314,34 @@ export const EnterpriseProducts: React.FC = () => {
 
     } catch (err: any) {
       console.error("Save product error:", err);
-      toast({ title: "ত্রুটি", description: err?.message || "প্রোডাক্ট সেভ করতে সমস্যা হয়েছে", variant: "destructive" });
+      toast({ title: "Error", description: err?.message || "Failed to save product", variant: "destructive" });
     }
   };
 
 
   const handleDeleteProduct = async (id: string) => {
-    if (!confirm("আপনি কি নিশ্চিত যে এই প্রোডাক্টটি মুছে ফেলতে চান?")) return;
+    if (!confirm("Are you sure you want to delete this product?")) return;
     try {
       await deleteDoc(doc(db, "products", id));
-      toast({ title: "প্রোডাক্ট মুছে ফেলা হয়েছে!" });
+      toast({ title: "Product deleted successfully!" });
       loadProducts();
     } catch (err: any) {
-      toast({ title: "মুছে ফেলা সম্ভব হয়নি", description: err.message, variant: "destructive" });
+      toast({ title: "Could not delete product", description: err.message, variant: "destructive" });
     }
   };
 
   const handleBulkDelete = async () => {
     if (selectedIds.length === 0) return;
-    if (!confirm(`আপনি কি চিহ্নিত ${selectedIds.length} টি প্রোডাক্ট মুছে ফেলতে চান?`)) return;
+    if (!confirm(`Are you sure you want to delete ${selectedIds.length} selected products?`)) return;
     try {
       for (const id of selectedIds) {
         await deleteDoc(doc(db, "products", id));
       }
-      toast({ title: "বাল্ক ডিলেট সফল!", description: `${selectedIds.length} টি প্রোডাক্ট মুছে ফেলা হয়েছে।` });
+      toast({ title: "Bulk delete successful!", description: `${selectedIds.length} products deleted.` });
       setSelectedIds([]);
       loadProducts();
     } catch (err: any) {
-      toast({ title: "বাল্ক ডিলেট ব্যর্থ", description: err.message, variant: "destructive" });
+      toast({ title: "Bulk delete failed", description: err.message, variant: "destructive" });
     }
   };
 
@@ -400,7 +400,7 @@ export const EnterpriseProducts: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              ভেরিয়েন্ট ম্যাট্রিক্স, বারকোড, এসইও মেটাডাটা, একাধিক ছবি ও ভিডিও সহ সম্পুর্ন ডিটেইলস প্রোডাক্ট ম্যানেজমেন্ট।
+              Comprehensive product management with variant matrix, barcode, SEO metadata, multiple images, and video.
             </p>
           </div>
 
@@ -409,7 +409,7 @@ export const EnterpriseProducts: React.FC = () => {
               <Download className="h-4 w-4" /> Export JSON
             </Button>
             <Button onClick={handleOpenAddModal} className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs gap-2">
-              <Plus className="h-4 w-4" /> নতুন প্রোডাক্ট যোগ করুন
+              <Plus className="h-4 w-4" /> Add New Product
             </Button>
           </div>
         </div>
@@ -421,14 +421,14 @@ export const EnterpriseProducts: React.FC = () => {
             <Input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="টাইটেল, SKU বা ক্যাটাগরি দিয়ে খুঁজুন..."
+              placeholder="Search by title, SKU, or category..."
               className="pl-9 text-xs bg-slate-50 dark:bg-slate-950 border-slate-300 dark:border-slate-800"
             />
           </div>
 
           {selectedIds.length > 0 && (
             <Button onClick={handleBulkDelete} variant="destructive" className="text-xs font-bold gap-1.5">
-              <Trash2 className="h-3.5 w-3.5" /> সিলেক্টেড {selectedIds.length} টি ডিলেট করুন
+              <Trash2 className="h-3.5 w-3.5" /> Delete Selected ({selectedIds.length})
             </Button>
           )}
         </div>
@@ -452,7 +452,7 @@ export const EnterpriseProducts: React.FC = () => {
                 {filtered.length === 0 ? (
                   <tr>
                     <td colSpan={7} className="p-8 text-center text-slate-500 font-medium">
-                      কোন প্রোডাক্ট রেকর্ড পাওয়া যায়নি
+                      No products found
                     </td>
                   </tr>
                 ) : (

@@ -27,11 +27,11 @@ export const EnterpriseWebsiteControl: React.FC = () => {
 
   const [siteConfig, setSiteConfig] = useState({
     maintenanceMode: false,
-    maintenanceMessage: "ওয়েবসাইট সাময়িকভাবে রক্ষণাবেক্ষণের জন্য বন্ধ আছে। কিছুক্ষণের মধ্যেই আমরা ফিরে আসব!",
+    maintenanceMessage: "The website is temporarily under maintenance. We will be back shortly!",
     allowRegistration: true,
     allowGuestCheckout: true,
     showNoticeBanner: true,
-    noticeText: "⚡ সেরা অফারে কেনাকাটা করুন! সারা বাংলাদেশে ক্যাশ অন ডেলিভারি সুবিধা!",
+    noticeText: "⚡ Shop best deals! Cash on delivery available nationwide!",
     noticeLink: "/products",
     enableCOD: true,
     enableBKash: true,
@@ -72,11 +72,11 @@ export const EnterpriseWebsiteControl: React.FC = () => {
       }, { merge: true });
 
       toast({
-        title: "ওয়েবসাইট সেটিংস সংরক্ষিত!",
-        description: "রিয়েল-টাইমে লাইভ ওয়েবসাইটে কনফিগারেশন আপডেট করা হয়েছে।",
+        title: "Website settings saved!",
+        description: "Configuration updated on live website in real-time.",
       });
     } catch (err: any) {
-      toast({ title: "সংরক্ষণ ব্যর্থ", description: err.message, variant: "destructive" });
+      toast({ title: "Save failed", description: err.message, variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -96,16 +96,16 @@ export const EnterpriseWebsiteControl: React.FC = () => {
               </Badge>
             </h1>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-              হোমপেজ লেআউট, হিরো ব্যানার, হেডার/ফুটার, সেকশন ভিজিবিলিটি, পেমেন্ট গেটওয়ে ও মেইনটেন্যান্স মোড লাইভ টিউন করুন।
+              Configure homepage layout, hero banner, header/footer, section visibility, payment gateway, and maintenance mode in real-time.
             </p>
           </div>
 
           <div className="flex items-center gap-2.5">
             <Button variant="outline" onClick={loadConfig} className="text-xs font-bold border-slate-300">
-              <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> রিফ্রেশ
+              <RefreshCcw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} /> Refresh
             </Button>
             <Button onClick={handleSaveConfig} disabled={saving} className="bg-orange-600 hover:bg-orange-700 text-white font-bold text-xs gap-2">
-              <Save className="h-4 w-4" /> {saving ? "সংরক্ষণ হচ্ছে..." : "সেটিং সেভ করুন"}
+              <Save className="h-4 w-4" /> {saving ? "Saving..." : "Save Settings"}
             </Button>
           </div>
         </div>
@@ -115,13 +115,13 @@ export const EnterpriseWebsiteControl: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <ShieldAlert className="h-4 w-4 text-rose-500" /> মেইনটেন্যান্স মোড
+                <ShieldAlert className="h-4 w-4 text-rose-500" /> Maintenance Mode
               </h2>
               <Switch checked={siteConfig.maintenanceMode} onCheckedChange={(val) => setSiteConfig({ ...siteConfig, maintenanceMode: val })} />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold">মেইনটেন্যান্স নোটিশ মেসোজ</label>
+              <label className="text-xs font-bold">Maintenance Notice Message</label>
               <Input value={siteConfig.maintenanceMessage} onChange={(e) => setSiteConfig({ ...siteConfig, maintenanceMessage: e.target.value })} className="text-xs" />
             </div>
           </div>
@@ -129,13 +129,13 @@ export const EnterpriseWebsiteControl: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-4 shadow-sm">
             <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
               <h2 className="text-sm font-extrabold text-slate-900 dark:text-white flex items-center gap-2">
-                <Megaphone className="h-4 w-4 text-amber-500" /> গ্লোবাল নোটিশ ব্যানার
+                <Megaphone className="h-4 w-4 text-amber-500" /> Global Notice Banner
               </h2>
               <Switch checked={siteConfig.showNoticeBanner} onCheckedChange={(val) => setSiteConfig({ ...siteConfig, showNoticeBanner: val })} />
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-bold">ব্যানার টেক্সট</label>
+              <label className="text-xs font-bold">Banner Text</label>
               <Input value={siteConfig.noticeText} onChange={(e) => setSiteConfig({ ...siteConfig, noticeText: e.target.value })} className="text-xs" />
             </div>
           </div>

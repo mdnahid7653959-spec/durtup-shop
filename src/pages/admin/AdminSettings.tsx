@@ -714,7 +714,7 @@ export default function AdminSettings() {
                     rows={4}
                     value={autoReply.message_bn}
                     onChange={(e) => setAutoReply({ ...autoReply, message_bn: e.target.value })}
-                    placeholder="আমাদের সাপোর্ট টিমের সবাই এই মুহূর্তে ব্যস্ত…"
+                    placeholder="All members of our support team are currently busy..."
                   />
                 </div>
 

@@ -1053,7 +1053,7 @@ export default function SellerProductForm() {
                       disabled={saving || uploading}
                     />
                     <p className="text-xs text-muted-foreground">
-                      শুধুমাত্র YouTube ভিডিও লিংক দিন। সরাসরি ভিডিও আপলোড সাপোর্টেড নয়।
+                      Only YouTube video links are supported. Direct video upload is not supported.
                     </p>
                   </div>
                 </CardContent>
