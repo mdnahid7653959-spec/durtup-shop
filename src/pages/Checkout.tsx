@@ -995,23 +995,22 @@ export default function Checkout() {
                               </div>
 
                               {/* Instructions & Number */}
-                              <div className="p-3.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2">
+                              <div className="p-3.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2.5">
                                 <div className="flex items-center justify-between flex-wrap gap-2">
-                                  <div>
-                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">bKash Number</p>
-                                    <p className="text-base sm:text-lg font-black text-[#E2136E] tracking-wider">01622530550</p>
+                                  <div className="space-y-0.5">
+                                    <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">bKash Number</span>
+                                    <span className="text-lg sm:text-xl font-black text-[#E2136E] tracking-wider block">01885985097</span>
                                   </div>
                                   <Button
                                     type="button"
                                     size="sm"
                                     variant="outline"
                                     onClick={() => {
-                                      navigator.clipboard.writeText("01622530550");
-                                      toast({ title: "Copied!", description: "bKash number copied to clipboard" });
+                                      navigator.clipboard.writeText("01885985097");
                                     }}
-                                    className="h-8 px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10"
+                                    className="h-8 px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10 flex items-center gap-1.5"
                                   >
-                                    <Copy className="h-3.5 w-3.5 mr-1" /> Copy Number
+                                    <Copy className="h-3.5 w-3.5" /> Copy Number
                                   </Button>
                                 </div>
 
