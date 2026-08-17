@@ -323,15 +323,27 @@ export default function ProductDetail() {
 
   // Helper to map supplier product to Product interface (Price MUST match card price exactly)
   const mapSupplierProduct = (raw: any, productSlug: string, imagesArr: ProductImage[]): Product => {
-    const API_PROFIT_MARGIN = 1.30; // 30% profit margin
-    const rawSalePrice = parseFloat(raw.sale_price) || parseFloat(raw.discount_price) || 0;
-    const rawRegularPrice = parseFloat(raw.price) || parseFloat(raw.regular_price) || rawSalePrice;
-    
-    const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawRegularPrice;
-    const sellingPrice = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
+    let sellingPrice = 0;
+    let regularPrice = 0;
 
-    const baseRegularPrice = rawRegularPrice > baseSellingPrice ? rawRegularPrice : Math.round(baseSellingPrice * 1.30);
-    const regularPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+    // Check if product is already processed with final price (e.g. from mohasagorCache or home products)
+    if (raw.discount_price || (raw.price && raw.originalPrice)) {
+      sellingPrice = Number(raw.discount_price || raw.price || 0);
+      regularPrice = Number(raw.originalPrice || raw.regular_price || Math.round(sellingPrice * 1.30));
+    } else if (raw.sale_price !== undefined || raw.price !== undefined) {
+      const API_PROFIT_MARGIN = 1.30; // 30% profit margin
+      const rawSalePrice = parseFloat(raw.sale_price) || parseFloat(raw.discount_price) || 0;
+      const rawRegularPrice = parseFloat(raw.price) || parseFloat(raw.regular_price) || rawSalePrice;
+      
+      const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawRegularPrice;
+      sellingPrice = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
+
+      const baseRegularPrice = rawRegularPrice > baseSellingPrice ? rawRegularPrice : Math.round(baseSellingPrice * 1.30);
+      regularPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+    } else {
+      sellingPrice = Number(raw.price || 0);
+      regularPrice = Number(raw.regular_price || raw.originalPrice || sellingPrice);
+    }
 
     const variants = (raw.product_variants || []).map((v: any) => ({
       id: parseInt(v.id) || Math.floor(Math.random() * 100000),
@@ -344,24 +356,24 @@ export default function ProductDetail() {
       id: raw.id.toString(),
       name: raw.name || raw.title || "Product",
       slug: productSlug,
-      short_description: null,
+      short_description: raw.short_description || null,
       description: raw.details || raw.description || "High quality product.",
-      regular_price: regularPrice,
+      regular_price: regularPrice > sellingPrice ? regularPrice : sellingPrice,
       discount_price: regularPrice > sellingPrice ? sellingPrice : null,
       stock_quantity: parseInt(raw.stock_quantity) || parseInt(raw.stock) || 50,
       free_shipping: true,
-      rating_average: 4.8,
-      rating_count: 15,
-      sold_count: parseInt(raw.sold) || 45,
-      is_featured: false,
-      warranty_info: null,
-      return_policy: null,
+      rating_average: Number(raw.rating_average || 4.8),
+      rating_count: Number(raw.rating_count || 15),
+      sold_count: parseInt(raw.sold) || parseInt(raw.sold_count) || 45,
+      is_featured: Boolean(raw.is_featured || raw.isFeatured),
+      warranty_info: raw.warranty_info || null,
+      return_policy: raw.return_policy || null,
       color: raw.color || null,
-      video_url: raw.video_link || null,
+      video_url: raw.video_link || raw.video_url || null,
       product_images: imagesArr,
       product_variants: variants,
-      category_id: raw.category || null,
-      seller_id: "mohasagor.com.bd"
+      category_id: raw.category_id || raw.category || null,
+      seller_id: raw.seller_id || "mohasagor.com.bd"
     };
   };
 
@@ -442,7 +454,37 @@ export default function ProductDetail() {
           console.warn("ProductDetail local storage check warning:", localErr);
         }
 
-        // 2. Query Supabase DB by slug OR id
+        // 2. Query Mohasagor Supplier Master Cache (Fast 0ms in-memory/localStorage - Ensures 100% price parity with cards)
+        try {
+          const cachedMohasagor = await getCachedMohasagorProducts();
+          if (cachedMohasagor && cachedMohasagor.length > 0) {
+            const foundSp = cachedMohasagor.find(
+              (sp: any) =>
+                String(sp.id) === cleanId ||
+                (extractedId && String(sp.id) === extractedId) ||
+                sp.slug === targetSlug ||
+                sp.slug === `product-${cleanId}` ||
+                (extractedId && sp.slug === `product-${extractedId}`) ||
+                String(sp.product_code) === cleanId ||
+                (extractedId && String(sp.product_code) === extractedId) ||
+                (sp.name && targetLower.includes(sp.name.toLowerCase().slice(0, 15)))
+            );
+
+            if (foundSp) {
+              const mappedImages = mapSupplierImages(foundSp);
+              const mappedProduct = mapSupplierProduct(foundSp, targetSlug, mappedImages);
+              setProduct(mappedProduct);
+              setSelectedImage(0);
+              trackView(mappedProduct.id);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (spErr) {
+          console.warn("Supplier cache lookup warning:", spErr);
+        }
+
+        // 3. Query Database by slug OR id
         try {
           const { data, error } = await supabase.from("products").select(`
               *,
@@ -468,7 +510,7 @@ export default function ProductDetail() {
               )
             `).or(`slug.eq.${targetSlug},id.eq.${targetSlug}`).maybeSingle();
 
-          if (data) {
+          if (data && (data.slug === targetSlug || data.id === targetSlug || String(data.id) === cleanId)) {
             const dbVariants: ProductVariant[] = [];
             if (data.product_variants && Array.isArray(data.product_variants)) {
               data.product_variants.forEach((v: any, idx: number) => {
@@ -526,7 +568,7 @@ export default function ProductDetail() {
           console.warn("Supabase product lookup warning:", dbErr);
         }
 
-        // 3. Query Firestore DB by slug OR id
+        // 4. Query Firestore DB by slug OR id
         try {
           const snap = await getDocs(collection(db, "products"));
           if (!snap.empty) {
@@ -579,36 +621,6 @@ export default function ProductDetail() {
           }
         } catch (fsErr) {
           console.warn("Firestore product lookup warning:", fsErr);
-        }
-
-        // 4. Query Mohasagor Supplier Master Cache
-        try {
-          const cachedMohasagor = await getCachedMohasagorProducts();
-          if (cachedMohasagor && cachedMohasagor.length > 0) {
-            const foundSp = cachedMohasagor.find(
-              (sp: any) =>
-                String(sp.id) === cleanId ||
-                (extractedId && String(sp.id) === extractedId) ||
-                sp.slug === targetSlug ||
-                sp.slug === `product-${cleanId}` ||
-                (extractedId && sp.slug === `product-${extractedId}`) ||
-                String(sp.product_code) === cleanId ||
-                (extractedId && String(sp.product_code) === extractedId) ||
-                (sp.name && targetLower.includes(sp.name.toLowerCase().slice(0, 15)))
-            );
-
-            if (foundSp) {
-              const mappedImages = mapSupplierImages(foundSp);
-              const mappedProduct = mapSupplierProduct(foundSp, targetSlug, mappedImages);
-              setProduct(mappedProduct);
-              setSelectedImage(0);
-              trackView(mappedProduct.id);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (spErr) {
-          console.warn("Supplier cache lookup warning:", spErr);
         }
 
         // 5. Direct Supplier API Fallback

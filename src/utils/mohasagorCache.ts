@@ -109,6 +109,8 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
       product_images: formattedImgList,
       price,
       originalPrice: originalPrice > price ? originalPrice : undefined,
+      regular_price: originalPrice > price ? originalPrice : price,
+      discount_price: originalPrice > price ? price : null,
       rating: 4.8,
       reviews: 15,
       sold: parseInt(p.sold) || 45,

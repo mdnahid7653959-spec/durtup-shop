@@ -156,23 +156,31 @@ function mapSupplierProduct(p: any, index: number): Product {
 
   const image = getSmartProductImage(p.name, firstImage || undefined, p.category || "", index);
 
-  const API_PROFIT_MARGIN = 1.30; // 30% profit margin
-  const rawSalePrice = parseFloat(p.sale_price) || parseFloat(p.discount_price) || 0;
-  const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || rawSalePrice;
-  
-  const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawPrice;
-  const price = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
+  let price = 0;
+  let originalPrice: number | undefined = undefined;
 
-  const baseRegularPrice = rawPrice > baseSellingPrice ? rawPrice : Math.round(baseSellingPrice * 1.30);
-  const originalPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+  if (p.discount_price || (p.price && p.originalPrice)) {
+    price = Number(p.discount_price || p.price || 0);
+    originalPrice = Number(p.originalPrice || p.regular_price || 0);
+  } else {
+    const API_PROFIT_MARGIN = 1.30; // 30% profit margin
+    const rawSalePrice = parseFloat(p.sale_price) || parseFloat(p.discount_price) || 0;
+    const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || rawSalePrice;
+    
+    const baseSellingPrice = rawSalePrice > 0 ? rawSalePrice : rawPrice;
+    price = Math.round(baseSellingPrice * API_PROFIT_MARGIN);
+
+    const baseRegularPrice = rawPrice > baseSellingPrice ? rawPrice : Math.round(baseSellingPrice * 1.30);
+    originalPrice = Math.round(baseRegularPrice * API_PROFIT_MARGIN);
+  }
 
   return {
     id: p.id.toString(),
     name: p.name,
-    slug: `product-${p.id}`,
+    slug: p.slug || `product-${p.id}`,
     image,
     price,
-    originalPrice: originalPrice > price ? originalPrice : undefined,
+    originalPrice: (originalPrice && originalPrice > price) ? originalPrice : undefined,
     rating: 4.8,
     reviews: 15,
     sold: parseInt(p.sold) || 45,

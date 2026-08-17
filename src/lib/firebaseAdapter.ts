@@ -43,7 +43,7 @@ class FirebaseQueryBuilder {
   private updateData: any = null;
   private isDelete = false;
   private isInsert = false;
-  private insertData: any = null;
+  private orFilter: string | null = null;
 
   constructor(colName: string) {
     this.colName = colName;
@@ -95,6 +95,7 @@ class FirebaseQueryBuilder {
   }
 
   or(filterStr: string) {
+    this.orFilter = filterStr;
     return this;
   }
 
@@ -215,6 +216,32 @@ class FirebaseQueryBuilder {
 
       const snapshot = await this.executeFetch();
       let list: any[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      if (this.orFilter) {
+        const clauses = this.orFilter.split(',').map(s => s.trim()).filter(Boolean);
+        list = list.filter(item => {
+          return clauses.some(clause => {
+            const parts = clause.split('.');
+            if (parts.length >= 3) {
+              const field = parts[0];
+              const op = parts[1];
+              const val = parts.slice(2).join('.');
+              const itemVal = item[field];
+              if (op === 'eq') {
+                return String(itemVal) === String(val) || (field === 'id' && String(item.id) === String(val));
+              }
+              if (op === 'neq') {
+                return String(itemVal) !== String(val);
+              }
+              if (op === 'ilike') {
+                const search = val.replace(/%/g, '').toLowerCase();
+                return String(itemVal || '').toLowerCase().includes(search);
+              }
+            }
+            return false;
+          });
+        });
+      }
 
       if (this.isSingle || this.isMaybeSingle) {
         const item = list.length > 0 ? list[0] : null;
