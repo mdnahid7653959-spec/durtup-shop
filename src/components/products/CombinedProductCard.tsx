@@ -85,7 +85,7 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
             onError={(e) => {
-              (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1596755094514-f87e34085b2c?w=400&h=400&fit=crop";
+              (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
             }}
           />
 

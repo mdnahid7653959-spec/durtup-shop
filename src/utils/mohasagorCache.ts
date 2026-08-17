@@ -1,7 +1,8 @@
 import type { Product } from "@/components/products/ProductCard";
 import { calculateProductPrice } from "@/utils/pricingMargin";
+import { getSmartProductImage } from "@/utils/productImageHelper";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v6";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v7";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300,000ms)
 
 let inMemoryProductsCache: Product[] | null = null;
@@ -64,18 +65,54 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
   return FALLBACK_SUPPLIER_PRODUCTS;
 }
 
-
 function mapRawProducts(rawProducts: any[], base: string): Product[] {
-  const resolveUrl = (url: string) => {
-    if (!url) return "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop";
-    if (url.startsWith("http") || url.startsWith("//")) return url;
-    return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
+  const resolveUrl = (url: any): string => {
+    if (!url || typeof url !== "string") return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+      return trimmed;
+    }
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
+    return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
+  };
+
+  const extractAnyImg = (p: any): string => {
+    if (!p) return "";
+    if (typeof p === "string") return resolveUrl(p);
+
+    if (p.image && typeof p.image === "string") return resolveUrl(p.image);
+    if (p.thumbnail_img && typeof p.thumbnail_img === "string") return resolveUrl(p.thumbnail_img);
+    if (p.thumbnail && typeof p.thumbnail === "string") return resolveUrl(p.thumbnail);
+    if (p.image_url && typeof p.image_url === "string") return resolveUrl(p.image_url);
+    if (p.photo && typeof p.photo === "string") return resolveUrl(p.photo);
+
+    if (Array.isArray(p.product_images) && p.product_images.length > 0) {
+      for (const img of p.product_images) {
+        if (typeof img === "string" && img.trim()) return resolveUrl(img);
+        if (img && typeof img === "object") {
+          const u = img.product_image || img.image_url || img.image || img.url;
+          if (u && typeof u === "string" && u.trim()) return resolveUrl(u);
+        }
+      }
+    }
+
+    if (Array.isArray(p.images) && p.images.length > 0) {
+      for (const img of p.images) {
+        if (typeof img === "string" && img.trim()) return resolveUrl(img);
+        if (img && typeof img === "object") {
+          const u = img.image_url || img.image || img.url;
+          if (u && typeof u === "string" && u.trim()) return resolveUrl(u);
+        }
+      }
+    }
+
+    return "";
   };
 
   return rawProducts.map((p, index) => {
-    const firstImage = p.product_images && p.product_images.length > 0
-      ? resolveUrl(p.product_images[0].product_image)
-      : p.thumbnail_img ? resolveUrl(p.thumbnail_img) : resolveUrl("");
+    const rawImage = extractAnyImg(p);
+    const firstImage = getSmartProductImage(p.name, rawImage, p.category || "", index);
 
     // Base supplier price from API (p.price or p.sale_price)
     const exactRetailPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
@@ -86,17 +123,22 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
     const price = calc.price;
     const originalPrice = calc.originalPrice;
 
-    const allImages = p.product_images && p.product_images.length > 0
-      ? p.product_images.map((imgObj: any) => resolveUrl(imgObj.product_image || imgObj.image || imgObj.url))
-      : [firstImage];
+    const allImages: string[] = [];
+    if (Array.isArray(p.product_images) && p.product_images.length > 0) {
+      p.product_images.forEach((imgObj: any) => {
+        const u = typeof imgObj === "string" ? resolveUrl(imgObj) : resolveUrl(imgObj?.product_image || imgObj?.image || imgObj?.url || imgObj?.image_url);
+        if (u && !allImages.includes(u)) allImages.push(u);
+      });
+    }
+    if (allImages.length === 0) {
+      allImages.push(firstImage);
+    }
 
-    const formattedImgList = p.product_images && p.product_images.length > 0
-      ? p.product_images.map((imgObj: any, idx: number) => ({
-          id: imgObj.id ? String(imgObj.id) : `img-${idx}`,
-          image_url: resolveUrl(imgObj.product_image || imgObj.image || imgObj.url),
-          sort_order: idx
-        }))
-      : [{ id: "img-0", image_url: firstImage, sort_order: 0 }];
+    const formattedImgList = allImages.map((imgUrl, idx) => ({
+      id: `img-${idx}`,
+      image_url: imgUrl,
+      sort_order: idx
+    }));
 
     const rawStock = p.stock_quantity ?? p.stock ?? (p.stock_status === "available" ? 50 : 0);
 

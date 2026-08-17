@@ -144,18 +144,32 @@ function mapDbProduct(p: ProductWithImages, index: number): Product {
 
 function mapSupplierProduct(p: any, index: number): Product {
   const base = "https://mohasagor.com.bd";
-  const resolveUrl = (url: string) => {
-    if (!url) return "";
-    if (url.startsWith("http") || url.startsWith("//")) return url;
-    return url.startsWith("/") ? `${base}${url}` : `${base}/${url}`;
+  const resolveUrl = (url: any): string => {
+    if (!url || typeof url !== "string") return "";
+    const trimmed = url.trim();
+    if (!trimmed) return "";
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+      return trimmed;
+    }
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
+    return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
   };
 
-  // Get the best image available
-  const firstImage = p.product_images && p.product_images.length > 0
-    ? resolveUrl(p.product_images[0].product_image)
-    : p.thumbnail_img ? resolveUrl(p.thumbnail_img) : null;
+  // Get the best image available from all potential properties
+  let rawFirstImg = "";
+  if (p.image && typeof p.image === "string") rawFirstImg = resolveUrl(p.image);
+  else if (p.thumbnail_img && typeof p.thumbnail_img === "string") rawFirstImg = resolveUrl(p.thumbnail_img);
+  else if (p.thumbnail && typeof p.thumbnail === "string") rawFirstImg = resolveUrl(p.thumbnail);
+  else if (p.image_url && typeof p.image_url === "string") rawFirstImg = resolveUrl(p.image_url);
+  else if (Array.isArray(p.product_images) && p.product_images.length > 0) {
+    const first = p.product_images[0];
+    rawFirstImg = typeof first === "string" ? resolveUrl(first) : resolveUrl(first?.product_image || first?.image_url || first?.image || first?.url);
+  } else if (Array.isArray(p.images) && p.images.length > 0) {
+    const first = p.images[0];
+    rawFirstImg = typeof first === "string" ? resolveUrl(first) : resolveUrl(first?.image_url || first?.image || first?.url);
+  }
 
-  const image = getSmartProductImage(p.name, firstImage || undefined, p.category || "", index);
+  const image = getSmartProductImage(p.name, rawFirstImg || undefined, p.category || "", index);
 
   let price = 0;
   let originalPrice: number | undefined = undefined;

@@ -97,7 +97,7 @@ function ProductCardComponent({ product }: ProductCardProps) {
               loading="lazy"
               decoding="async"
               onError={(e) => {
-                (e.target as HTMLImageElement).src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop";
+                (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
               }}
             />
           </div>
