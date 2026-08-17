@@ -167,6 +167,7 @@ export default function AdminOrders() {
   const [invoiceModalOpen, setInvoiceModalOpen] = useState(false);
   const [packingSlipOpen, setPackingSlipOpen] = useState(false);
   const [shippingLabelOpen, setShippingLabelOpen] = useState(false);
+  const [savingAll, setSavingAll] = useState(false);
 
   const fetchOrders = async () => {
     setLoading(true);
@@ -346,6 +347,76 @@ export default function AdminOrders() {
     invalidateOrders();
     toast({ title: "Orders synced" });
     setRefreshing(false);
+  };
+
+  const handleSaveAllOrders = async () => {
+    setSavingAll(true);
+    const nowIso = new Date().toISOString();
+    try {
+      // 1. Save to LocalStorage
+      localStorage.setItem("enterprise_admin_orders", JSON.stringify(orders));
+      localStorage.setItem("local_orders", JSON.stringify(orders));
+
+      // 2. Batch update to Firestore
+      for (const order of orders) {
+        try {
+          await setDoc(doc(db, "orders", order.id), {
+            id: order.id,
+            order_number: order.order_number,
+            status: order.status,
+            payment_status: order.payment_status,
+            payment_method: order.payment_method,
+            total: order.total,
+            totalAmount: order.total,
+            courier_name: order.courier_name || null,
+            tracking_number: order.tracking_number || null,
+            updated_at: nowIso
+          }, { merge: true });
+
+          if (order.order_number && order.order_number !== order.id) {
+            await setDoc(doc(db, "orders", order.order_number), {
+              status: order.status,
+              payment_status: order.payment_status,
+              courier_name: order.courier_name || null,
+              tracking_number: order.tracking_number || null,
+              updated_at: nowIso
+            }, { merge: true });
+          }
+        } catch (err) {
+          console.warn(`Firestore save error for order ${order.id}:`, err);
+        }
+
+        // 3. Update Supabase
+        try {
+          await supabase.from("orders").update({
+            status: order.status,
+            payment_status: order.payment_status,
+            courier_name: order.courier_name || null,
+            tracking_number: order.tracking_number || null,
+            updated_at: nowIso
+          }).eq("id", order.id);
+        } catch (sbErr) {
+          console.warn(`Supabase save error for order ${order.id}:`, sbErr);
+        }
+      }
+
+      // 4. Dispatch storage event for instant cross-tab sync
+      window.dispatchEvent(new Event("storage"));
+      invalidateOrders();
+
+      toast({
+        title: "Saved Successfully! 🎉",
+        description: "All order statuses and changes have been saved & synced to user panel."
+      });
+    } catch (e: any) {
+      toast({
+        variant: "destructive",
+        title: "Error",
+        description: e.message || "Failed to save orders"
+      });
+    } finally {
+      setSavingAll(false);
+    }
   };
 
   const updateStatus = async (id: string, newStatus: string) => {
@@ -713,10 +784,20 @@ export default function AdminOrders() {
             <h1 className="text-2xl font-bold text-foreground">Orders & Fulfillment</h1>
             <p className="text-muted-foreground">Manage customer orders, status timelines, dynamic invoices & courier shipping</p>
           </div>
-          <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
-            <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
-            Sync Orders
-          </Button>
+          <div className="flex items-center gap-2.5 flex-wrap">
+            <Button variant="outline" onClick={handleRefresh} disabled={refreshing}>
+              <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? "animate-spin" : ""}`} />
+              Sync Orders
+            </Button>
+            <Button 
+              onClick={handleSaveAllOrders} 
+              disabled={savingAll}
+              className="bg-primary text-primary-foreground hover:bg-primary/90 font-bold shadow-md flex items-center gap-2"
+            >
+              {savingAll ? <RefreshCw className="h-4 w-4 mr-1.5 animate-spin" /> : <Save className="h-4 w-4 mr-1.5" />}
+              {savingAll ? "Saving to Store..." : "Save Changes"}
+            </Button>
+          </div>
         </div>
 
         {/* Stats Cards */}
