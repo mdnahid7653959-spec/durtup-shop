@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X } from "lucide-react";
+import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -40,6 +40,9 @@ export default function Checkout() {
   const [applyingCoupon, setApplyingCoupon] = useState(false);
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null);
 
+  const [hasSavedAddress, setHasSavedAddress] = useState(false);
+  const [isEditingAddress, setIsEditingAddress] = useState(false);
+
   const [shippingInfo, setShippingInfo] = useState({
     firstName: "",
     lastName: "",
@@ -56,33 +59,83 @@ export default function Checkout() {
   // Prefill shipping info from profile + default address so user doesn't retype
   useEffect(() => {
     const loadSaved = async () => {
-      if (!user) return;
+      // 1. Check local storage first for instant response
+      let localAddr = null;
+      try {
+        const raw = localStorage.getItem("durtup_saved_address");
+        if (raw) localAddr = JSON.parse(raw);
+      } catch {}
 
-      const [{ data: profile }, { data: addressesData }] = await Promise.all([
-        supabase.from("profiles").select("full_name, phone, email").eq("user_id", user.id).maybeSingle(),
-        supabase.from("addresses").select("*").eq("user_id", user.id),
-      ]);
+      if (!user) {
+        if (localAddr?.address && localAddr?.city && localAddr?.phone) {
+          const [first = "", ...rest] = (localAddr.fullName || "").split(" ");
+          setShippingInfo({
+            firstName: first,
+            lastName: rest.join(" "),
+            email: localAddr.email || "",
+            phone: localAddr.phone || "",
+            address: localAddr.address || "",
+            city: localAddr.city || "",
+            state: localAddr.state || "",
+            zipCode: localAddr.zipCode || "",
+            country: localAddr.country || "Bangladesh"
+          });
+          setHasSavedAddress(true);
+          setIsEditingAddress(false);
+        } else {
+          setHasSavedAddress(false);
+          setIsEditingAddress(true);
+        }
+        return;
+      }
 
-      const addresses = Array.isArray(addressesData) ? addressesData : [];
-      const address = addresses.find((a: any) => a.is_default) || addresses[0] || null;
+      try {
+        const [{ data: profile }, { data: addressesData }] = await Promise.all([
+          supabase.from("profiles").select("full_name, phone, email").eq("user_id", user.id).maybeSingle(),
+          supabase.from("addresses").select("*").eq("user_id", user.id),
+        ]);
 
-      setShippingInfo((prev) => {
-        const [first = "", ...rest] = (profile?.full_name || address?.full_name || "").split(" ");
-        return {
-          firstName: prev.firstName || first,
-          lastName: prev.lastName || rest.join(" "),
-          email: prev.email || profile?.email || user.email || "",
-          phone: prev.phone || profile?.phone || address?.phone || "",
-          address: prev.address || address?.address_line1 || "",
-          city: prev.city || address?.city || "",
-          state: prev.state || address?.state || "",
-          zipCode: prev.zipCode || address?.postal_code || "",
-          country: prev.country || address?.country || "Bangladesh",
-        };
-      });
+        const addresses = Array.isArray(addressesData) ? addressesData : [];
+        const address = addresses.find((a: any) => a.is_default) || addresses[0] || null;
 
-      if (address?.id) setSavedAddressId(address.id);
+        const effectiveFullName = profile?.full_name || address?.full_name || localAddr?.fullName || "";
+        const [first = "", ...rest] = effectiveFullName.split(" ");
+        const effectivePhone = profile?.phone || address?.phone || localAddr?.phone || "";
+        const effectiveStreet = address?.address_line1 || localAddr?.address || "";
+        const effectiveCity = address?.city || localAddr?.city || "";
+        const effectiveState = address?.state || localAddr?.state || "";
+        const effectiveZip = address?.postal_code || localAddr?.zipCode || "";
+        const effectiveCountry = address?.country || localAddr?.country || "Bangladesh";
+        const effectiveEmail = profile?.email || user.email || localAddr?.email || "";
+
+        setShippingInfo({
+          firstName: first,
+          lastName: rest.join(" "),
+          email: effectiveEmail,
+          phone: effectivePhone,
+          address: effectiveStreet,
+          city: effectiveCity,
+          state: effectiveState,
+          zipCode: effectiveZip,
+          country: effectiveCountry,
+        });
+
+        if (address?.id) setSavedAddressId(address.id);
+
+        if (effectiveStreet.trim() && effectiveCity.trim() && effectivePhone.trim()) {
+          setHasSavedAddress(true);
+          setIsEditingAddress(false);
+        } else {
+          setHasSavedAddress(false);
+          setIsEditingAddress(true);
+        }
+      } catch (err) {
+        console.warn("Failed loading saved checkout address:", err);
+        setHasSavedAddress(false);
+        setIsEditingAddress(true);
+      }
     };
+
     loadSaved();
   }, [user]);
 
@@ -307,6 +360,17 @@ export default function Checkout() {
           updated_at: new Date().toISOString(),
         };
         await supabase.from("addresses").upsert(addressPayload);
+        localStorage.setItem("durtup_saved_address", JSON.stringify({
+          fullName: fullNameCombined,
+          phone: shippingInfo.phone,
+          address: shippingInfo.address,
+          city: shippingInfo.city,
+          state: shippingInfo.state,
+          zipCode: shippingInfo.zipCode,
+          country: shippingInfo.country,
+          email: shippingInfo.email
+        }));
+        setHasSavedAddress(true);
       } catch (e) { console.warn("address save skipped", e); }
 
 
@@ -532,114 +596,192 @@ export default function Checkout() {
               {/* Shipping & Payment */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 {/* Shipping Information */}
-                <Card>
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Truck className="h-4 w-4 text-primary" />
-                      </div>
-                      Shipping Information
-                    </CardTitle>
+                <Card className="border shadow-sm overflow-hidden">
+                  <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <MapPin className="h-4 w-4" />
+                        </div>
+                        Delivery Address
+                      </CardTitle>
+
+                      {hasSavedAddress && !isEditingAddress && (
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setIsEditingAddress(true)}
+                          className="text-xs h-8 px-3 rounded-lg border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-1.5"
+                        >
+                          <Edit3 className="h-3.5 w-3.5" /> Change / Add New Address
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
-                  <CardContent className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="firstName" className="text-sm">First Name *</Label>
-                        <Input
-                          id="firstName"
-                          name="firstName"
-                          value={shippingInfo.firstName}
-                          onChange={handleInputChange}
-                          required
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="lastName" className="text-sm">Last Name *</Label>
-                        <Input
-                          id="lastName"
-                          name="lastName"
-                          value={shippingInfo.lastName}
-                          onChange={handleInputChange}
-                          required
-                          className="h-11"
-                        />
-                      </div>
-                    </div>
 
-                    <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="email" className="text-sm">Email *</Label>
-                        <Input
-                          id="email"
-                          name="email"
-                          type="email"
-                          value={shippingInfo.email}
-                          onChange={handleInputChange}
-                          required
-                          className="h-11"
-                        />
-                      </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="phone" className="text-sm">Phone *</Label>
-                        <Input
-                          id="phone"
-                          name="phone"
-                          type="tel"
-                          value={shippingInfo.phone}
-                          onChange={handleInputChange}
-                          required
-                          className="h-11"
-                        />
-                      </div>
-                    </div>
+                  <CardContent className="p-4 sm:p-6 space-y-4">
+                    {hasSavedAddress && !isEditingAddress ? (
+                      /* Saved Address Card View */
+                      <div className="p-4 rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 via-muted/20 to-background space-y-3 relative">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold text-base text-foreground">
+                              {shippingInfo.firstName} {shippingInfo.lastName}
+                            </span>
+                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] px-2 py-0.5 font-semibold gap-1">
+                              <CheckCircle2 className="h-3 w-3" /> Default Address
+                            </Badge>
+                          </div>
+                        </div>
 
-                    <div className="space-y-1.5">
-                      <Label htmlFor="address" className="text-sm">Street Address *</Label>
-                      <Input
-                        id="address"
-                        name="address"
-                        value={shippingInfo.address}
-                        onChange={handleInputChange}
-                        required
-                        className="h-11"
-                      />
-                    </div>
+                        <div className="space-y-1.5 text-sm text-foreground/90">
+                          <div className="flex items-start gap-2">
+                            <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                            <span className="leading-relaxed">
+                              {shippingInfo.address}, {shippingInfo.city}{shippingInfo.state ? `, ${shippingInfo.state}` : ''} - {shippingInfo.zipCode}, {shippingInfo.country}
+                            </span>
+                          </div>
 
-                    <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                      <div className="space-y-1.5">
-                        <Label htmlFor="city" className="text-sm">City *</Label>
-                        <Input
-                          id="city"
-                          name="city"
-                          value={shippingInfo.city}
-                          onChange={handleInputChange}
-                          required
-                          className="h-11"
-                        />
+                          <div className="flex items-center gap-2 pt-1">
+                            <Phone className="h-4 w-4 text-primary shrink-0" />
+                            <span className="font-semibold text-foreground">{shippingInfo.phone}</span>
+                            {shippingInfo.email && (
+                              <span className="text-muted-foreground text-xs ml-2">({shippingInfo.email})</span>
+                            )}
+                          </div>
+                        </div>
                       </div>
-                      <div className="space-y-1.5">
-                        <Label htmlFor="state" className="text-sm">State</Label>
-                        <Input
-                          id="state"
-                          name="state"
-                          value={shippingInfo.state}
-                          onChange={handleInputChange}
-                          className="h-11"
-                        />
+                    ) : (
+                      /* Address Input Form */
+                      <div className="space-y-4">
+                        {hasSavedAddress && (
+                          <div className="flex justify-end">
+                            <Button
+                          type="button"
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => setIsEditingAddress(false)}
+                          className="text-xs text-muted-foreground hover:text-foreground h-7"
+                        >
+                          Cancel & Use Saved Address
+                        </Button>
+                          </div>
+                        )}
+
+                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="firstName" className="text-xs sm:text-sm font-semibold">First Name *</Label>
+                            <Input
+                              id="firstName"
+                              name="firstName"
+                              value={shippingInfo.firstName}
+                              onChange={handleInputChange}
+                              placeholder="e.g. Nahid"
+                              required
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="lastName" className="text-xs sm:text-sm font-semibold">Last Name *</Label>
+                            <Input
+                              id="lastName"
+                              name="lastName"
+                              value={shippingInfo.lastName}
+                              onChange={handleInputChange}
+                              placeholder="e.g. Islam"
+                              required
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="email" className="text-xs sm:text-sm font-semibold">Email Address *</Label>
+                            <Input
+                              id="email"
+                              name="email"
+                              type="email"
+                              value={shippingInfo.email}
+                              onChange={handleInputChange}
+                              placeholder="name@example.com"
+                              required
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="phone" className="text-xs sm:text-sm font-semibold">Phone Number (Mobile) *</Label>
+                            <Input
+                              id="phone"
+                              name="phone"
+                              type="tel"
+                              value={shippingInfo.phone}
+                              onChange={handleInputChange}
+                              placeholder="01XXXXXXXXX"
+                              required
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <div className="space-y-1.5">
+                          <Label htmlFor="address" className="text-xs sm:text-sm font-semibold">Street Address / House / Road *</Label>
+                          <Input
+                            id="address"
+                            name="address"
+                            value={shippingInfo.address}
+                            onChange={handleInputChange}
+                            placeholder="House #, Road #, Area / Landmark"
+                            required
+                            className="h-11 text-sm"
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                          <div className="space-y-1.5">
+                            <Label htmlFor="city" className="text-xs sm:text-sm font-semibold">City / District *</Label>
+                            <Input
+                              id="city"
+                              name="city"
+                              value={shippingInfo.city}
+                              onChange={handleInputChange}
+                              placeholder="e.g. Dhaka"
+                              required
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5">
+                            <Label htmlFor="state" className="text-xs sm:text-sm font-semibold">State / Division</Label>
+                            <Input
+                              id="state"
+                              name="state"
+                              value={shippingInfo.state}
+                              onChange={handleInputChange}
+                              placeholder="e.g. Dhaka"
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                          <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                            <Label htmlFor="zipCode" className="text-xs sm:text-sm font-semibold">Postal Code / Zip *</Label>
+                            <Input
+                              id="zipCode"
+                              name="zipCode"
+                              value={shippingInfo.zipCode}
+                              onChange={handleInputChange}
+                              placeholder="e.g. 1200"
+                              required
+                              className="h-11 text-sm"
+                            />
+                          </div>
+                        </div>
+
+                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 pt-1">
+                          <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                          This address and phone number will be automatically saved to your Account Settings for future orders.
+                        </p>
                       </div>
-                      <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                        <Label htmlFor="zipCode" className="text-sm">Zip Code *</Label>
-                        <Input
-                          id="zipCode"
-                          name="zipCode"
-                          value={shippingInfo.zipCode}
-                          onChange={handleInputChange}
-                          required
-                          className="h-11"
-                        />
-                      </div>
-                    </div>
+                    )}
                   </CardContent>
                 </Card>
 
