@@ -415,6 +415,7 @@ export default function AdminOrders() {
   const updateStatus = async (id: string, newStatus: string) => {
     try {
       const nowIso = new Date().toISOString();
+      const targetOrder = orders.find((o) => o.id === id || o.order_number === id);
 
       // Optimistically update React state and LocalStorage immediately
       setOrders((prevOrders) => {
@@ -430,28 +431,45 @@ export default function AdminOrders() {
         setSelectedOrder({ ...selectedOrder, status: newStatus });
       }
 
-      // Direct Firestore update
+      // 1. Direct Firestore update across id and order_number
       try {
         await setDoc(doc(db, "orders", id), { status: newStatus, updated_at: nowIso }, { merge: true });
+        if (targetOrder?.id && targetOrder.id !== id) {
+          await setDoc(doc(db, "orders", targetOrder.id), { status: newStatus, updated_at: nowIso }, { merge: true });
+        }
+        if (targetOrder?.order_number && targetOrder.order_number !== id) {
+          await setDoc(doc(db, "orders", targetOrder.order_number), { status: newStatus, updated_at: nowIso }, { merge: true });
+        }
       } catch (e) {
         console.warn("Firestore direct setDoc error:", e);
       }
 
-      // 1. Invoke function or fallback to DB update
-      if (admin?.id) {
-        const { data, error } = await supabase.functions.invoke("admin-orders", {
-          body: { action: "update-status", adminId: admin.id, orderId: id, data: { status: newStatus } }
-        });
-        if (error || data?.error) {
-          await adminDb.update("orders", { status: newStatus, updated_at: nowIso }, { id });
-          await supabase.from("orders").update({ status: newStatus, updated_at: nowIso }).eq("id", id);
-        }
-      } else {
-        await adminDb.update("orders", { status: newStatus, updated_at: nowIso }, { id });
+      // 2. Direct Supabase update across id and order_number
+      try {
         await supabase.from("orders").update({ status: newStatus, updated_at: nowIso }).eq("id", id);
+        await supabase.from("orders").update({ status: newStatus, updated_at: nowIso }).eq("order_number", id);
+        if (targetOrder?.id) {
+          await supabase.from("orders").update({ status: newStatus, updated_at: nowIso }).eq("id", targetOrder.id);
+        }
+        if (targetOrder?.order_number) {
+          await supabase.from("orders").update({ status: newStatus, updated_at: nowIso }).eq("order_number", targetOrder.order_number);
+        }
+      } catch (sbErr) {
+        console.warn("Supabase update error:", sbErr);
       }
 
-      // 2. Record transition in order_timelines
+      // 3. Fallback adminDb & Edge Function
+      try {
+        await adminDb.update("orders", { status: newStatus, updated_at: nowIso }, { id });
+      } catch {}
+
+      if (admin?.id) {
+        supabase.functions.invoke("admin-orders", {
+          body: { action: "update-status", adminId: admin.id, orderId: id, data: { status: newStatus } }
+        }).catch(() => {});
+      }
+
+      // 4. Record transition in order_timelines
       const timelineRecord = {
         order_id: id,
         status: newStatus,
@@ -463,7 +481,7 @@ export default function AdminOrders() {
       try {
         await supabase.from("order_timelines" as any).insert(timelineRecord);
       } catch {
-        await adminDb.insert("order_timelines", timelineRecord);
+        await adminDb.insert("order_timelines", timelineRecord).catch(() => {});
       }
 
       toast({ title: "Order status updated", description: `Changed status to ${newStatus}` });
@@ -477,6 +495,7 @@ export default function AdminOrders() {
   const updatePaymentStatus = async (id: string, payment_status: string) => {
     try {
       const nowIso = new Date().toISOString();
+      const targetOrder = orders.find((o) => o.id === id || o.order_number === id);
 
       setOrders((prevOrders) => {
         const updated = prevOrders.map((o) => (o.id === id || o.order_number === id ? { ...o, payment_status, updated_at: nowIso } : o));
@@ -494,21 +513,38 @@ export default function AdminOrders() {
       // Direct Firestore update
       try {
         await setDoc(doc(db, "orders", id), { payment_status, updated_at: nowIso }, { merge: true });
+        if (targetOrder?.id && targetOrder.id !== id) {
+          await setDoc(doc(db, "orders", targetOrder.id), { payment_status, updated_at: nowIso }, { merge: true });
+        }
+        if (targetOrder?.order_number && targetOrder.order_number !== id) {
+          await setDoc(doc(db, "orders", targetOrder.order_number), { payment_status, updated_at: nowIso }, { merge: true });
+        }
       } catch (e) {
         console.warn("Firestore direct setDoc error:", e);
       }
 
-      if (admin?.id) {
-        const { data, error } = await supabase.functions.invoke("admin-orders", {
-          body: { action: "update-payment", adminId: admin.id, orderId: id, data: { payment_status } }
-        });
-        if (error || data?.error) {
-          await adminDb.update("orders", { payment_status, updated_at: nowIso }, { id });
-          await supabase.from("orders").update({ payment_status, updated_at: nowIso }).eq("id", id);
-        }
-      } else {
-        await adminDb.update("orders", { payment_status, updated_at: nowIso }, { id });
+      // Direct Supabase update
+      try {
         await supabase.from("orders").update({ payment_status, updated_at: nowIso }).eq("id", id);
+        await supabase.from("orders").update({ payment_status, updated_at: nowIso }).eq("order_number", id);
+        if (targetOrder?.id) {
+          await supabase.from("orders").update({ payment_status, updated_at: nowIso }).eq("id", targetOrder.id);
+        }
+        if (targetOrder?.order_number) {
+          await supabase.from("orders").update({ payment_status, updated_at: nowIso }).eq("order_number", targetOrder.order_number);
+        }
+      } catch (sbErr) {
+        console.warn("Supabase payment update warning:", sbErr);
+      }
+
+      try {
+        await adminDb.update("orders", { payment_status, updated_at: nowIso }, { id });
+      } catch {}
+
+      if (admin?.id) {
+        supabase.functions.invoke("admin-orders", {
+          body: { action: "update-payment", adminId: admin.id, orderId: id, data: { payment_status } }
+        }).catch(() => {});
       }
 
       toast({ title: "Payment status updated", description: `Payment status changed to ${payment_status}` });

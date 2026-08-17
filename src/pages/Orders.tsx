@@ -63,13 +63,26 @@ export default function Orders() {
         fetchOrders();
       }, () => {});
 
-      // Storage event listener for cross-tab updates
-      const onStorage = () => fetchOrders();
-      window.addEventListener("storage", onStorage);
+      // Realtime listener for Supabase orders
+      const sbChannel = supabase
+        .channel(`public:orders:${user.id}`)
+        .on("postgres_changes", { event: "*", schema: "public", table: "orders" }, () => {
+          fetchOrders();
+        })
+        .subscribe();
+
+      // Cross-tab and window focus listeners
+      const onSync = () => fetchOrders();
+      window.addEventListener("focus", onSync);
+      document.addEventListener("visibilitychange", onSync);
+      window.addEventListener("storage", onSync);
 
       return () => {
         unsub();
-        window.removeEventListener("storage", onStorage);
+        supabase.removeChannel(sbChannel);
+        window.removeEventListener("focus", onSync);
+        document.removeEventListener("visibilitychange", onSync);
+        window.removeEventListener("storage", onSync);
       };
     }
   }, [user]);
