@@ -1,0 +1,20 @@
+/* Root-level scroll enforcement */
+html,
+body {
+  height: auto !important;
+  min-height: 100% !important;
+  overflow-y: auto !important;
+  overflow-x: clip !important;
+  overscroll-behavior: auto !important;
+  touch-action: auto !important;
+}
+
+#root {
+  height: auto !important;
+  min-height: 100vh !important;
+  overflow: visible !important;
+}
+
+body {
+  position: relative !important;
+}

@@ -1,0 +1,596 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Barlow:wght@400;500;600;700;800&family=Bebas+Neue&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 97%;
+    --foreground: 220 20% 10%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 220 20% 10%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 220 20% 10%;
+
+    --primary: 16 90% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 14% 96%;
+    --secondary-foreground: 220 20% 20%;
+
+    --muted: 220 14% 96%;
+    --muted-foreground: 220 10% 46%;
+
+    --accent: 16 90% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 13% 91%;
+    --input: 220 13% 91%;
+    --ring: 16 90% 55%;
+
+    --radius: 0.75rem;
+
+    /* Custom e-commerce tokens */
+    --sale: 0 84% 55%;
+    --sale-foreground: 0 0% 100%;
+    --success: 142 76% 36%;
+    --success-foreground: 0 0% 100%;
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+    
+    /* Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(16, 90%, 55%) 0%, hsl(28, 95%, 60%) 100%);
+    --gradient-hero: linear-gradient(135deg, hsl(16, 90%, 50%) 0%, hsl(350, 80%, 55%) 100%);
+    --gradient-dark: linear-gradient(180deg, hsl(220, 20%, 10%) 0%, hsl(220, 25%, 15%) 100%);
+    
+    /* Premium Shadows */
+    --shadow-sm: 0 1px 2px 0 hsl(220 20% 10% / 0.04);
+    --shadow-md: 0 4px 12px -2px hsl(220 20% 10% / 0.08);
+    --shadow-lg: 0 12px 24px -4px hsl(220 20% 10% / 0.1);
+    --shadow-xl: 0 24px 48px -8px hsl(220 20% 10% / 0.12);
+    --shadow-product: 0 4px 20px -2px hsl(220 20% 10% / 0.06);
+    
+    --sidebar-background: 0 0% 98%;
+    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-border: 220 13% 91%;
+    --sidebar-ring: 16 90% 55%;
+  }
+
+  .dark {
+    --background: 220 20% 6%;
+    --foreground: 0 0% 98%;
+
+    --card: 220 20% 10%;
+    --card-foreground: 0 0% 98%;
+
+    --popover: 220 20% 10%;
+    --popover-foreground: 0 0% 98%;
+
+    --primary: 16 90% 55%;
+    --primary-foreground: 0 0% 100%;
+
+    --secondary: 220 20% 15%;
+    --secondary-foreground: 0 0% 98%;
+
+    --muted: 220 20% 15%;
+    --muted-foreground: 220 10% 60%;
+
+    --accent: 16 90% 55%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 62% 50%;
+    --destructive-foreground: 0 0% 100%;
+
+    --border: 220 20% 18%;
+    --input: 220 20% 18%;
+    --ring: 16 90% 55%;
+    
+    --sidebar-background: 220 20% 8%;
+    --sidebar-foreground: 0 0% 98%;
+    --sidebar-primary: 16 90% 55%;
+    --sidebar-primary-foreground: 0 0% 100%;
+    --sidebar-accent: 220 20% 12%;
+    --sidebar-accent-foreground: 0 0% 98%;
+    --sidebar-border: 220 20% 15%;
+    --sidebar-ring: 16 90% 55%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+    box-sizing: border-box;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    text-size-adjust: 100%;
+    -webkit-overflow-scrolling: touch;
+    scroll-behavior: smooth;
+    font-size: 16px;
+    overflow-x: clip;
+    overflow-y: scroll !important;
+    height: auto !important;
+    /* Universal scrolling - allow scroll from anywhere */
+    touch-action: pan-x pan-y;
+    pointer-events: auto;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    overscroll-behavior-y: contain;
+    overflow-x: clip;
+    overflow-y: scroll !important;
+    /* Universal scrolling */
+    touch-action: pan-x pan-y;
+    pointer-events: auto;
+    width: 100%;
+    min-height: 100vh;
+    height: auto !important;
+    position: relative !important;
+    line-height: 1.5;
+  }
+
+  /* Allow horizontal scroll if needed */
+  #root {
+    overflow: visible;
+    width: 100%;
+    min-height: 100vh;
+    height: auto;
+    /* Ensure scroll passes through to body */
+    pointer-events: auto;
+  }
+}
+
+@layer utilities {
+  .gradient-primary {
+    background: var(--gradient-primary);
+  }
+  
+  .gradient-hero {
+    background: var(--gradient-hero);
+  }
+  
+  .gradient-dark {
+    background: var(--gradient-dark);
+  }
+  
+  .shadow-product {
+    box-shadow: var(--shadow-product);
+  }
+  
+  .text-gradient {
+    background: var(--gradient-primary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  /* Container that never overflows */
+  .container-safe {
+    width: 100%;
+    max-width: 100%;
+    padding-left: 1rem;
+    padding-right: 1rem;
+    margin-left: auto;
+    margin-right: auto;
+    overflow-x: hidden;
+  }
+
+  @media (min-width: 640px) {
+    .container-safe {
+      max-width: 640px;
+    }
+  }
+
+  @media (min-width: 768px) {
+    .container-safe {
+      max-width: 768px;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container-safe {
+      max-width: 1024px;
+    }
+  }
+
+  @media (min-width: 1280px) {
+    .container-safe {
+      max-width: 1280px;
+    }
+  }
+
+  /* Safe area utilities for iOS notch/home indicator */
+  .safe-area-pb {
+    padding-bottom: max(env(safe-area-inset-bottom, 0px), 16px);
+  }
+  
+  .safe-area-pt {
+    padding-top: env(safe-area-inset-top, 0px);
+  }
+
+  .safe-area-pl {
+    padding-left: env(safe-area-inset-left, 0px);
+  }
+
+  .safe-area-pr {
+    padding-right: env(safe-area-inset-right, 0px);
+  }
+
+  /* Touch-optimized interactions */
+  .touch-manipulation {
+    touch-action: manipulation;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  /* Premium mobile animations */
+  .app-fade-in {
+    animation: appFadeIn 0.25s ease-out;
+  }
+
+  .app-slide-up {
+    animation: appSlideUp 0.3s ease-out;
+  }
+
+  .app-scale-in {
+    animation: appScaleIn 0.2s ease-out;
+  }
+
+  .app-bounce-in {
+    animation: appBounceIn 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  /* Prevent text selection on interactive elements */
+  .no-select {
+    -webkit-user-select: none;
+    user-select: none;
+  }
+
+  /* Hide scrollbar but keep functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Smooth horizontal scroll for mobile carousels */
+  .scroll-snap-x {
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .scroll-snap-center {
+    scroll-snap-align: center;
+  }
+
+  .scroll-snap-start {
+    scroll-snap-align: start;
+  }
+
+  /* Glass effect for premium UI */
+  .glass {
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    background: hsl(var(--card) / 0.85);
+  }
+
+  .glass-strong {
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    background: hsl(var(--card) / 0.95);
+  }
+
+  /* Active press state for buttons */
+  .press-scale {
+    transition: transform 0.1s ease-out;
+  }
+
+  .press-scale:active {
+    transform: scale(0.96);
+  }
+
+  /* Minimum touch target 44px */
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Product card aspect ratio */
+  .aspect-square-safe {
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    width: 100%;
+  }
+}
+
+/* Premium mobile animations - optimized for 60fps */
+@keyframes appFadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes appSlideUp {
+  from { 
+    opacity: 0; 
+    transform: translateY(12px); 
+  }
+  to { 
+    opacity: 1; 
+    transform: translateY(0); 
+  }
+}
+
+@keyframes appScaleIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.95); 
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+@keyframes appBounceIn {
+  from { 
+    opacity: 0; 
+    transform: scale(0.9); 
+  }
+  60% {
+    opacity: 1;
+    transform: scale(1.02);
+  }
+  to { 
+    opacity: 1; 
+    transform: scale(1); 
+  }
+}
+
+/* Slide animation for menus */
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-slide-down {
+  animation: slideDown 0.2s ease-out;
+}
+
+/* Pulse animation for badges */
+@keyframes pulse-soft {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.85; 
+    transform: scale(1.03);
+  }
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s infinite;
+}
+
+/* Custom scrollbar - only on desktop */
+@media (min-width: 768px) {
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    background: hsl(var(--muted));
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background: hsl(var(--muted-foreground) / 0.25);
+    border-radius: 3px;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background: hsl(var(--muted-foreground) / 0.4);
+  }
+}
+
+/* MOBILE-FIRST CRITICAL STYLES */
+@media (max-width: 767px) {
+  /* Hide scrollbars on mobile for app-like feel */
+  ::-webkit-scrollbar {
+    display: none;
+  }
+  
+  * {
+    scrollbar-width: none;
+  }
+
+  /* UNIVERSAL SCROLLING - Critical mobile fix */
+  html, body {
+    overflow-y: scroll !important;
+    overflow-x: hidden !important;
+    max-width: 100vw;
+    height: auto !important;
+    position: relative !important;
+    touch-action: pan-x pan-y !important;
+  }
+  
+  #root {
+    overflow: visible !important;
+    height: auto !important;
+  }
+
+  /* Larger touch targets - 44px minimum */
+  button, 
+  a, 
+  [role="button"],
+  .touch-target {
+    min-height: 44px;
+  }
+
+  /* Prevent iOS zoom on input focus */
+  input, textarea, select {
+    font-size: 16px !important;
+  }
+
+  /* Smoother momentum scrolling */
+  .overflow-y-auto,
+  .overflow-x-auto {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Container padding for mobile */
+  .container {
+    padding-left: 0.75rem;
+    padding-right: 0.75rem;
+    max-width: 100%;
+  }
+}
+
+/* Extra small screens (< 375px) */
+@media (max-width: 374px) {
+  html {
+    font-size: 15px;
+  }
+
+  .container {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+  }
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Image optimization */
+img {
+  content-visibility: auto;
+  max-width: 100%;
+  height: auto;
+}
+
+/* Loading skeleton shimmer */
+@keyframes shimmer {
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
+}
+
+.skeleton-shimmer {
+  background: linear-gradient(
+    90deg,
+    hsl(var(--muted)) 0%,
+    hsl(var(--muted-foreground) / 0.08) 50%,
+    hsl(var(--muted)) 100%
+  );
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* ============================================================
+   MOBILE-ONLY cinematic hero effects (<=767px)
+   Desktop layout untouched.
+   ============================================================ */
+@media (max-width: 767px) {
+  @keyframes heroAurora {
+    0%,100% { transform: translate3d(0,0,0) scale(1); opacity: .55; }
+    50%    { transform: translate3d(8%,-6%,0) scale(1.25); opacity: .85; }
+  }
+  @keyframes heroAurora2 {
+    0%,100% { transform: translate3d(0,0,0) scale(1.1); opacity: .5; }
+    50%    { transform: translate3d(-10%,8%,0) scale(1.35); opacity: .8; }
+  }
+  @keyframes heroSheen {
+    0%   { transform: translateX(-120%) skewX(-18deg); }
+    60%  { transform: translateX(160%) skewX(-18deg); }
+    100% { transform: translateX(160%) skewX(-18deg); }
+  }
+  @keyframes floatY {
+    0%,100% { transform: translateY(0); }
+    50%    { transform: translateY(-4px); }
+  }
+  @keyframes marqueeX {
+    0%   { transform: translateX(0); }
+    100% { transform: translateX(-50%); }
+  }
+  @keyframes ringPulse {
+    0%,100% { box-shadow: 0 0 0 0 rgba(255,255,255,.45); }
+    50%    { box-shadow: 0 0 0 8px rgba(255,255,255,0); }
+  }
+
+  .m-hero-aurora-a,
+  .m-hero-aurora-b {
+    position: absolute; border-radius: 9999px; filter: blur(40px);
+    pointer-events: none; will-change: transform, opacity;
+  }
+  .m-hero-aurora-a {
+    width: 70%; height: 70%; top: -20%; right: -20%;
+    background: radial-gradient(circle, rgba(255,214,145,.9), rgba(232,67,147,.35) 55%, transparent 70%);
+    animation: heroAurora 9s ease-in-out infinite;
+  }
+  .m-hero-aurora-b {
+    width: 75%; height: 75%; bottom: -25%; left: -25%;
+    background: radial-gradient(circle, rgba(108,92,231,.85), rgba(255,107,53,.35) 55%, transparent 70%);
+    animation: heroAurora2 11s ease-in-out infinite;
+  }
+  .m-hero-noise {
+    position: absolute; inset: 0; pointer-events: none; opacity: .08; mix-blend-mode: overlay;
+    background-image: radial-gradient(rgba(255,255,255,.9) 1px, transparent 1px);
+    background-size: 3px 3px;
+  }
+  .m-hero-sheen {
+    position: absolute; top: 0; bottom: 0; width: 40%; pointer-events: none;
+    background: linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+    animation: heroSheen 5.5s ease-in-out infinite;
+  }
+  .m-float { animation: floatY 4s ease-in-out infinite; }
+  .m-ring-pulse { animation: ringPulse 2.4s ease-out infinite; }
+
+  .m-marquee { overflow: hidden; mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); -webkit-mask-image: linear-gradient(90deg, transparent, #000 8%, #000 92%, transparent); }
+  .m-marquee-track {
+    display: flex; gap: .5rem; width: max-content;
+    animation: marqueeX 22s linear infinite;
+  }
+
+  .m-glass {
+    background: rgba(255,255,255,.14);
+    backdrop-filter: blur(14px) saturate(140%);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    border: 1px solid rgba(255,255,255,.22);
+  }
+  .m-cta-glow {
+    box-shadow: 0 8px 28px -6px rgba(255,107,53,.55), 0 0 0 1px rgba(255,255,255,.35) inset;
+  }
+}
