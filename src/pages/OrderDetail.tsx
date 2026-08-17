@@ -8,12 +8,16 @@ import {
   CreditCard, 
   Phone, 
   Mail,
-  Download,
   MessageSquare,
   RotateCcw,
   Loader2,
   Copy,
-  CheckCircle2
+  CheckCircle2,
+  Sparkles,
+  ShieldCheck,
+  Headphones,
+  Star,
+  ChevronRight
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
@@ -25,6 +29,24 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { OrderTimeline } from "@/components/orders/OrderTimeline";
 import { useToast } from "@/hooks/use-toast";
 
@@ -38,6 +60,7 @@ interface OrderItem {
   product_image?: string;
   total?: number;
   price?: number;
+  product_id?: string | null;
 }
 
 interface Order {
@@ -58,6 +81,7 @@ interface Order {
   shipped_at?: string;
   delivered_at?: string;
   order_items: OrderItem[];
+  return_requested?: boolean;
 }
 
 const getStatusColor = (status: string) => {
@@ -87,6 +111,17 @@ export default function OrderDetail() {
   const [isLoading, setIsLoading] = useState(true);
   const [copied, setCopied] = useState(false);
 
+  // Return Request Modal State
+  const [returnModalOpen, setReturnModalOpen] = useState(false);
+  const [returnReason, setReturnReason] = useState("");
+  const [returnPhone, setReturnPhone] = useState("");
+  const [returnNote, setReturnNote] = useState("");
+  const [returnSubmitting, setReturnSubmitting] = useState(false);
+  const [returnSuccess, setReturnSuccess] = useState(false);
+
+  // Review Modal State (for multiple items)
+  const [reviewModalOpen, setReviewModalOpen] = useState(false);
+
   useEffect(() => {
     const fetchOrder = async () => {
       if (!id || !user) return;
@@ -108,7 +143,6 @@ export default function OrderDetail() {
           const formattedItems = await Promise.all((itemsData || []).map(async (it: any) => {
             let product_image = it.product_image || it.image || null;
             
-            // Try fetching image from product_images if it's missing (for older orders)
             if (!product_image && it.product_id) {
               try {
                 const { data: images } = await supabase
@@ -212,7 +246,8 @@ export default function OrderDetail() {
               quantity: Number(it.quantity || 1),
               unit_price: Number(it.price || it.unit_price || 0),
               total_price: Number((it.price || it.unit_price || 0) * (it.quantity || 1)),
-              product_image: it.image || it.product?.image
+              product_image: it.image || it.product?.image,
+              product_id: it.product_id || it.product?.id || null
             })) : []
           };
           setOrder(formatted);
@@ -254,12 +289,94 @@ export default function OrderDetail() {
     }
   };
 
+  const handleOpenReturnModal = () => {
+    setReturnSuccess(false);
+    setReturnReason("");
+    setReturnNote("");
+    setReturnPhone(order?.shipping_address?.phone || "");
+    setReturnModalOpen(true);
+  };
+
+  const handleReturnSubmit = async () => {
+    if (!order) return;
+    if (!returnReason) {
+      toast({ variant: "destructive", title: "কারণ নির্বাচন করুন", description: "দয়া করে রিটার্নের কারণ নির্বাচন করুন।" });
+      return;
+    }
+    setReturnSubmitting(true);
+    const nowIso = new Date().toISOString();
+    const returnPayload = {
+      order_id: order.id,
+      order_number: order.order_number,
+      user_id: user?.id || null,
+      user_email: user?.email || null,
+      phone: returnPhone || (order.shipping_address?.phone || ""),
+      reason: returnReason,
+      note: returnNote || "",
+      status: "pending",
+      created_at: nowIso,
+      items: order.order_items || []
+    };
+
+    try {
+      // 1. Save to Firestore
+      try {
+        await setDoc(doc(db, "returns", `RET-${order.id}`), returnPayload, { merge: true });
+        await setDoc(doc(db, "orders", order.id), {
+          return_requested: true,
+          return_reason: returnReason,
+          return_note: returnNote,
+          return_status: "pending",
+          updated_at: nowIso
+        }, { merge: true });
+      } catch (fsErr) {
+        console.warn("Firestore return save error:", fsErr);
+      }
+
+      // 2. Save to Supabase
+      try {
+        await supabase.from("returns" as any).insert(returnPayload);
+        await supabase.from("orders").update({
+          return_requested: true,
+          updated_at: nowIso
+        } as any).eq("id", order.id);
+      } catch {}
+
+      // 3. Save to localStorage
+      try {
+        const existing = JSON.parse(localStorage.getItem("durtup_return_requests") || "[]");
+        existing.unshift(returnPayload);
+        localStorage.setItem("durtup_return_requests", JSON.stringify(existing));
+      } catch {}
+
+      setReturnSuccess(true);
+    } catch (err: any) {
+      toast({ variant: "destructive", title: "Error", description: err.message || "Failed to submit return request" });
+    } finally {
+      setReturnSubmitting(false);
+    }
+  };
+
+  const handleReviewClick = () => {
+    if (!order || !order.order_items || order.order_items.length === 0) {
+      navigate("/products");
+      return;
+    }
+    if (order.order_items.length === 1) {
+      const it = order.order_items[0];
+      const targetId = it.product_id || it.id;
+      navigate(`/product/${targetId}?review=true#reviews`);
+    } else {
+      setReviewModalOpen(true);
+    }
+  };
+
   if (!user) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
         <main className="flex-1 flex items-center justify-center">
-          <p>Please login to view order details</p>
+          <p>Please log in to view order details.</p>
         </main>
         <MobileBottomNav />
       </div>
@@ -282,10 +399,14 @@ export default function OrderDetail() {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
-        <main className="flex-1 flex flex-col items-center justify-center gap-4">
-          <Package className="h-16 w-16 text-muted-foreground" />
-          <p className="text-lg font-medium">Order not found</p>
-          <Button onClick={() => navigate("/orders")}>View All Orders</Button>
+        <main className="flex-1 flex items-center justify-center">
+          <div className="text-center">
+            <h2 className="text-xl font-semibold mb-2">Order Not Found</h2>
+            <p className="text-muted-foreground mb-4">The order you're looking for doesn't exist.</p>
+            <Button asChild>
+              <Link to="/orders">Back to Orders</Link>
+            </Button>
+          </div>
         </main>
         <MobileBottomNav />
       </div>
@@ -299,7 +420,7 @@ export default function OrderDetail() {
       <Header />
       
       <main className="flex-1 pb-24 md:pb-8">
-        <div className="container max-w-4xl py-4">
+        <div className="container max-w-4xl py-4 px-3 sm:px-4">
           {/* Header */}
           <div className="flex items-center gap-3 mb-6">
             <Button variant="ghost" size="icon" onClick={() => navigate("/orders")}>
@@ -307,7 +428,7 @@ export default function OrderDetail() {
             </Button>
             <div className="flex-1">
               <h1 className="text-lg font-bold">Order Details</h1>
-              <p className="text-sm text-muted-foreground">{order.order_number}</p>
+              <p className="text-sm text-muted-foreground">#{order.order_number}</p>
             </div>
             <Badge className={getStatusColor(order.status)}>
               {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
@@ -318,7 +439,7 @@ export default function OrderDetail() {
           <Card className="mb-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Truck className="h-5 w-5" />
+                <Truck className="h-5 w-5 text-primary" />
                 Order Status
               </CardTitle>
             </CardHeader>
@@ -366,14 +487,14 @@ export default function OrderDetail() {
           <Card className="mb-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <Package className="h-5 w-5" />
+                <Package className="h-5 w-5 text-primary" />
                 Items ({order.order_items.length})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
               {order.order_items.map((item) => (
-                <div key={item.id} className="flex gap-3 p-3 bg-muted/50 rounded-lg">
-                  <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center">
+                <div key={item.id} className="flex gap-3 p-3 bg-muted/50 rounded-xl items-center border">
+                  <div className="w-16 h-16 bg-muted rounded-lg flex-shrink-0 overflow-hidden flex items-center justify-center border">
                     {item.product_image ? (
                       <img 
                         src={item.product_image} 
@@ -385,11 +506,11 @@ export default function OrderDetail() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-medium text-sm line-clamp-2">{item.product_name}</p>
+                    <p className="font-semibold text-sm line-clamp-2 text-foreground">{item.product_name}</p>
                     {item.variant_name && (
                       <p className="text-xs text-muted-foreground">{item.variant_name}</p>
                     )}
-                    <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">Qty: {item.quantity}</p>
                   </div>
                   <div className="text-right">
                     <p className="font-bold text-primary">৳{(item.total || item.total_price || 0).toLocaleString()}</p>
@@ -404,29 +525,29 @@ export default function OrderDetail() {
           <Card className="mb-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <MapPin className="h-5 w-5" />
+                <MapPin className="h-5 w-5 text-primary" />
                 Shipping Address
               </CardTitle>
             </CardHeader>
             <CardContent>
               <div className="space-y-1 text-sm">
-                <p className="font-medium">
-                  {shippingAddress.firstName} {shippingAddress.lastName}
+                <p className="font-bold text-foreground">
+                  {shippingAddress.firstName || shippingAddress.name} {shippingAddress.lastName || ""}
                 </p>
-                <p className="text-muted-foreground">{shippingAddress.address}</p>
+                <p className="text-muted-foreground">{shippingAddress.address || shippingAddress.street}</p>
                 <p className="text-muted-foreground">
                   {shippingAddress.city}
                   {shippingAddress.state && `, ${shippingAddress.state}`}
                   {shippingAddress.zipCode && ` - ${shippingAddress.zipCode}`}
                 </p>
-                <p className="text-muted-foreground">{shippingAddress.country}</p>
+                <p className="text-muted-foreground">{shippingAddress.country || "Bangladesh"}</p>
                 <div className="flex items-center gap-2 pt-2 text-muted-foreground">
-                  <Phone className="h-4 w-4" />
-                  <span>{shippingAddress.phone}</span>
+                  <Phone className="h-4 w-4 text-primary" />
+                  <span className="font-medium text-foreground">{shippingAddress.phone || "No phone provided"}</span>
                 </div>
                 {shippingAddress.email && (
                   <div className="flex items-center gap-2 text-muted-foreground">
-                    <Mail className="h-4 w-4" />
+                    <Mail className="h-4 w-4 text-primary" />
                     <span>{shippingAddress.email}</span>
                   </div>
                 )}
@@ -438,7 +559,7 @@ export default function OrderDetail() {
           <Card className="mb-4">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
-                <CreditCard className="h-5 w-5" />
+                <CreditCard className="h-5 w-5 text-primary" />
                 Payment Summary
               </CardTitle>
             </CardHeader>
@@ -457,7 +578,7 @@ export default function OrderDetail() {
                   <span>৳{(order.tax_amount || 0).toLocaleString()}</span>
                 </div>
                 {order.discount_amount > 0 && (
-                  <div className="flex justify-between text-green-600">
+                  <div className="flex justify-between text-green-600 font-medium">
                     <span>Discount</span>
                     <span>-৳{order.discount_amount.toLocaleString()}</span>
                   </div>
@@ -465,15 +586,15 @@ export default function OrderDetail() {
                 <Separator className="my-2" />
                 <div className="flex justify-between font-bold text-base">
                   <span>Total</span>
-                  <span className="text-primary">৳{order.total.toLocaleString()}</span>
+                  <span className="text-primary text-lg">৳{order.total.toLocaleString()}</span>
                 </div>
                 <div className="flex items-center gap-2 pt-2">
-                  <Badge variant="outline" className="text-xs">
+                  <Badge variant="outline" className="text-xs uppercase font-bold">
                     {order.payment_method === "cod" ? "Cash on Delivery" : order.payment_method}
                   </Badge>
                   <Badge 
                     variant="outline" 
-                    className={order.payment_status === "paid" ? "text-green-600" : "text-yellow-600"}
+                    className={order.payment_status === "paid" ? "text-green-600 bg-green-500/10 border-green-500/30" : "text-yellow-600 bg-yellow-500/10 border-yellow-500/30"}
                   >
                     {order.payment_status}
                   </Badge>
@@ -482,32 +603,176 @@ export default function OrderDetail() {
             </CardContent>
           </Card>
 
-          {/* Actions */}
-          <div className="flex gap-3">
-            {order.status === "pending" && (
-              <Button variant="destructive" className="flex-1">
-                Cancel Order
-              </Button>
-            )}
-            {order.status === "delivered" && (
-              <>
-                <Button variant="outline" className="flex-1 gap-2">
-                  <RotateCcw className="h-4 w-4" />
-                  Return
-                </Button>
-                <Button variant="outline" className="flex-1 gap-2">
-                  <MessageSquare className="h-4 w-4" />
-                  Review
-                </Button>
-              </>
-            )}
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              Invoice
+          {/* Actions: Clean Return & Review Buttons (Invoice Removed) */}
+          <div className="flex gap-3 pt-2">
+            <Button 
+              variant="outline" 
+              onClick={handleOpenReturnModal}
+              className="flex-1 gap-2 font-semibold h-11 border-border hover:border-primary/50 hover:bg-primary/5"
+            >
+              <RotateCcw className="h-4 w-4 text-primary" />
+              Return
+            </Button>
+            <Button 
+              variant="outline" 
+              onClick={handleReviewClick}
+              className="flex-1 gap-2 font-semibold h-11 border-border hover:border-primary/50 hover:bg-primary/5"
+            >
+              <MessageSquare className="h-4 w-4 text-primary" />
+              Review
             </Button>
           </div>
         </div>
       </main>
+
+      {/* Return Request Application Modal */}
+      <Dialog open={returnModalOpen} onOpenChange={setReturnModalOpen}>
+        <DialogContent className="max-w-lg">
+          {!returnSuccess ? (
+            <>
+              <DialogHeader>
+                <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <RotateCcw className="h-4 w-4" />
+                  </div>
+                  রিটার্ন বা এক্সচেঞ্জ আবেদন
+                </DialogTitle>
+                <DialogDescription>
+                  অর্ডার #{order.order_number} এর জন্য আপনার রিটার্ন কারণ ও বিবরণ দিন।
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 py-2">
+                <div className="space-y-1.5">
+                  <Label htmlFor="return-reason" className="text-sm font-semibold">রিটার্নের কারণ নির্বাচন করুন *</Label>
+                  <Select value={returnReason} onValueChange={setReturnReason}>
+                    <SelectTrigger id="return-reason">
+                      <SelectValue placeholder="কারণ সিলেক্ট করুন..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="নষ্ট বা ক্ষতিগ্রস্ত পণ্য পেয়েছি">নষ্ট বা ক্ষতিগ্রস্ত পণ্য পেয়েছি (Damaged/Defective)</SelectItem>
+                      <SelectItem value="ভুল পণ্য ডেলিভারি হয়েছে">ভুল পণ্য ডেলিভারি হয়েছে (Wrong Item)</SelectItem>
+                      <SelectItem value="ছবির সাথে পণ্যের মিল নেই">ছবির সাথে পণ্যের মিল নেই (Not As Described)</SelectItem>
+                      <SelectItem value="সাইজ বা ফিটিং সমস্যা">সাইজ বা ফিটিং সমস্যা (Size/Fitting Issue)</SelectItem>
+                      <SelectItem value="অন্যান্য কারণ">অন্যান্য কারণ (Other)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="return-phone" className="text-sm font-semibold">যোগাযোগের মোবাইল নাম্বার *</Label>
+                  <Input 
+                    id="return-phone"
+                    placeholder="e.g. 01885985097" 
+                    value={returnPhone}
+                    onChange={(e) => setReturnPhone(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label htmlFor="return-note" className="text-sm font-semibold">বিস্তারিত বিবরণ (ঐচ্ছিক)</Label>
+                  <Textarea
+                    id="return-note"
+                    placeholder="পণ্যটির কি সমস্যা বিস্তারিত এখানে লিখুন..."
+                    value={returnNote}
+                    onChange={(e) => setReturnNote(e.target.value)}
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              <DialogFooter className="gap-2 sm:gap-0">
+                <Button variant="outline" onClick={() => setReturnModalOpen(false)}>
+                  বাতিল করুন
+                </Button>
+                <Button 
+                  onClick={handleReturnSubmit} 
+                  disabled={returnSubmitting || !returnReason}
+                  className="bg-primary text-primary-foreground font-bold"
+                >
+                  {returnSubmitting ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                  আবেদন জমা দিন
+                </Button>
+              </DialogFooter>
+            </>
+          ) : (
+            <div className="py-6 text-center space-y-4 animate-in zoom-in-95 duration-200">
+              <div className="w-16 h-16 rounded-full bg-emerald-500/10 text-emerald-600 border-2 border-emerald-500/20 mx-auto flex items-center justify-center shadow-inner">
+                <CheckCircle2 className="w-9 h-9" />
+              </div>
+              <div className="space-y-2">
+                <h3 className="text-xl font-bold text-foreground">🎉 আপনার রিটার্ন আবেদনটি সফলভাবে গৃহীত হয়েছে!</h3>
+                <p className="text-sm text-muted-foreground leading-relaxed max-w-sm mx-auto">
+                  শীঘ্রই আপনার রিটার্ন প্রসেস সম্পন্ন করার জন্য আমাদের একজন প্রতিনিধি আপনার সাথে সরাসরি যোগাযোগ করবেন।
+                </p>
+              </div>
+
+              <div className="p-3.5 bg-muted/50 rounded-xl border text-xs text-left space-y-1 text-muted-foreground">
+                <p><strong className="text-foreground">অর্ডার নাম্বার:</strong> #{order.order_number}</p>
+                <p><strong className="text-foreground">কারণ:</strong> {returnReason}</p>
+                {returnPhone && <p><strong className="text-foreground">মোবাইল:</strong> {returnPhone}</p>}
+              </div>
+
+              <div className="pt-2">
+                <Button 
+                  onClick={() => setReturnModalOpen(false)}
+                  className="w-full bg-primary text-primary-foreground font-bold"
+                >
+                  ঠিক আছে (Close)
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Review Product Selector Modal (for multiple items) */}
+      <Dialog open={reviewModalOpen} onOpenChange={setReviewModalOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-base font-bold">
+              <Star className="h-5 w-5 text-warning fill-warning" />
+              যে পণ্যটির রিভিউ দিতে চান সিলেক্ট করুন
+            </DialogTitle>
+            <DialogDescription>
+              নিচের তালিকা থেকে প্রোডাক্ট সিলেক্ট করে আপনার মূল্যবান রিভিউ দিন।
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            {order.order_items.map((item) => (
+              <div 
+                key={item.id} 
+                className="flex items-center justify-between p-3 rounded-xl border bg-card hover:bg-muted/40 transition-colors gap-3"
+              >
+                <div className="flex items-center gap-3 min-w-0">
+                  <div className="w-12 h-12 rounded-lg bg-muted flex-shrink-0 overflow-hidden border flex items-center justify-center">
+                    {item.product_image ? (
+                      <img src={item.product_image} alt={item.product_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <Package className="h-5 w-5 text-muted-foreground" />
+                    )}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-xs font-bold truncate">{item.product_name}</p>
+                    <p className="text-[11px] text-muted-foreground">৳{(item.price || item.unit_price || 0).toLocaleString()}</p>
+                  </div>
+                </div>
+                <Button 
+                  size="sm" 
+                  onClick={() => {
+                    setReviewModalOpen(false);
+                    const targetId = item.product_id || item.id;
+                    navigate(`/product/${targetId}?review=true#reviews`);
+                  }}
+                  className="shrink-0 text-xs font-semibold gap-1"
+                >
+                  রিভিউ দিন <ChevronRight className="h-3.5 w-3.5" />
+                </Button>
+              </div>
+            ))}
+          </div>
+        </DialogContent>
+      </Dialog>
 
       <MobileBottomNav />
     </div>
