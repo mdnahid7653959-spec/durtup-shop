@@ -153,6 +153,18 @@
     position: relative;
     pointer-events: auto;
   }
+
+  /* Universal container & media constraints against mobile overflow */
+  .container {
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+  }
+
+  img, svg, video, iframe {
+    max-width: 100%;
+    height: auto;
+  }
 }
 
 @layer utilities {

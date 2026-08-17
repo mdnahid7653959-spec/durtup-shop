@@ -576,8 +576,8 @@ export default function Checkout() {
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className="flex-1 pb-32 md:pb-8">
-        <div className="container py-4 sm:py-8 max-w-6xl">
+      <main className="flex-1 pb-32 md:pb-8 w-full overflow-x-hidden">
+        <div className="container px-3 sm:px-4 md:px-6 py-4 sm:py-8 max-w-6xl w-full min-w-0">
           <Link to="/cart" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 sm:mb-6 text-sm font-medium">
             <ArrowLeft className="h-4 w-4" />
             Back to Cart
@@ -912,94 +912,94 @@ export default function Checkout() {
 
                 {/* STEP 2: PAYMENT METHOD (Shows after clicking Place Order) */}
                 {checkoutStep === "payment" && (
-                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300 w-full min-w-0">
                     {/* Back Button & Address Preview */}
-                    <div className="flex items-center justify-between gap-2 p-3 bg-muted/40 border rounded-xl">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 p-3 bg-muted/40 border rounded-xl w-full min-w-0 overflow-hidden">
                       <Button
                         type="button"
                         variant="ghost"
                         size="sm"
                         onClick={() => setCheckoutStep("shipping")}
-                        className="text-xs font-semibold text-primary hover:text-primary flex items-center gap-1.5 h-8 px-2"
+                        className="text-xs font-semibold text-primary hover:text-primary flex items-center gap-1.5 h-8 px-1 -ml-1 shrink-0"
                       >
                         <ArrowLeft className="h-4 w-4" /> Back to Delivery Details
                       </Button>
-                      <div className="text-right text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-xs">
+                      <div className="text-left sm:text-right text-xs text-muted-foreground truncate w-full sm:w-auto min-w-0">
                         Deliver to: <span className="font-semibold text-foreground">{shippingInfo.firstName} {shippingInfo.lastName}</span> ({shippingInfo.phone})
                       </div>
                     </div>
 
                     {/* Payment Method Selection Card */}
-                    <Card className="border shadow-sm">
-                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+                    <Card className="border shadow-sm overflow-hidden w-full min-w-0">
+                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20 p-3 sm:p-6">
                         <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary shrink-0">
                             <CreditCard className="h-4 w-4" />
                           </div>
                           Select Payment Method
                         </CardTitle>
                       </CardHeader>
-                      <CardContent className="p-4 sm:p-6 space-y-3">
-                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+                      <CardContent className="p-3 sm:p-6 space-y-3 w-full min-w-0">
+                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3 w-full min-w-0">
                           {/* Cash on Delivery (COD) */}
                           <div 
                             onClick={() => setPaymentMethod("cod")}
-                            className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                            className={`flex items-center gap-3 p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all w-full min-w-0 ${
                               paymentMethod === "cod" 
                                 ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
                                 : "border-border hover:border-primary/40 bg-card"
                             }`}
                           >
-                            <RadioGroupItem value="cod" id="page-cod" />
-                            <Label htmlFor="page-cod" className="flex-1 cursor-pointer">
+                            <RadioGroupItem value="cod" id="page-cod" className="shrink-0" />
+                            <Label htmlFor="page-cod" className="flex-1 cursor-pointer min-w-0">
                               <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
-                              <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">Pay in cash when product arrives at your doorstep</p>
                             </Label>
-                            {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                            {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0 ml-auto" />}
                           </div>
 
                           {/* bKash */}
                           <div 
                             onClick={() => setPaymentMethod("bkash")}
-                            className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                            className={`flex items-center gap-3 p-3 sm:p-4 border-2 rounded-xl cursor-pointer transition-all w-full min-w-0 ${
                               paymentMethod === "bkash" 
                                 ? "border-[#E2136E] bg-[#E2136E]/5 shadow-sm ring-1 ring-[#E2136E]/20" 
                                 : "border-border hover:border-[#E2136E]/40 bg-card"
                             }`}
                           >
-                            <RadioGroupItem value="bkash" id="page-bkash" />
-                            <Label htmlFor="page-bkash" className="flex-1 cursor-pointer">
+                            <RadioGroupItem value="bkash" id="page-bkash" className="shrink-0" />
+                            <Label htmlFor="page-bkash" className="flex-1 cursor-pointer min-w-0">
                               <span className="font-bold text-sm text-foreground block">bKash (বিকাশ)</span>
-                              <p className="text-xs text-muted-foreground mt-0.5">Send Money / Make payment via bKash</p>
+                              <p className="text-xs text-muted-foreground mt-0.5 line-clamp-2">Send Money / Make payment via bKash</p>
                             </Label>
-                            {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-[#E2136E] shrink-0" />}
+                            {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-[#E2136E] shrink-0 ml-auto" />}
                           </div>
 
                           {/* bKash Payment Details Box */}
                           {paymentMethod === "bkash" && (
-                            <div className="p-4 sm:p-5 rounded-2xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                            <div className="p-3 sm:p-5 rounded-xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-3.5 animate-in fade-in zoom-in-95 duration-200 w-full min-w-0 overflow-hidden">
                               {/* bKash Header */}
-                              <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20">
-                                <div className="flex items-center gap-2.5">
-                                  <div className="w-10 h-10 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm">
+                              <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20 flex-wrap gap-2 min-w-0 w-full">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                  <div className="w-9 h-9 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm shrink-0">
                                     bKash
                                   </div>
-                                  <div>
-                                    <h4 className="font-bold text-sm text-foreground">bKash Payment Details</h4>
-                                    <p className="text-[11px] text-muted-foreground">Personal / Merchant Account</p>
+                                  <div className="min-w-0">
+                                    <h4 className="font-bold text-sm text-foreground truncate">bKash Payment Details</h4>
+                                    <p className="text-[11px] text-muted-foreground truncate">Personal / Merchant Account</p>
                                   </div>
                                 </div>
-                                <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5">
+                                <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5 shrink-0">
                                   Send Money
                                 </Badge>
                               </div>
 
                               {/* Instructions & Number */}
-                              <div className="p-3.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2.5">
-                                <div className="flex items-center justify-between flex-wrap gap-2">
-                                  <div className="space-y-0.5">
+                              <div className="p-3 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2.5 overflow-hidden w-full min-w-0">
+                                <div className="flex items-center justify-between flex-wrap gap-2 w-full">
+                                  <div className="space-y-0.5 min-w-0">
                                     <span className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider block">bKash Number</span>
-                                    <span className="text-lg sm:text-xl font-black text-[#E2136E] tracking-wider block">01885985097</span>
+                                    <span className="text-lg sm:text-xl font-black text-[#E2136E] tracking-wider block select-all">01885985097</span>
                                   </div>
                                   <Button
                                     type="button"
@@ -1008,31 +1008,31 @@ export default function Checkout() {
                                     onClick={() => {
                                       navigator.clipboard.writeText("01885985097");
                                     }}
-                                    className="h-8 px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10 flex items-center gap-1.5"
+                                    className="h-8 px-2.5 sm:px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10 flex items-center gap-1.5 shrink-0"
                                   >
                                     <Copy className="h-3.5 w-3.5" /> Copy Number
                                   </Button>
                                 </div>
 
-                                <div className="pt-1 text-xs text-foreground/80 space-y-1">
-                                  <p className="flex items-center gap-1.5 font-medium">
-                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">1</span>
-                                    বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।
+                                <div className="pt-1 text-xs text-foreground/80 space-y-1.5 break-words">
+                                  <p className="flex items-start gap-1.5 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">1</span>
+                                    <span>বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।</span>
                                   </p>
-                                  <p className="flex items-center gap-1.5 font-medium">
-                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">2</span>
-                                    টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{total.toLocaleString()}</strong>
+                                  <p className="flex items-start gap-1.5 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">2</span>
+                                    <span>টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{total.toLocaleString()}</strong></span>
                                   </p>
-                                  <p className="flex items-center gap-1.5 font-medium">
-                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">3</span>
-                                    পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।
+                                  <p className="flex items-start gap-1.5 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0 mt-0.5">3</span>
+                                    <span>পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।</span>
                                   </p>
                                 </div>
                               </div>
 
                               {/* Inputs for verification */}
-                              <div className="grid sm:grid-cols-2 gap-3 pt-1">
-                                <div className="space-y-1.5">
+                              <div className="grid sm:grid-cols-2 gap-3 pt-1 w-full min-w-0">
+                                <div className="space-y-1.5 min-w-0">
                                   <Label htmlFor="bkashNumber" className="text-xs font-bold text-foreground">
                                     Sender bKash Number (আপনার বিকাশ নাম্বার) *
                                   </Label>
@@ -1041,12 +1041,12 @@ export default function Checkout() {
                                     placeholder="e.g. 01XXXXXXXXX"
                                     value={bkashNumber}
                                     onChange={(e) => setBkashNumber(e.target.value)}
-                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E]"
+                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] w-full"
                                     required={paymentMethod === "bkash"}
                                   />
                                 </div>
 
-                                <div className="space-y-1.5">
+                                <div className="space-y-1.5 min-w-0">
                                   <Label htmlFor="bkashTrxId" className="text-xs font-bold text-foreground">
                                     Transaction ID (TrxID / ট্রানজেকশন আইডি) *
                                   </Label>
@@ -1055,7 +1055,7 @@ export default function Checkout() {
                                     placeholder="e.g. 9M7A8X9K2"
                                     value={bkashTrxId}
                                     onChange={(e) => setBkashTrxId(e.target.value.toUpperCase())}
-                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono"
+                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono w-full"
                                     required={paymentMethod === "bkash"}
                                   />
                                 </div>
