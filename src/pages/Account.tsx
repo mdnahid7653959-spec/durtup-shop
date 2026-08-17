@@ -1,13 +1,11 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Switch } from "@/components/ui/switch";
-import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { useAuth } from "@/contexts/AuthContext";
 import { useSellerStatus } from "@/hooks/useSellerStatus";
@@ -16,6 +14,8 @@ import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { MobileBottomNav } from "@/components/layout/MobileBottomNav";
 import { supabase } from "@/lib/firebaseAdapter";
+import { sendPasswordResetEmail } from "firebase/auth";
+import { auth } from "@/integrations/firebase/client";
 
 export default function Account() {
   const { user, profile, loading } = useAuth();
@@ -168,50 +168,36 @@ export default function Account() {
     }
   };
 
-  const handleChangePassword = async () => {
-    if (newPassword !== confirmPassword) {
-      toast({
-        variant: "destructive",
-        title: "Passwords don't match",
-        description: "Please make sure both passwords are the same."
-      });
-      return;
-    }
+  const [sendingResetEmail, setSendingResetEmail] = useState(false);
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
-    if (newPassword.length < 6) {
-      toast({
-        variant: "destructive",
-        title: "Password too short",
-        description: "Password must be at least 6 characters."
-      });
-      return;
-    }
-
-    setChangingPassword(true);
-
-    try {
-      const { error } = await supabase.auth.updateUser({
-        password: newPassword
-      });
-
-      if (error) throw error;
-
-      toast({
-        title: "Password changed!",
-        description: "Your password has been updated successfully."
-      });
-      
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    } catch (error: any) {
+  const handleSendResetEmail = async () => {
+    const targetEmail = user?.email;
+    if (!targetEmail) {
       toast({
         variant: "destructive",
         title: "Error",
-        description: error.message
+        description: "No registered email found for this account."
+      });
+      return;
+    }
+
+    setSendingResetEmail(true);
+    try {
+      await sendPasswordResetEmail(auth, targetEmail);
+      setResetEmailSent(true);
+      toast({
+        title: "Verification email sent!",
+        description: `Check your Gmail inbox (${targetEmail}) for the password reset link.`
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to send email",
+        description: error.message || "Could not send verification email."
       });
     } finally {
-      setChangingPassword(false);
+      setSendingResetEmail(false);
     }
   };
 
@@ -453,64 +439,72 @@ export default function Account() {
             <TabsContent value="password">
               <Card className="border-0 sm:border shadow-sm">
                 <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-lg">Change Password</CardTitle>
+                  <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+                    <ShieldCheck className="h-5 w-5 text-primary" />
+                    Change Password via Gmail
+                  </CardTitle>
                   <CardDescription className="text-xs sm:text-sm">
-                    Ensure your account is using a secure password (at least 6 characters).
+                    For your account security, a password reset verification link will be sent to your registered Gmail address.
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
-                  <div className="grid gap-3 sm:gap-4 max-w-md">
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="newPassword" className="text-xs sm:text-sm font-medium">New Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="newPassword"
-                          type={showPasswords ? "text" : "password"}
-                          value={newPassword}
-                          onChange={(e) => setNewPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="h-11 sm:h-10 text-sm pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswords(!showPasswords)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
+                  {resetEmailSent ? (
+                    <div className="p-5 sm:p-6 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-center max-w-md mx-auto space-y-3">
+                      <div className="w-12 h-12 rounded-full bg-emerald-500/20 text-emerald-600 flex items-center justify-center mx-auto">
+                        <CheckCircle className="h-6 w-6" />
+                      </div>
+                      <h3 className="font-bold text-base text-foreground">
+                        Verification Email Sent!
+                      </h3>
+                      <p className="text-xs sm:text-sm text-muted-foreground leading-relaxed">
+                        We have sent a secure password reset link to <span className="font-semibold text-foreground">{user?.email}</span>. Check your inbox (or spam folder) and click the link to set your new password.
+                      </p>
+                      <div className="flex flex-col sm:flex-row gap-2 justify-center pt-2">
+                        <a
+                          href="https://mail.google.com"
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center justify-center gap-2 px-4 py-2 text-xs font-semibold rounded-lg bg-primary text-primary-foreground hover:bg-primary/90 transition-colors shadow-sm"
                         >
-                          {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
+                          <Mail className="h-4 w-4" /> Open Gmail Inbox
+                        </a>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={handleSendResetEmail}
+                          disabled={sendingResetEmail}
+                          className="text-xs"
+                        >
+                          {sendingResetEmail ? "Resending..." : "Resend Link"}
+                        </Button>
                       </div>
                     </div>
-
-                    <div className="space-y-1.5 sm:space-y-2">
-                      <Label htmlFor="confirmPassword" className="text-xs sm:text-sm font-medium">Confirm New Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="confirmPassword"
-                          type={showPasswords ? "text" : "password"}
-                          value={confirmPassword}
-                          onChange={(e) => setConfirmPassword(e.target.value)}
-                          placeholder="••••••••"
-                          className="h-11 sm:h-10 text-sm pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowPasswords(!showPasswords)}
-                          className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground p-1"
-                        >
-                          {showPasswords ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                        </button>
+                  ) : (
+                    <div className="space-y-4 max-w-md">
+                      <div className="p-3.5 rounded-xl bg-muted/50 border space-y-1">
+                        <span className="text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                          Registered Gmail Address
+                        </span>
+                        <div className="flex items-center gap-2 font-medium text-sm text-foreground">
+                          <Mail className="h-4 w-4 text-primary" />
+                          <span>{user?.email || "No email available"}</span>
+                        </div>
                       </div>
-                    </div>
 
-                    <Button
-                      onClick={handleChangePassword}
-                      className="w-full sm:w-auto h-11 sm:h-10 text-sm touch-manipulation active:scale-[0.98] mt-2"
-                      disabled={changingPassword || !newPassword || !confirmPassword}
-                    >
-                      <Lock className="w-4 h-4 mr-2" />
-                      {changingPassword ? "Updating..." : "Update Password"}
-                    </Button>
-                  </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Click the button below and we will send a password change link to your Gmail. You can then verify your identity and set a new password safely.
+                      </p>
+
+                      <Button
+                        onClick={handleSendResetEmail}
+                        className="w-full sm:w-auto h-11 sm:h-10 text-sm font-semibold touch-manipulation active:scale-[0.98] bg-primary hover:bg-primary/90 text-primary-foreground flex items-center gap-2"
+                        disabled={sendingResetEmail || !user?.email}
+                      >
+                        <Mail className="w-4 h-4" />
+                        {sendingResetEmail ? "Sending Link..." : "Send Verification Link to Gmail"}
+                      </Button>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
