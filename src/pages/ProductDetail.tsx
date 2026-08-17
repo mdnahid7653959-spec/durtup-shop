@@ -331,22 +331,12 @@ export default function ProductDetail() {
       sellingPrice = Number(raw.discount_price || raw.price || 0);
       regularPrice = raw.originalPrice || raw.regular_price ? Number(raw.originalPrice || raw.regular_price) : null;
     } else {
-      // Direct raw API object
-      const rawSalePrice = parseFloat(raw.sale_price) || parseFloat(raw.discount_price) || 0;
-      const rawPrice = parseFloat(raw.price) || parseFloat(raw.regular_price) || 0;
+      // Direct raw API object - use exact retail price from supplier website (raw.price)
+      const exactRetailPrice = parseFloat(raw.price) || parseFloat(raw.sale_price) || 0;
+      const rawRegularPrice = parseFloat(raw.regular_price) || 0;
 
-      if (rawSalePrice > 0 && rawPrice > 0 && rawPrice > rawSalePrice) {
-        sellingPrice = rawSalePrice;
-        regularPrice = rawPrice;
-      } else if (rawSalePrice > 0) {
-        sellingPrice = rawSalePrice;
-        regularPrice = rawPrice > 0 ? rawPrice : null;
-      } else if (rawPrice > 0) {
-        sellingPrice = rawPrice;
-        regularPrice = null;
-      } else {
-        sellingPrice = parseFloat(raw.price) || 0;
-      }
+      sellingPrice = exactRetailPrice;
+      regularPrice = rawRegularPrice > sellingPrice ? rawRegularPrice : Math.round(sellingPrice * 1.35);
     }
 
     const variants = (raw.product_variants || []).map((v: any) => ({

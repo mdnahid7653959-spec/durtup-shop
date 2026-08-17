@@ -163,22 +163,12 @@ function mapSupplierProduct(p: any, index: number): Product {
     price = Number(p.discount_price || p.price || 0);
     originalPrice = p.originalPrice || p.regular_price ? Number(p.originalPrice || p.regular_price) : undefined;
   } else {
-    // Exact direct API prices without markup
-    const rawSalePrice = parseFloat(p.sale_price) || parseFloat(p.discount_price) || 0;
-    const rawPrice = parseFloat(p.price) || parseFloat(p.regular_price) || 0;
-    
-    if (rawSalePrice > 0 && rawPrice > 0 && rawPrice > rawSalePrice) {
-      price = rawSalePrice;
-      originalPrice = rawPrice;
-    } else if (rawSalePrice > 0) {
-      price = rawSalePrice;
-      originalPrice = rawPrice > 0 ? rawPrice : undefined;
-    } else if (rawPrice > 0) {
-      price = rawPrice;
-      originalPrice = undefined;
-    } else {
-      price = parseFloat(p.price) || 0;
-    }
+    // Exact retail price from supplier website (p.price)
+    const exactRetailPrice = parseFloat(p.price) || parseFloat(p.sale_price) || 0;
+    const rawRegularPrice = parseFloat(p.regular_price) || 0;
+
+    price = exactRetailPrice;
+    originalPrice = rawRegularPrice > price ? rawRegularPrice : Math.round(price * 1.35);
   }
 
   return {
@@ -260,7 +250,7 @@ function buildSections(products: Product[]) {
   };
 }
 
-const CACHE_KEY = "mohasagor_cached_home_products_v4";
+const CACHE_KEY = "mohasagor_cached_home_products_v5";
 
 function preloadImages(products: Product[]) {
   if (typeof window === "undefined") return;
