@@ -926,6 +926,16 @@ export default function ProductDetail() {
                   </button>
                 )}
               </div>
+
+              {/* Product Ratings & Reviews in Left Column */}
+              <div className="mt-4">
+                <ProductReviews
+                  productId={product.id}
+                  ratingAverage={product.rating_average}
+                  ratingCount={product.rating_count}
+                  productName={product.name}
+                />
+              </div>
             </div>
 
 
@@ -1161,65 +1171,52 @@ export default function ProductDetail() {
             </div>
           </div>
 
-          {/* Store Details & Reviews - Professional Layout */}
-          <div className="grid lg:grid-cols-3 gap-6 mt-8">
-            {/* Reviews - Takes 2 columns */}
-            <div className="lg:col-span-2 order-2 lg:order-1">
-              <ProductReviews
-                productId={product.id}
-                ratingAverage={product.rating_average}
-                ratingCount={product.rating_count}
+          {/* Store Information */}
+          <div className="mt-8">
+            {product.seller_id ? (
+              <StoreDetails
+                sellerId={product.seller_id}
+                onContactSeller={handleContactSeller}
+                contactingSeller={contactingSeller}
               />
-            </div>
-            {/* Store Details - Sticky sidebar */}
-            <div className="order-1 lg:order-2">
-              <div className="lg:sticky lg:top-24 space-y-4">
-                {product.seller_id ? (
-                  <StoreDetails
-                    sellerId={product.seller_id}
-                    onContactSeller={handleContactSeller}
-                    contactingSeller={contactingSeller}
-                  />
-                ) : (
-                  <div className="bg-card rounded-2xl border p-4 sm:p-6">
-                    <h3 className="text-lg font-bold text-foreground mb-4">Store Information</h3>
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center flex-shrink-0">
-                        <Store className="h-6 w-6 text-primary" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2">
-                          <h4 className="font-semibold text-foreground text-base">Durtup Official</h4>
-                          <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />
-                        </div>
-                        <p className="text-xs text-muted-foreground">Official Store</p>
-                      </div>
-                    </div>
-                    <div className="grid grid-cols-3 gap-3 mb-4">
-                      <div className="text-center p-3 bg-muted/50 rounded-xl">
-                        <Star className="h-4 w-4 mx-auto text-warning mb-1" />
-                        <p className="text-sm font-semibold text-foreground">5.0</p>
-                        <p className="text-xs text-muted-foreground">Rating</p>
-                      </div>
-                      <div className="text-center p-3 bg-muted/50 rounded-xl">
-                        <Shield className="h-4 w-4 mx-auto text-primary mb-1" />
-                        <p className="text-sm font-semibold text-foreground">100%</p>
-                        <p className="text-xs text-muted-foreground">Authentic</p>
-                      </div>
-                      <div className="text-center p-3 bg-muted/50 rounded-xl">
-                        <RotateCcw className="h-4 w-4 mx-auto text-primary mb-1" />
-                        <p className="text-sm font-semibold text-foreground">Easy</p>
-                        <p className="text-xs text-muted-foreground">Returns</p>
-                      </div>
-                    </div>
-                    <Button className="w-full gap-2" onClick={handleContactSeller} disabled={contactingSeller}>
-                      {contactingSeller ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
-                      Chat with Store
-                    </Button>
+            ) : (
+              <div className="bg-card rounded-2xl border p-4 sm:p-6 max-w-xl">
+                <h3 className="text-lg font-bold text-foreground mb-4">Store Information</h3>
+                <div className="flex items-center gap-4 mb-4">
+                  <div className="w-14 h-14 rounded-full bg-primary/10 border-2 border-primary/20 flex items-center justify-center flex-shrink-0">
+                    <Store className="h-6 w-6 text-primary" />
                   </div>
-                )}
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2">
+                      <h4 className="font-semibold text-foreground text-base">Durtup Official</h4>
+                      <ShieldCheck className="h-4 w-4 text-primary flex-shrink-0" />
+                    </div>
+                    <p className="text-xs text-muted-foreground">Official Store</p>
+                  </div>
+                </div>
+                <div className="grid grid-cols-3 gap-3 mb-4">
+                  <div className="text-center p-3 bg-muted/50 rounded-xl">
+                    <Star className="h-4 w-4 mx-auto text-warning mb-1" />
+                    <p className="text-sm font-semibold text-foreground">5.0</p>
+                    <p className="text-xs text-muted-foreground">Rating</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted/50 rounded-xl">
+                    <Shield className="h-4 w-4 mx-auto text-primary mb-1" />
+                    <p className="text-sm font-semibold text-foreground">100%</p>
+                    <p className="text-xs text-muted-foreground">Authentic</p>
+                  </div>
+                  <div className="text-center p-3 bg-muted/50 rounded-xl">
+                    <RotateCcw className="h-4 w-4 mx-auto text-primary mb-1" />
+                    <p className="text-sm font-semibold text-foreground">Easy</p>
+                    <p className="text-xs text-muted-foreground">Returns</p>
+                  </div>
+                </div>
+                <Button className="w-full gap-2" onClick={handleContactSeller} disabled={contactingSeller}>
+                  {contactingSeller ? <Loader2 className="h-4 w-4 animate-spin" /> : <MessageSquare className="h-4 w-4" />}
+                  Chat with Store
+                </Button>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Related Products - Full width below product grid */}
