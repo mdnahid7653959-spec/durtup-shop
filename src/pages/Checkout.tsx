@@ -264,8 +264,8 @@ export default function Checkout() {
     toast({ title: "Coupon removed" });
   };
 
-  const handleInitiatePlaceOrder = (e?: React.FormEvent) => {
-    if (e) e.preventDefault();
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     
     if (!user) {
       toast({ variant: "destructive", title: "Please login", description: "You need to login to place an order" });
@@ -285,17 +285,6 @@ export default function Checkout() {
         title: "Shipping Address Required",
         description: "Please enter your name, phone number, and street address to proceed.",
       });
-      return;
-    }
-
-    // Open Payment Method Modal
-    setShowPaymentModal(true);
-  };
-
-  const executeOrderPlacement = async () => {
-    if (!user) {
-      toast({ variant: "destructive", title: "Please login", description: "You need to login to place an order" });
-      navigate("/login?redirect=/checkout");
       return;
     }
 
@@ -511,7 +500,6 @@ export default function Checkout() {
       // Clear both carts
       await clearCart();
       clearCJCart();
-      setShowPaymentModal(false);
 
       toast({ 
         title: "Order placed successfully! 🎉", 
@@ -551,8 +539,8 @@ export default function Checkout() {
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
       <main className="flex-1 pb-32 md:pb-8">
-        <div className="container py-4 sm:py-8">
-          <Link to="/cart" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 sm:mb-6 text-sm">
+        <div className="container py-4 sm:py-8 max-w-6xl">
+          <Link to="/cart" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-4 sm:mb-6 text-sm font-medium">
             <ArrowLeft className="h-4 w-4" />
             Back to Cart
           </Link>
@@ -625,7 +613,7 @@ export default function Checkout() {
                   </div>
                   {couponDiscount > 0 && (
                     <div className="flex justify-between text-success">
-                      <span>Coupon Discount</span>
+                      <span>Coupon Discount ({appliedCoupon?.code})</span>
                       <span>-৳{couponDiscount.toLocaleString()}</span>
                     </div>
                   )}
@@ -634,9 +622,9 @@ export default function Checkout() {
             )}
           </div>
 
-          <form onSubmit={handleInitiatePlaceOrder}>
+          <form onSubmit={handleSubmit}>
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
-              {/* Shipping & Coupon */}
+              {/* Shipping, Coupon & Payment Method */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 {/* Shipping Information */}
                 <Card className="border shadow-sm overflow-hidden">
@@ -829,47 +817,47 @@ export default function Checkout() {
                 </Card>
 
                 {/* Coupon Code */}
-                <Card>
-                  <CardHeader className="pb-3 sm:pb-6">
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
                     <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <Tag className="h-4 w-4 text-primary" />
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <Tag className="h-4 w-4" />
                       </div>
                       Coupon Code
                     </CardTitle>
                   </CardHeader>
-                  <CardContent>
+                  <CardContent className="p-4 sm:p-6">
                     {appliedCoupon ? (
                       <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-xl">
                         <div className="flex items-center gap-2">
                           <CheckCircle className="h-5 w-5 text-success" />
                           <div>
-                            <p className="font-medium text-success">{appliedCoupon.code}</p>
-                            <p className="text-sm text-muted-foreground">
+                            <p className="font-bold text-success text-sm">{appliedCoupon.code}</p>
+                            <p className="text-xs text-muted-foreground">
                               {appliedCoupon.discount_type === "percentage" 
-                                ? `${appliedCoupon.discount_value}% off` 
-                                : `৳${appliedCoupon.discount_value} off`}
+                                ? `${appliedCoupon.discount_value}% Discount Applied` 
+                                : `৳${appliedCoupon.discount_value} Discount Applied`}
                             </p>
                           </div>
                         </div>
-                        <Button variant="ghost" size="sm" onClick={removeCoupon}>
+                        <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-8 w-8 p-0 rounded-full">
                           <X className="h-4 w-4" />
                         </Button>
                       </div>
                     ) : (
                       <div className="flex gap-2">
                         <Input
-                          placeholder="Enter coupon code"
+                          placeholder="Enter coupon code (e.g. DURTUP2026)"
                           value={couponCode}
                           onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="h-11 flex-1"
+                          className="h-11 flex-1 text-sm"
                         />
                         <Button 
                           type="button" 
                           variant="outline" 
                           onClick={applyCoupon}
                           disabled={applyingCoupon}
-                          className="h-11 px-6"
+                          className="h-11 px-6 font-semibold"
                         >
                           {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                         </Button>
@@ -877,15 +865,64 @@ export default function Checkout() {
                     )}
                   </CardContent>
                 </Card>
+
+                {/* Payment Method - Clean Integrated Card */}
+                <Card className="border shadow-sm">
+                  <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                        <CreditCard className="h-4 w-4" />
+                      </div>
+                      Payment Method
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-4 sm:p-6 space-y-3">
+                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+                      {/* Cash on Delivery (COD) */}
+                      <div 
+                        onClick={() => setPaymentMethod("cod")}
+                        className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                          paymentMethod === "cod" 
+                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                            : "border-border hover:border-primary/40 bg-card"
+                        }`}
+                      >
+                        <RadioGroupItem value="cod" id="page-cod" />
+                        <Label htmlFor="page-cod" className="flex-1 cursor-pointer">
+                          <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
+                          <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
+                        </Label>
+                        {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                      </div>
+
+                      {/* bKash */}
+                      <div 
+                        onClick={() => setPaymentMethod("bkash")}
+                        className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                          paymentMethod === "bkash" 
+                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                            : "border-border hover:border-primary/40 bg-card"
+                        }`}
+                      >
+                        <RadioGroupItem value="bkash" id="page-bkash" />
+                        <Label htmlFor="page-bkash" className="flex-1 cursor-pointer">
+                          <span className="font-bold text-sm text-foreground block">bKash</span>
+                          <p className="text-xs text-muted-foreground mt-0.5">Instant online payment via bKash Account</p>
+                        </Label>
+                        {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                      </div>
+                    </RadioGroup>
+                  </CardContent>
+                </Card>
               </div>
 
               {/* Order Summary - Desktop */}
               <div className="hidden lg:block lg:col-span-1">
-                <Card className="sticky top-24">
-                  <CardHeader>
-                    <CardTitle>Order Summary</CardTitle>
+                <Card className="sticky top-24 shadow-sm border">
+                  <CardHeader className="pb-3 border-b bg-muted/20">
+                    <CardTitle className="text-base font-bold">Order Summary</CardTitle>
                   </CardHeader>
-                  <CardContent className="space-y-4">
+                  <CardContent className="space-y-4 p-4 sm:p-6">
                     <div className="space-y-3 max-h-64 overflow-y-auto">
                       {/* Regular items */}
                       {regularItems.map(item => (
@@ -893,12 +930,12 @@ export default function Checkout() {
                           <img
                             src={item.image}
                             alt={item.product.name}
-                            className="w-16 h-16 object-cover rounded-lg"
+                            className="w-14 h-14 object-cover rounded-lg border"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{item.product.name}</p>
-                            <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                            <p className="text-sm font-medium text-primary">
+                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                            <p className="text-sm font-bold text-primary">
                               ৳{((item.product.discount_price || item.product.regular_price) * item.quantity).toLocaleString()}
                             </p>
                           </div>
@@ -913,13 +950,13 @@ export default function Checkout() {
                           <img
                             src={item.image}
                             alt={item.name}
-                            className="w-16 h-16 object-cover rounded-lg"
+                            className="w-14 h-14 object-cover rounded-lg border"
                           />
                           <div className="flex-1 min-w-0">
                             <p className="text-sm font-medium truncate">{item.name}</p>
                             {item.variant && <p className="text-[10px] text-muted-foreground">{item.variant}</p>}
-                            <p className="text-sm text-muted-foreground">Qty: {item.quantity}</p>
-                            <p className="text-sm font-medium text-primary">
+                            <p className="text-xs text-muted-foreground">Qty: {item.quantity}</p>
+                            <p className="text-sm font-bold text-primary">
                               ৳{(item.price * item.quantity).toLocaleString()}
                             </p>
                           </div>
@@ -930,11 +967,11 @@ export default function Checkout() {
                     <div className="border-t pt-4 space-y-2 text-sm">
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Subtotal</span>
-                        <span>৳{subtotal.toLocaleString()}</span>
+                        <span className="font-semibold">৳{subtotal.toLocaleString()}</span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Shipping</span>
-                        <span>{shipping === 0 ? <span className="text-success">FREE</span> : `৳${shipping}`}</span>
+                        <span className="font-semibold">{shipping === 0 ? <span className="text-success">FREE</span> : `৳${shipping}`}</span>
                       </div>
                       {couponDiscount > 0 && (
                         <div className="flex justify-between text-success font-medium">
@@ -946,23 +983,23 @@ export default function Checkout() {
 
                     <div className="border-t pt-4 flex justify-between text-lg font-bold">
                       <span>Total</span>
-                      <span className="text-primary">৳{total.toLocaleString()}</span>
+                      <span className="text-primary font-black text-xl">৳{total.toLocaleString()}</span>
                     </div>
 
-                    <Button type="submit" className="w-full h-12 text-base font-semibold" disabled={loading}>
+                    <Button type="submit" className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-md" disabled={loading}>
                       {loading ? (
                         <>
                           <Loader2 className="h-5 w-5 mr-2 animate-spin" />
-                          Processing...
+                          Processing Order...
                         </>
                       ) : (
                         "Place Order"
                       )}
                     </Button>
 
-                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
-                      <Shield className="h-4 w-4" />
-                      Secure checkout
+                    <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground pt-1">
+                      <Shield className="h-4 w-4 text-emerald-600" />
+                      100% Safe & Secure Checkout
                     </div>
                   </CardContent>
                 </Card>
@@ -971,15 +1008,15 @@ export default function Checkout() {
 
             {/* Mobile Place Order Bar */}
             <div className="lg:hidden fixed bottom-16 left-0 right-0 z-40 bg-card border-t p-4 shadow-[0_-4px_20px_rgba(0,0,0,0.1)]">
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-4">
                 <div>
-                  <p className="text-sm text-muted-foreground">Total</p>
-                  <p className="text-xl font-bold text-primary">৳{total.toLocaleString()}</p>
+                  <p className="text-xs text-muted-foreground">Total Payable</p>
+                  <p className="text-xl font-black text-primary">৳{total.toLocaleString()}</p>
                   {couponDiscount > 0 && (
-                    <p className="text-xs text-success">Saved ৳{couponDiscount.toLocaleString()}</p>
+                    <p className="text-[11px] text-success font-semibold">Saved ৳{couponDiscount.toLocaleString()}</p>
                   )}
                 </div>
-                <Button type="submit" size="lg" className="h-12 px-8 text-base font-semibold" disabled={loading}>
+                <Button type="submit" size="lg" className="h-12 px-8 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl flex-1 max-w-[200px]" disabled={loading}>
                   {loading ? (
                     <>
                       <Loader2 className="h-5 w-5 mr-2 animate-spin" />
@@ -992,110 +1029,6 @@ export default function Checkout() {
               </div>
             </div>
           </form>
-
-          {/* Interactive Payment Method Modal */}
-          <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
-            <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl border bg-card shadow-2xl">
-              <DialogHeader className="p-5 pb-3 border-b bg-muted/20">
-                <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2 text-foreground">
-                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                    <CreditCard className="h-4 w-4" />
-                  </div>
-                  Select Payment Method
-                </DialogTitle>
-                <DialogDescription className="text-xs text-muted-foreground">
-                  Choose your preferred payment method to complete your order.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="p-5 space-y-4">
-                {/* Total Payable Banner */}
-                <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-muted border border-primary/20 flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Payable Amount</p>
-                    <p className="text-2xl font-black text-primary">৳{total.toLocaleString()}</p>
-                  </div>
-                  <div className="text-right text-xs">
-                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full text-[11px]">
-                      <CheckCircle2 className="h-3 w-3" /> Ready to Confirm
-                    </span>
-                    <p className="text-muted-foreground text-[11px] mt-0.5 truncate max-w-[150px]">
-                      {shippingInfo.firstName} {shippingInfo.lastName}
-                    </p>
-                  </div>
-                </div>
-
-                {/* Payment Options Selection */}
-                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-2.5">
-                  {/* Cash on Delivery (COD) */}
-                  <div 
-                    onClick={() => setPaymentMethod("cod")}
-                    className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                      paymentMethod === "cod" 
-                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                        : "border-border hover:border-primary/40 bg-card"
-                    }`}
-                  >
-                    <RadioGroupItem value="cod" id="modal-cod" />
-                    <Label htmlFor="modal-cod" className="flex-1 cursor-pointer">
-                      <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
-                    </Label>
-                    {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
-                  </div>
-
-                  {/* bKash */}
-                  <div 
-                    onClick={() => setPaymentMethod("bkash")}
-                    className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                      paymentMethod === "bkash" 
-                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                        : "border-border hover:border-primary/40 bg-card"
-                    }`}
-                  >
-                    <RadioGroupItem value="bkash" id="modal-bkash" />
-                    <Label htmlFor="modal-bkash" className="flex-1 cursor-pointer">
-                      <span className="font-bold text-sm text-foreground block">bKash</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Instant online payment via bKash Account</p>
-                    </Label>
-                    {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
-                  </div>
-                </RadioGroup>
-
-                {/* Confirm Action Button */}
-                <div className="pt-2 space-y-2">
-                  <Button
-                    type="button"
-                    onClick={executeOrderPlacement}
-                    disabled={loading}
-                    className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg flex items-center justify-center gap-2"
-                  >
-                    {loading ? (
-                      <>
-                        <Loader2 className="h-5 w-5 animate-spin" />
-                        Confirming Order...
-                      </>
-                    ) : (
-                      <>
-                        Confirm Order • ৳{total.toLocaleString()}
-                        <ArrowRight className="h-4 w-4" />
-                      </>
-                    )}
-                  </Button>
-
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowPaymentModal(false)}
-                    className="w-full text-xs text-muted-foreground hover:text-foreground h-8"
-                  >
-                    Back to Shipping Details
-                  </Button>
-                </div>
-              </div>
-            </DialogContent>
-          </Dialog>
         </div>
       </main>
       <Footer />
