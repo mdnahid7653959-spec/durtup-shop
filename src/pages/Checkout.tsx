@@ -1010,21 +1010,15 @@ export default function Checkout() {
                   {/* Cash on Delivery (COD) */}
                   <div 
                     onClick={() => setPaymentMethod("cod")}
-                    className={`flex items-center gap-3.5 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                    className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                       paymentMethod === "cod" 
                         ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
                         : "border-border hover:border-primary/40 bg-card"
                     }`}
                   >
                     <RadioGroupItem value="cod" id="modal-cod" />
-                    <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
-                      <Banknote className="h-5 w-5" />
-                    </div>
                     <Label htmlFor="modal-cod" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-foreground">Cash on Delivery (COD)</span>
-                        <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 text-[10px] px-1.5 py-0 font-medium">Recommended</Badge>
-                      </div>
+                      <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
                       <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
                     </Label>
                     {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
@@ -1033,44 +1027,18 @@ export default function Checkout() {
                   {/* bKash */}
                   <div 
                     onClick={() => setPaymentMethod("bkash")}
-                    className={`flex items-center gap-3.5 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                    className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
                       paymentMethod === "bkash" 
                         ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
                         : "border-border hover:border-primary/40 bg-card"
                     }`}
                   >
                     <RadioGroupItem value="bkash" id="modal-bkash" />
-                    <div className="w-9 h-9 rounded-lg bg-pink-500/10 text-pink-600 flex items-center justify-center shrink-0">
-                      <Smartphone className="h-5 w-5" />
-                    </div>
                     <Label htmlFor="modal-bkash" className="flex-1 cursor-pointer">
-                      <div className="flex items-center gap-2">
-                        <span className="font-bold text-sm text-foreground">bKash</span>
-                        <Badge variant="secondary" className="bg-pink-500/10 text-pink-700 text-[10px] px-1.5 py-0 font-medium">Mobile Banking</Badge>
-                      </div>
+                      <span className="font-bold text-sm text-foreground block">bKash</span>
                       <p className="text-xs text-muted-foreground mt-0.5">Instant online payment via bKash Account</p>
                     </Label>
                     {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
-                  </div>
-
-                  {/* Credit/Debit Card & Online Banking */}
-                  <div 
-                    onClick={() => setPaymentMethod("card")}
-                    className={`flex items-center gap-3.5 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
-                      paymentMethod === "card" 
-                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                        : "border-border hover:border-primary/40 bg-card"
-                    }`}
-                  >
-                    <RadioGroupItem value="card" id="modal-card" />
-                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
-                      <CreditCard className="h-5 w-5" />
-                    </div>
-                    <Label htmlFor="modal-card" className="flex-1 cursor-pointer">
-                      <span className="font-bold text-sm text-foreground block">Credit / Debit Card</span>
-                      <p className="text-xs text-muted-foreground mt-0.5">Visa, Mastercard, Nagad, Rocket, NexusPay</p>
-                    </Label>
-                    {paymentMethod === "card" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
                   </div>
                 </RadioGroup>
 
