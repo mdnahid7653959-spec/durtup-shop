@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Lock, Sun, Moon, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -88,24 +88,10 @@ export default function Account() {
   }, [user]);
 
   useEffect(() => {
-    // Check for saved theme preference
-    const savedTheme = localStorage.getItem("theme");
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-    const isDark = savedTheme === "dark" || (!savedTheme && prefersDark);
-    setIsDarkMode(isDark);
-    document.documentElement.classList.toggle("dark", isDark);
+    // Force light theme
+    localStorage.setItem("theme", "light");
+    document.documentElement.classList.remove("dark");
   }, []);
-
-  const handleThemeToggle = () => {
-    const newMode = !isDarkMode;
-    setIsDarkMode(newMode);
-    localStorage.setItem("theme", newMode ? "dark" : "light");
-    document.documentElement.classList.toggle("dark", newMode);
-    toast({
-      title: newMode ? "Dark mode enabled" : "Light mode enabled",
-      description: "Your theme preference has been saved."
-    });
-  };
 
   const handleAvatarUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -308,10 +294,9 @@ export default function Account() {
           <Tabs defaultValue="profile" className="space-y-4 sm:space-y-6">
             {/* Mobile-friendly horizontal scroll tabs */}
             <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
-              <TabsList className="grid w-full grid-cols-3 min-w-[280px] h-10 sm:h-11">
+              <TabsList className="grid w-full grid-cols-2 min-w-[240px] h-10 sm:h-11">
                 <TabsTrigger value="profile" className="text-[11px] sm:text-sm px-2 sm:px-4">Profile</TabsTrigger>
                 <TabsTrigger value="address" className="text-[11px] sm:text-sm px-2 sm:px-4">Address</TabsTrigger>
-                <TabsTrigger value="preferences" className="text-[11px] sm:text-sm px-2 sm:px-4">Settings</TabsTrigger>
               </TabsList>
             </div>
 
@@ -513,36 +498,6 @@ export default function Account() {
                     <Save className="w-4 h-4 mr-2" />
                     {savingAddress ? "Saving..." : "Save Address"}
                   </Button>
-                </CardContent>
-              </Card>
-            </TabsContent>
-
-            {/* Preferences Tab */}
-            <TabsContent value="preferences">
-              <Card className="border-0 sm:border shadow-sm">
-                <CardHeader className="p-4 sm:p-6">
-                  <CardTitle className="text-base sm:text-lg">Preferences</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Customize your shopping experience.</CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-4 sm:space-y-6 p-4 sm:p-6 pt-0">
-                  <div className="flex items-center justify-between gap-4 p-3 sm:p-4 bg-muted/50 rounded-xl">
-                    <div className="space-y-0.5 flex-1">
-                      <div className="flex items-center gap-2">
-                        {isDarkMode ? <Moon className="w-4 h-4 sm:w-5 sm:h-5" /> : <Sun className="w-4 h-4 sm:w-5 sm:h-5" />}
-                        <Label htmlFor="theme" className="text-sm sm:text-base font-medium">
-                          Dark Mode
-                        </Label>
-                      </div>
-                      <p className="text-[10px] sm:text-sm text-muted-foreground">
-                        Switch between light and dark theme
-                      </p>
-                    </div>
-                    <Switch
-                      id="theme"
-                      checked={isDarkMode}
-                      onCheckedChange={handleThemeToggle}
-                    />
-                  </div>
                 </CardContent>
               </Card>
             </TabsContent>
