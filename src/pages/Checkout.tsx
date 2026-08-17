@@ -1,12 +1,13 @@
 import { useState, useMemo, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home } from "lucide-react";
+import { CreditCard, Truck, Shield, ArrowLeft, Loader2, ChevronDown, ChevronUp, CheckCircle, Globe, Tag, X, MapPin, Phone, User as UserIcon, Plus, Edit3, CheckCircle2, Home, Banknote, Smartphone, ArrowRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
 import { useCart } from "@/contexts/CartContext";
@@ -34,6 +35,7 @@ export default function Checkout() {
   const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // Coupon state
   const [couponCode, setCouponCode] = useState("");
@@ -242,8 +244,8 @@ export default function Checkout() {
     toast({ title: "Coupon removed" });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleInitiatePlaceOrder = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
     
     if (!user) {
       toast({ variant: "destructive", title: "Please login", description: "You need to login to place an order" });
@@ -253,6 +255,27 @@ export default function Checkout() {
 
     if (totalItems === 0) {
       toast({ variant: "destructive", title: "Cart is empty", description: "Please add items to your cart" });
+      return;
+    }
+
+    if (!shippingInfo.firstName.trim() || !shippingInfo.phone.trim() || !shippingInfo.address.trim() || !shippingInfo.city.trim()) {
+      setIsEditingAddress(true);
+      toast({
+        variant: "destructive",
+        title: "Shipping Address Required",
+        description: "Please enter your name, phone number, and street address to proceed.",
+      });
+      return;
+    }
+
+    // Open Payment Method Modal
+    setShowPaymentModal(true);
+  };
+
+  const executeOrderPlacement = async () => {
+    if (!user) {
+      toast({ variant: "destructive", title: "Please login", description: "You need to login to place an order" });
+      navigate("/login?redirect=/checkout");
       return;
     }
 
@@ -373,8 +396,7 @@ export default function Checkout() {
         setHasSavedAddress(true);
       } catch (e) { console.warn("address save skipped", e); }
 
-
-      // Update coupon usage count if a coupon was applied
+      // Increment coupon used_count if a coupon was used
       if (appliedCoupon) {
         const { data: currentCoupon } = await supabase
           .from("coupons")
@@ -469,9 +491,10 @@ export default function Checkout() {
       // Clear both carts
       await clearCart();
       clearCJCart();
+      setShowPaymentModal(false);
 
       toast({ 
-        title: "Order placed successfully!", 
+        title: "Order placed successfully! 🎉", 
         description: `Your order #${orderNumber} has been confirmed.`
       });
 
@@ -591,9 +614,9 @@ export default function Checkout() {
             )}
           </div>
 
-          <form onSubmit={handleSubmit}>
+          <form onSubmit={handleInitiatePlaceOrder}>
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
-              {/* Shipping & Payment */}
+              {/* Shipping & Coupon */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                 {/* Shipping Information */}
                 <Card className="border shadow-sm overflow-hidden">
@@ -658,14 +681,14 @@ export default function Checkout() {
                         {hasSavedAddress && (
                           <div className="flex justify-end">
                             <Button
-                          type="button"
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => setIsEditingAddress(false)}
-                          className="text-xs text-muted-foreground hover:text-foreground h-7"
-                        >
-                          Cancel & Use Saved Address
-                        </Button>
+                              type="button"
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => setIsEditingAddress(false)}
+                              className="text-xs text-muted-foreground hover:text-foreground h-7"
+                            >
+                              Cancel & Use Saved Address
+                            </Button>
                           </div>
                         )}
 
@@ -834,46 +857,6 @@ export default function Checkout() {
                     )}
                   </CardContent>
                 </Card>
-
-                {/* Payment Method */}
-                <Card>
-                  <CardHeader className="pb-3 sm:pb-6">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                        <CreditCard className="h-4 w-4 text-primary" />
-                      </div>
-                      Payment Method
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
-                      <div className={`flex items-center space-x-3 p-4 border-2 rounded-xl transition-all touch-manipulation ${paymentMethod === 'cod' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                        <RadioGroupItem value="cod" id="cod" />
-                        <Label htmlFor="cod" className="flex-1 cursor-pointer">
-                          <div className="font-medium">Cash on Delivery (COD)</div>
-                          <p className="text-sm text-muted-foreground">Pay when you receive</p>
-                        </Label>
-                        {paymentMethod === 'cod' && <CheckCircle className="h-5 w-5 text-primary" />}
-                      </div>
-                      <div className={`flex items-center space-x-3 p-4 border-2 rounded-xl transition-all touch-manipulation ${paymentMethod === 'bkash' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                        <RadioGroupItem value="bkash" id="bkash" />
-                        <Label htmlFor="bkash" className="flex-1 cursor-pointer">
-                          <div className="font-medium">bKash</div>
-                          <p className="text-sm text-muted-foreground">Mobile banking</p>
-                        </Label>
-                        {paymentMethod === 'bkash' && <CheckCircle className="h-5 w-5 text-primary" />}
-                      </div>
-                      <div className={`flex items-center space-x-3 p-4 border-2 rounded-xl transition-all touch-manipulation ${paymentMethod === 'card' ? 'border-primary bg-primary/5' : 'border-border'}`}>
-                        <RadioGroupItem value="card" id="card" />
-                        <Label htmlFor="card" className="flex-1 cursor-pointer">
-                          <div className="font-medium">Credit/Debit Card</div>
-                          <p className="text-sm text-muted-foreground">Visa, Mastercard, Amex</p>
-                        </Label>
-                        {paymentMethod === 'card' && <CheckCircle className="h-5 w-5 text-primary" />}
-                      </div>
-                    </RadioGroup>
-                  </CardContent>
-                </Card>
               </div>
 
               {/* Order Summary - Desktop */}
@@ -989,6 +972,142 @@ export default function Checkout() {
               </div>
             </div>
           </form>
+
+          {/* Interactive Payment Method Modal */}
+          <Dialog open={showPaymentModal} onOpenChange={setShowPaymentModal}>
+            <DialogContent className="sm:max-w-[480px] p-0 overflow-hidden rounded-2xl border bg-card shadow-2xl">
+              <DialogHeader className="p-5 pb-3 border-b bg-muted/20">
+                <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2 text-foreground">
+                  <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                    <CreditCard className="h-4 w-4" />
+                  </div>
+                  Select Payment Method
+                </DialogTitle>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Choose your preferred payment method to complete your order.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="p-5 space-y-4">
+                {/* Total Payable Banner */}
+                <div className="p-3.5 rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-muted border border-primary/20 flex items-center justify-between">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">Total Payable Amount</p>
+                    <p className="text-2xl font-black text-primary">৳{total.toLocaleString()}</p>
+                  </div>
+                  <div className="text-right text-xs">
+                    <span className="inline-flex items-center gap-1 font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full text-[11px]">
+                      <CheckCircle2 className="h-3 w-3" /> Ready to Confirm
+                    </span>
+                    <p className="text-muted-foreground text-[11px] mt-0.5 truncate max-w-[150px]">
+                      {shippingInfo.firstName} {shippingInfo.lastName}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Payment Options Selection */}
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-2.5">
+                  {/* Cash on Delivery (COD) */}
+                  <div 
+                    onClick={() => setPaymentMethod("cod")}
+                    className={`flex items-center gap-3.5 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                      paymentMethod === "cod" 
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                        : "border-border hover:border-primary/40 bg-card"
+                    }`}
+                  >
+                    <RadioGroupItem value="cod" id="modal-cod" />
+                    <div className="w-9 h-9 rounded-lg bg-emerald-500/10 text-emerald-600 flex items-center justify-center shrink-0">
+                      <Banknote className="h-5 w-5" />
+                    </div>
+                    <Label htmlFor="modal-cod" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-foreground">Cash on Delivery (COD)</span>
+                        <Badge variant="secondary" className="bg-emerald-500/15 text-emerald-700 text-[10px] px-1.5 py-0 font-medium">Recommended</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
+                    </Label>
+                    {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                  </div>
+
+                  {/* bKash */}
+                  <div 
+                    onClick={() => setPaymentMethod("bkash")}
+                    className={`flex items-center gap-3.5 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                      paymentMethod === "bkash" 
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                        : "border-border hover:border-primary/40 bg-card"
+                    }`}
+                  >
+                    <RadioGroupItem value="bkash" id="modal-bkash" />
+                    <div className="w-9 h-9 rounded-lg bg-pink-500/10 text-pink-600 flex items-center justify-center shrink-0">
+                      <Smartphone className="h-5 w-5" />
+                    </div>
+                    <Label htmlFor="modal-bkash" className="flex-1 cursor-pointer">
+                      <div className="flex items-center gap-2">
+                        <span className="font-bold text-sm text-foreground">bKash</span>
+                        <Badge variant="secondary" className="bg-pink-500/10 text-pink-700 text-[10px] px-1.5 py-0 font-medium">Mobile Banking</Badge>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-0.5">Instant online payment via bKash Account</p>
+                    </Label>
+                    {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                  </div>
+
+                  {/* Credit/Debit Card & Online Banking */}
+                  <div 
+                    onClick={() => setPaymentMethod("card")}
+                    className={`flex items-center gap-3.5 p-3.5 border-2 rounded-xl cursor-pointer transition-all ${
+                      paymentMethod === "card" 
+                        ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                        : "border-border hover:border-primary/40 bg-card"
+                    }`}
+                  >
+                    <RadioGroupItem value="card" id="modal-card" />
+                    <div className="w-9 h-9 rounded-lg bg-primary/10 text-primary flex items-center justify-center shrink-0">
+                      <CreditCard className="h-5 w-5" />
+                    </div>
+                    <Label htmlFor="modal-card" className="flex-1 cursor-pointer">
+                      <span className="font-bold text-sm text-foreground block">Credit / Debit Card</span>
+                      <p className="text-xs text-muted-foreground mt-0.5">Visa, Mastercard, Nagad, Rocket, NexusPay</p>
+                    </Label>
+                    {paymentMethod === "card" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                  </div>
+                </RadioGroup>
+
+                {/* Confirm Action Button */}
+                <div className="pt-2 space-y-2">
+                  <Button
+                    type="button"
+                    onClick={executeOrderPlacement}
+                    disabled={loading}
+                    className="w-full h-12 text-base font-bold bg-primary hover:bg-primary/90 text-primary-foreground rounded-xl shadow-lg flex items-center justify-center gap-2"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Confirming Order...
+                      </>
+                    ) : (
+                      <>
+                        Confirm Order • ৳{total.toLocaleString()}
+                        <ArrowRight className="h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => setShowPaymentModal(false)}
+                    className="w-full text-xs text-muted-foreground hover:text-foreground h-8"
+                  >
+                    Back to Shipping Details
+                  </Button>
+                </div>
+              </div>
+            </DialogContent>
+          </Dialog>
         </div>
       </main>
       <Footer />
