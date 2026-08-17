@@ -1,7 +1,7 @@
 import type { Product } from "@/components/products/ProductCard";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v5";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v6";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300,000ms)
 
 let inMemoryProductsCache: Product[] | null = null;

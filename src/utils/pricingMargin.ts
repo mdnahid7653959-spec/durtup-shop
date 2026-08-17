@@ -9,14 +9,14 @@ export interface PricingMarginConfig {
 }
 
 export const DEFAULT_PRICING_MARGIN_CONFIG: PricingMarginConfig = {
-  enabled: false, // Default direct supplier price unless enabled by admin
-  type: 'percentage',
-  marginValue: 0,
+  enabled: true, // Margin active
+  type: 'fixed', // Fixed amount ৳
+  marginValue: 100, // ৳100 added to every product
   regularPriceMarkupPercent: 35,
   roundTo99: false,
 };
 
-const STORAGE_KEY = "darzo_pricing_margin_config_v1";
+const STORAGE_KEY = "darzo_pricing_margin_config_v2";
 
 export function getPricingMarginConfig(): PricingMarginConfig {
   if (typeof window === "undefined") return DEFAULT_PRICING_MARGIN_CONFIG;
@@ -27,7 +27,7 @@ export function getPricingMarginConfig(): PricingMarginConfig {
       return {
         enabled: Boolean(parsed.enabled),
         type: parsed.type === 'fixed' ? 'fixed' : 'percentage',
-        marginValue: Number(parsed.marginValue) || 0,
+        marginValue: Number(parsed.marginValue) !== undefined && !isNaN(Number(parsed.marginValue)) ? Number(parsed.marginValue) : 100,
         regularPriceMarkupPercent: Number(parsed.regularPriceMarkupPercent) || 35,
         roundTo99: Boolean(parsed.roundTo99),
       };

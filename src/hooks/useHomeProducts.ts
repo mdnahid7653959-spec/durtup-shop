@@ -252,7 +252,8 @@ function buildSections(products: Product[]) {
   };
 }
 
-const CACHE_KEY = "mohasagor_cached_home_products_v5";
+const CACHE_KEY = "mohasagor_cached_home_products_v6";
+const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes 
 
 function preloadImages(products: Product[]) {
   if (typeof window === "undefined") return;
