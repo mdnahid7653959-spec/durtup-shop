@@ -156,9 +156,14 @@ export function Header() {
         <div className="px-2.5 sm:container py-1.5 sm:py-2">
           <div className="flex items-center justify-between gap-1 sm:gap-6 relative">
             <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
-              <button className="lg:hidden p-1 hover:bg-white/10 rounded-md transition-colors" onClick={() => setIsMenuOpen(!isMenuOpen)}>
-                {isMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
-              </button>
+              <Link 
+                to="/categories" 
+                className="p-1.5 hover:bg-white/10 active:scale-95 rounded-lg transition-all flex items-center justify-center text-white"
+                aria-label="Open Categories"
+                title="Browse Categories"
+              >
+                <Menu className="h-5 w-5" />
+              </Link>
 
               <Link 
                 to="/" 
