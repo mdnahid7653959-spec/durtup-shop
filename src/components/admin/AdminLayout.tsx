@@ -38,6 +38,7 @@ import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { useAdminPWAInstall } from "@/hooks/useAdminPWAInstall";
+import { AdminNotificationBell } from "./AdminNotificationBell";
 
 interface AdminLayoutProps {
   children: ReactNode;
@@ -184,11 +185,11 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
       </aside>
 
       {/* Mobile Header */}
-      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b z-40 flex items-center justify-between px-4">
-        <div className="flex items-center gap-2">
+      <div className="lg:hidden fixed top-0 left-0 right-0 h-14 bg-card border-b z-40 flex items-center justify-between px-3 sm:px-4">
+        <div className="flex items-center gap-2 min-w-0">
           <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
             <SheetTrigger asChild>
-              <Button variant="ghost" size="icon">
+              <Button variant="ghost" size="icon" className="shrink-0">
                 <Menu className="h-5 w-5" />
               </Button>
             </SheetTrigger>
@@ -196,12 +197,15 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
               <SidebarContent onItemClick={() => setMobileMenuOpen(false)} />
             </SheetContent>
           </Sheet>
-          <span className="font-semibold text-foreground truncate">{title}</span>
+          <span className="font-semibold text-foreground truncate text-sm sm:text-base">{title}</span>
         </div>
-        <Link to="/" className="text-sm text-primary hover:underline flex items-center gap-1">
-          <Home className="h-4 w-4" />
-          <span className="hidden sm:inline">View Store</span>
-        </Link>
+        <div className="flex items-center gap-1.5 shrink-0">
+          <AdminNotificationBell />
+          <Link to="/" className="text-xs sm:text-sm text-primary hover:underline flex items-center gap-1 py-1 px-1.5 rounded-md hover:bg-muted">
+            <Home className="h-4 w-4" />
+            <span className="hidden sm:inline">Store</span>
+          </Link>
+        </div>
       </div>
 
       {/* Main Content */}
@@ -215,10 +219,13 @@ export function AdminLayout({ children, title }: AdminLayoutProps) {
             <ChevronRight className="h-4 w-4 text-muted-foreground" />
             <span className="text-foreground font-medium">{title}</span>
           </div>
-          <Link to="/" className="text-sm text-primary hover:underline flex items-center gap-1">
-            <Home className="h-4 w-4" />
-            View Store
-          </Link>
+          <div className="flex items-center gap-3">
+            <AdminNotificationBell />
+            <Link to="/" className="text-sm text-primary hover:underline flex items-center gap-1">
+              <Home className="h-4 w-4" />
+              View Store
+            </Link>
+          </div>
         </header>
         
         {/* Page Content */}

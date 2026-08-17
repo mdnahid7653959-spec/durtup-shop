@@ -390,6 +390,26 @@ export default function Checkout() {
           created_at: new Date().toISOString()
         };
         setDoc(doc(db, "orders", order.id), firestoreOrderDoc, { merge: true }).catch(() => {});
+
+        // Emit real-time Admin Notification for instant chime sound & mobile push alert
+        const adminNotificationDoc = {
+          type: "new_order",
+          title: `🛒 New Order #${orderNumber}!`,
+          message: `Order #${orderNumber} by ${shippingInfo.firstName} ${shippingInfo.lastName} (৳${total.toLocaleString()})`,
+          order_id: order.id,
+          order_number: orderNumber,
+          customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
+          customer_phone: shippingInfo.phone,
+          customer_email: shippingInfo.email || "",
+          total_amount: total,
+          payment_method: paymentMethod,
+          read: false,
+          created_at: new Date().toISOString()
+        };
+        setDoc(doc(db, "admin_notifications", order.id), adminNotificationDoc, { merge: true }).catch((e) => {
+          console.warn("admin_notification sync warning:", e);
+        });
+
         try {
           const rawLocal = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders") || "[]";
           const localList = JSON.parse(rawLocal);
