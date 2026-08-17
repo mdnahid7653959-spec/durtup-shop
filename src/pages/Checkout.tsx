@@ -33,9 +33,9 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [checkoutStep, setCheckoutStep] = useState<"shipping" | "payment">("shipping");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
 
   // bKash payment inputs
   const [bkashNumber, setBkashNumber] = useState("");
@@ -282,16 +282,25 @@ export default function Checkout() {
       return;
     }
 
-    if (!shippingInfo.firstName.trim() || !shippingInfo.phone.trim() || !shippingInfo.address.trim() || !shippingInfo.city.trim()) {
-      setIsEditingAddress(true);
-      toast({
-        variant: "destructive",
-        title: "Shipping Address Required",
-        description: "Please enter your name, phone number, and street address to proceed.",
-      });
+    // Step 1: Validate Shipping Address & Transition to Payment Method
+    if (checkoutStep === "shipping") {
+      if (!shippingInfo.firstName.trim() || !shippingInfo.phone.trim() || !shippingInfo.address.trim() || !shippingInfo.city.trim()) {
+        setIsEditingAddress(true);
+        toast({
+          variant: "destructive",
+          title: "Shipping Address Required",
+          description: "Please enter your name, phone number, and street address to proceed.",
+        });
+        return;
+      }
+
+      // Move to Payment Step
+      setCheckoutStep("payment");
+      window.scrollTo({ top: 0, behavior: "smooth" });
       return;
     }
 
+    // Step 2: Finalize Payment & Place Order
     if (paymentMethod === "bkash") {
       if (!bkashNumber.trim()) {
         toast({
@@ -653,385 +662,412 @@ export default function Checkout() {
 
           <form onSubmit={handleSubmit}>
             <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
-              {/* Shipping, Coupon & Payment Method */}
+              {/* Main Column */}
               <div className="lg:col-span-2 space-y-4 sm:space-y-6">
-                {/* Shipping Information */}
-                <Card className="border shadow-sm overflow-hidden">
-                  <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                          <MapPin className="h-4 w-4" />
-                        </div>
-                        Delivery Address
-                      </CardTitle>
 
-                      {hasSavedAddress && !isEditingAddress && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsEditingAddress(true)}
-                          className="text-xs h-8 px-3 rounded-lg border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-1.5"
-                        >
-                          <Edit3 className="h-3.5 w-3.5" /> Change / Add New Address
-                        </Button>
-                      )}
-                    </div>
-                  </CardHeader>
-
-                  <CardContent className="p-4 sm:p-6 space-y-4">
-                    {hasSavedAddress && !isEditingAddress ? (
-                      /* Saved Address Card View */
-                      <div className="p-4 rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 via-muted/20 to-background space-y-3 relative">
+                {/* STEP 1: SHIPPING & COUPON (Initial View) */}
+                {checkoutStep === "shipping" && (
+                  <>
+                    {/* Shipping Information */}
+                    <Card className="border shadow-sm overflow-hidden">
+                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
                         <div className="flex items-center justify-between flex-wrap gap-2">
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold text-base text-foreground">
-                              {shippingInfo.firstName} {shippingInfo.lastName}
-                            </span>
-                            <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] px-2 py-0.5 font-semibold gap-1">
-                              <CheckCircle2 className="h-3 w-3" /> Default Address
-                            </Badge>
-                          </div>
-                        </div>
+                          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                            <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                              <MapPin className="h-4 w-4" />
+                            </div>
+                            Delivery Address
+                          </CardTitle>
 
-                        <div className="space-y-1.5 text-sm text-foreground/90">
-                          <div className="flex items-start gap-2">
-                            <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
-                            <span className="leading-relaxed">
-                              {shippingInfo.address}, {shippingInfo.city}{shippingInfo.state ? `, ${shippingInfo.state}` : ''} - {shippingInfo.zipCode}, {shippingInfo.country}
-                            </span>
-                          </div>
-
-                          <div className="flex items-center gap-2 pt-1">
-                            <Phone className="h-4 w-4 text-primary shrink-0" />
-                            <span className="font-semibold text-foreground">{shippingInfo.phone}</span>
-                            {shippingInfo.email && (
-                              <span className="text-muted-foreground text-xs ml-2">({shippingInfo.email})</span>
-                            )}
-                          </div>
-                        </div>
-                      </div>
-                    ) : (
-                      /* Address Input Form */
-                      <div className="space-y-4">
-                        {hasSavedAddress && (
-                          <div className="flex justify-end">
+                          {hasSavedAddress && !isEditingAddress && (
                             <Button
                               type="button"
-                              variant="ghost"
+                              variant="outline"
                               size="sm"
-                              onClick={() => setIsEditingAddress(false)}
-                              className="text-xs text-muted-foreground hover:text-foreground h-7"
+                              onClick={() => setIsEditingAddress(true)}
+                              className="text-xs h-8 px-3 rounded-lg border-primary/30 text-primary hover:bg-primary/10 flex items-center gap-1.5"
                             >
-                              Cancel & Use Saved Address
+                              <Edit3 className="h-3.5 w-3.5" /> Change / Add New Address
+                            </Button>
+                          )}
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="p-4 sm:p-6 space-y-4">
+                        {hasSavedAddress && !isEditingAddress ? (
+                          /* Saved Address Card View */
+                          <div className="p-4 rounded-xl border-2 border-primary/40 bg-gradient-to-br from-primary/5 via-muted/20 to-background space-y-3 relative">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold text-base text-foreground">
+                                  {shippingInfo.firstName} {shippingInfo.lastName}
+                                </span>
+                                <Badge variant="secondary" className="bg-emerald-500/10 text-emerald-600 border-emerald-500/20 text-[10px] px-2 py-0.5 font-semibold gap-1">
+                                  <CheckCircle2 className="h-3 w-3" /> Default Address
+                                </Badge>
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5 text-sm text-foreground/90">
+                              <div className="flex items-start gap-2">
+                                <MapPin className="h-4 w-4 text-primary shrink-0 mt-0.5" />
+                                <span className="leading-relaxed">
+                                  {shippingInfo.address}, {shippingInfo.city}{shippingInfo.state ? `, ${shippingInfo.state}` : ''} - {shippingInfo.zipCode}, {shippingInfo.country}
+                                </span>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-1">
+                                <Phone className="h-4 w-4 text-primary shrink-0" />
+                                <span className="font-semibold text-foreground">{shippingInfo.phone}</span>
+                                {shippingInfo.email && (
+                                  <span className="text-muted-foreground text-xs ml-2">({shippingInfo.email})</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Address Input Form */
+                          <div className="space-y-4">
+                            {hasSavedAddress && (
+                              <div className="flex justify-end">
+                                <Button
+                                  type="button"
+                                  variant="ghost"
+                                  size="sm"
+                                  onClick={() => setIsEditingAddress(false)}
+                                  className="text-xs text-muted-foreground hover:text-foreground h-7"
+                                >
+                                  Cancel & Use Saved Address
+                                </Button>
+                              </div>
+                            )}
+
+                            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="firstName" className="text-xs sm:text-sm font-semibold">First Name *</Label>
+                                <Input
+                                  id="firstName"
+                                  name="firstName"
+                                  value={shippingInfo.firstName}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g. Nahid"
+                                  required
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="lastName" className="text-xs sm:text-sm font-semibold">Last Name *</Label>
+                                <Input
+                                  id="lastName"
+                                  name="lastName"
+                                  value={shippingInfo.lastName}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g. Islam"
+                                  required
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="email" className="text-xs sm:text-sm font-semibold">Email Address *</Label>
+                                <Input
+                                  id="email"
+                                  name="email"
+                                  type="email"
+                                  value={shippingInfo.email}
+                                  onChange={handleInputChange}
+                                  placeholder="name@example.com"
+                                  required
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="phone" className="text-xs sm:text-sm font-semibold">Phone Number (Mobile) *</Label>
+                                <Input
+                                  id="phone"
+                                  name="phone"
+                                  type="tel"
+                                  value={shippingInfo.phone}
+                                  onChange={handleInputChange}
+                                  placeholder="01XXXXXXXXX"
+                                  required
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <Label htmlFor="address" className="text-xs sm:text-sm font-semibold">Street Address / House / Road *</Label>
+                              <Input
+                                id="address"
+                                name="address"
+                                value={shippingInfo.address}
+                                onChange={handleInputChange}
+                                placeholder="House #, Road #, Area / Landmark"
+                                required
+                                className="h-11 text-sm"
+                              />
+                            </div>
+
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
+                              <div className="space-y-1.5">
+                                <Label htmlFor="city" className="text-xs sm:text-sm font-semibold">City / District *</Label>
+                                <Input
+                                  id="city"
+                                  name="city"
+                                  value={shippingInfo.city}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g. Dhaka"
+                                  required
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5">
+                                <Label htmlFor="state" className="text-xs sm:text-sm font-semibold">State / Division</Label>
+                                <Input
+                                  id="state"
+                                  name="state"
+                                  value={shippingInfo.state}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g. Dhaka"
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                              <div className="space-y-1.5 col-span-2 sm:col-span-1">
+                                <Label htmlFor="zipCode" className="text-xs sm:text-sm font-semibold">Postal Code / Zip *</Label>
+                                <Input
+                                  id="zipCode"
+                                  name="zipCode"
+                                  value={shippingInfo.zipCode}
+                                  onChange={handleInputChange}
+                                  placeholder="e.g. 1200"
+                                  required
+                                  className="h-11 text-sm"
+                                />
+                              </div>
+                            </div>
+
+                            <p className="text-[11px] text-muted-foreground flex items-center gap-1 pt-1">
+                              <CheckCircle className="h-3.5 w-3.5 text-primary" />
+                              This address and phone number will be automatically saved to your Account Settings for future orders.
+                            </p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Coupon Code */}
+                    <Card className="border shadow-sm">
+                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <Tag className="h-4 w-4" />
+                          </div>
+                          Coupon Code
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6">
+                        {appliedCoupon ? (
+                          <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-xl">
+                            <div className="flex items-center gap-2">
+                              <CheckCircle className="h-5 w-5 text-success" />
+                              <div>
+                                <p className="font-bold text-success text-sm">{appliedCoupon.code}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {appliedCoupon.discount_type === "percentage" 
+                                    ? `${appliedCoupon.discount_value}% Discount Applied` 
+                                    : `৳${appliedCoupon.discount_value} Discount Applied`}
+                                </p>
+                              </div>
+                            </div>
+                            <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-8 w-8 p-0 rounded-full">
+                              <X className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        ) : (
+                          <div className="flex gap-2">
+                            <Input
+                              placeholder="Enter coupon code (e.g. DURTUP2026)"
+                              value={couponCode}
+                              onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
+                              className="h-11 flex-1 text-sm"
+                            />
+                            <Button 
+                              type="button" 
+                              variant="outline" 
+                              onClick={applyCoupon}
+                              disabled={applyingCoupon}
+                              className="h-11 px-6 font-semibold"
+                            >
+                              {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
                             </Button>
                           </div>
                         )}
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
 
-                        <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="firstName" className="text-xs sm:text-sm font-semibold">First Name *</Label>
-                            <Input
-                              id="firstName"
-                              name="firstName"
-                              value={shippingInfo.firstName}
-                              onChange={handleInputChange}
-                              placeholder="e.g. Nahid"
-                              required
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="lastName" className="text-xs sm:text-sm font-semibold">Last Name *</Label>
-                            <Input
-                              id="lastName"
-                              name="lastName"
-                              value={shippingInfo.lastName}
-                              onChange={handleInputChange}
-                              placeholder="e.g. Islam"
-                              required
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="email" className="text-xs sm:text-sm font-semibold">Email Address *</Label>
-                            <Input
-                              id="email"
-                              name="email"
-                              type="email"
-                              value={shippingInfo.email}
-                              onChange={handleInputChange}
-                              placeholder="name@example.com"
-                              required
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="phone" className="text-xs sm:text-sm font-semibold">Phone Number (Mobile) *</Label>
-                            <Input
-                              id="phone"
-                              name="phone"
-                              type="tel"
-                              value={shippingInfo.phone}
-                              onChange={handleInputChange}
-                              placeholder="01XXXXXXXXX"
-                              required
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                        </div>
-
-                        <div className="space-y-1.5">
-                          <Label htmlFor="address" className="text-xs sm:text-sm font-semibold">Street Address / House / Road *</Label>
-                          <Input
-                            id="address"
-                            name="address"
-                            value={shippingInfo.address}
-                            onChange={handleInputChange}
-                            placeholder="House #, Road #, Area / Landmark"
-                            required
-                            className="h-11 text-sm"
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 sm:gap-4">
-                          <div className="space-y-1.5">
-                            <Label htmlFor="city" className="text-xs sm:text-sm font-semibold">City / District *</Label>
-                            <Input
-                              id="city"
-                              name="city"
-                              value={shippingInfo.city}
-                              onChange={handleInputChange}
-                              placeholder="e.g. Dhaka"
-                              required
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5">
-                            <Label htmlFor="state" className="text-xs sm:text-sm font-semibold">State / Division</Label>
-                            <Input
-                              id="state"
-                              name="state"
-                              value={shippingInfo.state}
-                              onChange={handleInputChange}
-                              placeholder="e.g. Dhaka"
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                          <div className="space-y-1.5 col-span-2 sm:col-span-1">
-                            <Label htmlFor="zipCode" className="text-xs sm:text-sm font-semibold">Postal Code / Zip *</Label>
-                            <Input
-                              id="zipCode"
-                              name="zipCode"
-                              value={shippingInfo.zipCode}
-                              onChange={handleInputChange}
-                              placeholder="e.g. 1200"
-                              required
-                              className="h-11 text-sm"
-                            />
-                          </div>
-                        </div>
-
-                        <p className="text-[11px] text-muted-foreground flex items-center gap-1 pt-1">
-                          <CheckCircle className="h-3.5 w-3.5 text-primary" />
-                          This address and phone number will be automatically saved to your Account Settings for future orders.
-                        </p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Coupon Code */}
-                <Card className="border shadow-sm">
-                  <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <Tag className="h-4 w-4" />
-                      </div>
-                      Coupon Code
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 sm:p-6">
-                    {appliedCoupon ? (
-                      <div className="flex items-center justify-between p-3 bg-success/10 border border-success/20 rounded-xl">
-                        <div className="flex items-center gap-2">
-                          <CheckCircle className="h-5 w-5 text-success" />
-                          <div>
-                            <p className="font-bold text-success text-sm">{appliedCoupon.code}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {appliedCoupon.discount_type === "percentage" 
-                                ? `${appliedCoupon.discount_value}% Discount Applied` 
-                                : `৳${appliedCoupon.discount_value} Discount Applied`}
-                            </p>
-                          </div>
-                        </div>
-                        <Button variant="ghost" size="sm" onClick={removeCoupon} className="h-8 w-8 p-0 rounded-full">
-                          <X className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    ) : (
-                      <div className="flex gap-2">
-                        <Input
-                          placeholder="Enter coupon code (e.g. DURTUP2026)"
-                          value={couponCode}
-                          onChange={(e) => setCouponCode(e.target.value.toUpperCase())}
-                          className="h-11 flex-1 text-sm"
-                        />
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          onClick={applyCoupon}
-                          disabled={applyingCoupon}
-                          className="h-11 px-6 font-semibold"
-                        >
-                          {applyingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "Apply"}
-                        </Button>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                {/* Payment Method - Clean Integrated Card */}
-                <Card className="border shadow-sm">
-                  <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
-                        <CreditCard className="h-4 w-4" />
-                      </div>
-                      Payment Method
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="p-4 sm:p-6 space-y-3">
-                    <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
-                      {/* Cash on Delivery (COD) */}
-                      <div 
-                        onClick={() => setPaymentMethod("cod")}
-                        className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                          paymentMethod === "cod" 
-                            ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
-                            : "border-border hover:border-primary/40 bg-card"
-                        }`}
+                {/* STEP 2: PAYMENT METHOD (Shows after clicking Place Order) */}
+                {checkoutStep === "payment" && (
+                  <div className="space-y-4 animate-in fade-in slide-in-from-bottom-4 duration-300">
+                    {/* Back Button & Address Preview */}
+                    <div className="flex items-center justify-between gap-2 p-3 bg-muted/40 border rounded-xl">
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setCheckoutStep("shipping")}
+                        className="text-xs font-semibold text-primary hover:text-primary flex items-center gap-1.5 h-8 px-2"
                       >
-                        <RadioGroupItem value="cod" id="page-cod" />
-                        <Label htmlFor="page-cod" className="flex-1 cursor-pointer">
-                          <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
-                        </Label>
-                        {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
+                        <ArrowLeft className="h-4 w-4" /> Back to Delivery Details
+                      </Button>
+                      <div className="text-right text-xs text-muted-foreground truncate max-w-[200px] sm:max-w-xs">
+                        Deliver to: <span className="font-semibold text-foreground">{shippingInfo.firstName} {shippingInfo.lastName}</span> ({shippingInfo.phone})
                       </div>
+                    </div>
 
-                      {/* bKash */}
-                      <div 
-                        onClick={() => setPaymentMethod("bkash")}
-                        className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
-                          paymentMethod === "bkash" 
-                            ? "border-[#E2136E] bg-[#E2136E]/5 shadow-sm ring-1 ring-[#E2136E]/20" 
-                            : "border-border hover:border-[#E2136E]/40 bg-card"
-                        }`}
-                      >
-                        <RadioGroupItem value="bkash" id="page-bkash" />
-                        <Label htmlFor="page-bkash" className="flex-1 cursor-pointer">
-                          <span className="font-bold text-sm text-foreground block">bKash (বিকাশ)</span>
-                          <p className="text-xs text-muted-foreground mt-0.5">Send Money / Make payment via bKash</p>
-                        </Label>
-                        {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-[#E2136E] shrink-0" />}
-                      </div>
-
-                      {/* bKash Payment Details Box */}
-                      {paymentMethod === "bkash" && (
-                        <div className="p-4 sm:p-5 rounded-2xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-4 animate-in fade-in zoom-in-95 duration-200">
-                          {/* bKash Header */}
-                          <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-10 h-10 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm">
-                                bKash
-                              </div>
-                              <div>
-                                <h4 className="font-bold text-sm text-foreground">bKash Payment Details</h4>
-                                <p className="text-[11px] text-muted-foreground">Personal / Merchant Account</p>
-                              </div>
-                            </div>
-                            <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5">
-                              Send Money
-                            </Badge>
+                    {/* Payment Method Selection Card */}
+                    <Card className="border shadow-sm">
+                      <CardHeader className="pb-3 sm:pb-4 border-b bg-muted/20">
+                        <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                          <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center text-primary">
+                            <CreditCard className="h-4 w-4" />
+                          </div>
+                          Select Payment Method
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="p-4 sm:p-6 space-y-3">
+                        <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod} className="space-y-3">
+                          {/* Cash on Delivery (COD) */}
+                          <div 
+                            onClick={() => setPaymentMethod("cod")}
+                            className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                              paymentMethod === "cod" 
+                                ? "border-primary bg-primary/5 shadow-sm ring-1 ring-primary/20" 
+                                : "border-border hover:border-primary/40 bg-card"
+                            }`}
+                          >
+                            <RadioGroupItem value="cod" id="page-cod" />
+                            <Label htmlFor="page-cod" className="flex-1 cursor-pointer">
+                              <span className="font-bold text-sm text-foreground block">Cash on Delivery (COD)</span>
+                              <p className="text-xs text-muted-foreground mt-0.5">Pay in cash when product arrives at your doorstep</p>
+                            </Label>
+                            {paymentMethod === "cod" && <CheckCircle className="h-5 w-5 text-primary shrink-0" />}
                           </div>
 
-                          {/* Instructions & Number */}
-                          <div className="p-3.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2">
-                            <div className="flex items-center justify-between flex-wrap gap-2">
-                              <div>
-                                <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">bKash Number</p>
-                                <p className="text-base sm:text-lg font-black text-[#E2136E] tracking-wider">01622530550</p>
+                          {/* bKash */}
+                          <div 
+                            onClick={() => setPaymentMethod("bkash")}
+                            className={`flex items-center gap-3.5 p-4 border-2 rounded-xl cursor-pointer transition-all ${
+                              paymentMethod === "bkash" 
+                                ? "border-[#E2136E] bg-[#E2136E]/5 shadow-sm ring-1 ring-[#E2136E]/20" 
+                                : "border-border hover:border-[#E2136E]/40 bg-card"
+                            }`}
+                          >
+                            <RadioGroupItem value="bkash" id="page-bkash" />
+                            <Label htmlFor="page-bkash" className="flex-1 cursor-pointer">
+                              <span className="font-bold text-sm text-foreground block">bKash (বিকাশ)</span>
+                              <p className="text-xs text-muted-foreground mt-0.5">Send Money / Make payment via bKash</p>
+                            </Label>
+                            {paymentMethod === "bkash" && <CheckCircle className="h-5 w-5 text-[#E2136E] shrink-0" />}
+                          </div>
+
+                          {/* bKash Payment Details Box */}
+                          {paymentMethod === "bkash" && (
+                            <div className="p-4 sm:p-5 rounded-2xl border-2 border-[#E2136E]/30 bg-gradient-to-br from-[#E2136E]/10 via-background to-muted/20 space-y-4 animate-in fade-in zoom-in-95 duration-200">
+                              {/* bKash Header */}
+                              <div className="flex items-center justify-between pb-3 border-b border-[#E2136E]/20">
+                                <div className="flex items-center gap-2.5">
+                                  <div className="w-10 h-10 rounded-xl bg-[#E2136E] text-white flex items-center justify-center font-black text-xs shadow-sm">
+                                    bKash
+                                  </div>
+                                  <div>
+                                    <h4 className="font-bold text-sm text-foreground">bKash Payment Details</h4>
+                                    <p className="text-[11px] text-muted-foreground">Personal / Merchant Account</p>
+                                  </div>
+                                </div>
+                                <Badge className="bg-[#E2136E] hover:bg-[#E2136E] text-white text-[10px] font-bold px-2 py-0.5">
+                                  Send Money
+                                </Badge>
                               </div>
-                              <Button
-                                type="button"
-                                size="sm"
-                                variant="outline"
-                                onClick={() => {
-                                  navigator.clipboard.writeText("01622530550");
-                                  toast({ title: "Copied!", description: "bKash number copied to clipboard" });
-                                }}
-                                className="h-8 px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10"
-                              >
-                                <Copy className="h-3.5 w-3.5 mr-1" /> Copy Number
-                              </Button>
-                            </div>
 
-                            <div className="pt-1 text-xs text-foreground/80 space-y-1">
-                              <p className="flex items-center gap-1.5 font-medium">
-                                <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">1</span>
-                                বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।
-                              </p>
-                              <p className="flex items-center gap-1.5 font-medium">
-                                <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">2</span>
-                                টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{total.toLocaleString()}</strong>
-                              </p>
-                              <p className="flex items-center gap-1.5 font-medium">
-                                <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">3</span>
-                                পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।
-                              </p>
-                            </div>
-                          </div>
+                              {/* Instructions & Number */}
+                              <div className="p-3.5 rounded-xl bg-[#E2136E]/10 border border-[#E2136E]/20 space-y-2">
+                                <div className="flex items-center justify-between flex-wrap gap-2">
+                                  <div>
+                                    <p className="text-[10px] text-muted-foreground uppercase font-bold tracking-wider">bKash Number</p>
+                                    <p className="text-base sm:text-lg font-black text-[#E2136E] tracking-wider">01622530550</p>
+                                  </div>
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => {
+                                      navigator.clipboard.writeText("01622530550");
+                                      toast({ title: "Copied!", description: "bKash number copied to clipboard" });
+                                    }}
+                                    className="h-8 px-3 text-xs font-semibold border-[#E2136E]/30 text-[#E2136E] hover:bg-[#E2136E]/10"
+                                  >
+                                    <Copy className="h-3.5 w-3.5 mr-1" /> Copy Number
+                                  </Button>
+                                </div>
 
-                          {/* Inputs for verification */}
-                          <div className="grid sm:grid-cols-2 gap-3 pt-1">
-                            <div className="space-y-1.5">
-                              <Label htmlFor="bkashNumber" className="text-xs font-bold text-foreground">
-                                Sender bKash Number (আপনার বিকাশ নাম্বার) *
-                              </Label>
-                              <Input
-                                id="bkashNumber"
-                                placeholder="e.g. 01XXXXXXXXX"
-                                value={bkashNumber}
-                                onChange={(e) => setBkashNumber(e.target.value)}
-                                className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E]"
-                                required={paymentMethod === "bkash"}
-                              />
-                            </div>
+                                <div className="pt-1 text-xs text-foreground/80 space-y-1">
+                                  <p className="flex items-center gap-1.5 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">1</span>
+                                    বিকাশ অ্যাপে গিয়ে <strong>Send Money</strong> করুন।
+                                  </p>
+                                  <p className="flex items-center gap-1.5 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">2</span>
+                                    টাকার পরিমাণ: <strong className="text-[#E2136E]">৳{total.toLocaleString()}</strong>
+                                  </p>
+                                  <p className="flex items-center gap-1.5 font-medium">
+                                    <span className="w-4 h-4 rounded-full bg-[#E2136E] text-white flex items-center justify-center text-[10px] shrink-0">3</span>
+                                    পেমেন্ট সম্পন্ন করে নিচের ঘরে আপনার বিকাশ নাম্বার ও TrxID দিন।
+                                  </p>
+                                </div>
+                              </div>
 
-                            <div className="space-y-1.5">
-                              <Label htmlFor="bkashTrxId" className="text-xs font-bold text-foreground">
-                                Transaction ID (TrxID / ট্রানজেকশন আইডি) *
-                              </Label>
-                              <Input
-                                id="bkashTrxId"
-                                placeholder="e.g. 9M7A8X9K2"
-                                value={bkashTrxId}
-                                onChange={(e) => setBkashTrxId(e.target.value.toUpperCase())}
-                                className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono"
-                                required={paymentMethod === "bkash"}
-                              />
+                              {/* Inputs for verification */}
+                              <div className="grid sm:grid-cols-2 gap-3 pt-1">
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="bkashNumber" className="text-xs font-bold text-foreground">
+                                    Sender bKash Number (আপনার বিকাশ নাম্বার) *
+                                  </Label>
+                                  <Input
+                                    id="bkashNumber"
+                                    placeholder="e.g. 01XXXXXXXXX"
+                                    value={bkashNumber}
+                                    onChange={(e) => setBkashNumber(e.target.value)}
+                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E]"
+                                    required={paymentMethod === "bkash"}
+                                  />
+                                </div>
+
+                                <div className="space-y-1.5">
+                                  <Label htmlFor="bkashTrxId" className="text-xs font-bold text-foreground">
+                                    Transaction ID (TrxID / ট্রানজেকশন আইডি) *
+                                  </Label>
+                                  <Input
+                                    id="bkashTrxId"
+                                    placeholder="e.g. 9M7A8X9K2"
+                                    value={bkashTrxId}
+                                    onChange={(e) => setBkashTrxId(e.target.value.toUpperCase())}
+                                    className="h-10 text-xs border-[#E2136E]/30 focus-visible:ring-[#E2136E] uppercase font-mono"
+                                    required={paymentMethod === "bkash"}
+                                  />
+                                </div>
+                              </div>
                             </div>
-                          </div>
-                        </div>
-                      )}
-                    </RadioGroup>
-                  </CardContent>
-                </Card>
+                          )}
+                        </RadioGroup>
+                      </CardContent>
+                    </Card>
+                  </div>
+                )}
               </div>
 
               {/* Order Summary - Desktop */}
@@ -1111,7 +1147,7 @@ export default function Checkout() {
                           Processing Order...
                         </>
                       ) : (
-                        "Place Order"
+                        checkoutStep === "shipping" ? "Place Order" : `Confirm Order • ৳${total.toLocaleString()}`
                       )}
                     </Button>
 
@@ -1141,7 +1177,7 @@ export default function Checkout() {
                       Processing...
                     </>
                   ) : (
-                    "Place Order"
+                    checkoutStep === "shipping" ? "Place Order" : "Confirm Order"
                   )}
                 </Button>
               </div>
