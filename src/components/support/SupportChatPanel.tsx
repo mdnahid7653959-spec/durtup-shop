@@ -34,6 +34,7 @@ export interface SupportMessage {
 
 interface Props {
   ticketId: string;
+  sourceTable?: "support_tickets" | "seller_support_tickets" | "conversations";
   senderType: "seller" | "staff" | "admin";
   senderId: string;
   senderName: string;
@@ -78,32 +79,38 @@ function AttachmentView({ att }: { att: SupportAttachment }) {
   );
 }
 
-export function SupportChatPanel({ ticketId, senderType, senderId, senderName, readOnly, headerTitle, headerSubtitle, onBack }: Props) {
+export function SupportChatPanel({ ticketId, sourceTable, senderType, senderId, senderName, readOnly, headerTitle, headerSubtitle, onBack }: Props) {
   const [messages, setMessages] = useState<SupportMessage[]>([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [ticketSource, setTicketSource] = useState<"support_tickets" | "seller_support_tickets" | "conversations">("seller_support_tickets");
+  const isDirectConv = sourceTable === "conversations" || ticketId.startsWith("conv-");
+  const [ticketSource, setTicketSource] = useState<"support_tickets" | "seller_support_tickets" | "conversations">(
+    isDirectConv ? "conversations" : (sourceTable || "seller_support_tickets")
+  );
   const [convDetails, setConvDetails] = useState<any>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
 
-  useEffect(() => {
-    let cancel = false;
-    (async () => {
-      setLoading(true);
+  const fetchChatMessages = async (isCancel: () => boolean) => {
+    // 1. Check if ticketId is a conversation (buyer-seller product/store chat)
+    if (isDirectConv || ticketSource === "conversations") {
+      setTicketSource("conversations");
 
-      // 1. Check if ticketId is a conversation (buyer-seller product/store chat)
+      // Fetch buyer profile & product details
       const { data: convRow } = await supabase.from("conversations").select("*").eq("id", ticketId).maybeSingle();
+      
+      let buyerProf: any = null;
+      let productInfo: any = null;
 
       if (convRow) {
-        setTicketSource("conversations");
+        if (convRow.buyer_id) {
+          const { data: bp } = await supabase.from("profiles").select("full_name, email, phone").eq("id", convRow.buyer_id).maybeSingle();
+          buyerProf = bp;
+        }
 
-        // Fetch buyer profile & product details
-        const { data: buyerProf } = await supabase.from("profiles").select("full_name, email, phone").eq("id", convRow.buyer_id).maybeSingle();
-        let productInfo: any = null;
         if (convRow.product_id) {
           const catalog = await getCachedMohasagorProducts().catch(() => []);
           productInfo = catalog.find((p: any) => p.id === convRow.product_id || p.slug === convRow.product_id);
@@ -113,7 +120,7 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
           }
         }
 
-        if (!cancel) {
+        if (!isCancel()) {
           setConvDetails({
             ...convRow,
             buyer_name: buyerProf?.full_name || buyerProf?.email || "Customer",
@@ -124,161 +131,170 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
             product_slug: productInfo?.slug,
           });
         }
-
-        // Fetch messages from "messages" table
-        const { data: msgRows } = await supabase
-          .from("messages")
-          .select("*")
-          .eq("conversation_id", ticketId)
-          .order("created_at", { ascending: true });
-
-        if (!cancel) {
-          const formatted: SupportMessage[] = (msgRows || []).map((m: any) => ({
-            id: m.id,
-            ticket_id: m.conversation_id,
-            sender_type: m.sender_type === "buyer" ? "customer" : (m.sender_type || "seller"),
-            sender_id: m.sender_id || "",
-            sender_name: m.sender_type === "buyer" ? (buyerProf?.full_name || "Customer") : (senderName || "Admin"),
-            content: m.content,
-            attachments: [],
-            created_at: m.created_at,
-            read_at: m.created_at,
-          }));
-
-          setMessages(formatted);
-          setLoading(false);
-
-          // Mark unread as 0 for seller/admin
-          supabase.from("conversations").update({ seller_unread_count: 0 }).eq("id", ticketId).then();
-          supabase.from("messages").update({ is_read: true }).eq("conversation_id", ticketId).eq("sender_type", "buyer").eq("is_read", false).then();
-        }
-        return;
       }
 
-      // 2. Check if ticketId exists in support_tickets table
-      const { data: stRow } = await supabase.from("support_tickets").select("id, subject").eq("id", ticketId).maybeSingle();
+      // Fetch messages from "messages" table
+      const { data: msgRows } = await supabase
+        .from("messages")
+        .select("*")
+        .eq("conversation_id", ticketId)
+        .order("created_at", { ascending: true });
 
-      if (stRow) {
-        setTicketSource("support_tickets");
-        const { data: tmRows } = await supabase
-          .from("ticket_messages")
-          .select("*")
-          .eq("ticket_id", ticketId)
-          .order("created_at", { ascending: true });
+      const formatted: SupportMessage[] = (msgRows || []).map((m: any) => ({
+        id: m.id,
+        ticket_id: m.conversation_id,
+        sender_type: m.sender_type === "buyer" ? "customer" : (m.sender_type || "seller"),
+        sender_id: m.sender_id || "",
+        sender_name: m.sender_type === "buyer" ? (buyerProf?.full_name || "Customer") : (senderName || "Admin"),
+        content: m.content,
+        attachments: [],
+        created_at: m.created_at,
+        read_at: m.created_at,
+      }));
 
-        if (!cancel) {
-          const formatted: SupportMessage[] = (tmRows || []).map((m) => {
-            const rawAtts: string[] = m.attachments || [];
-            const atts: SupportAttachment[] = rawAtts.map((url) => ({
-              url,
-              path: url,
-              type: "application/octet-stream",
-              kind: url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? "image" : url.match(/\.(mp3|wav|ogg)$/i) ? "audio" : "file",
-              name: url.split("/").pop() || "Attachment",
-              size: 0,
-            }));
-
-            return {
-              id: m.id,
-              ticket_id: m.ticket_id,
-              sender_type: (m.sender_type as any) || "customer",
-              sender_id: m.sender_id || "",
-              sender_name: m.sender_type === "admin" ? "Admin" : m.sender_type === "staff" ? "Support Agent" : "User / Seller",
-              content: m.message,
-              attachments: atts,
-              created_at: m.created_at,
-              read_at: m.created_at,
-            };
-          });
-
-          setMessages(formatted);
-          setLoading(false);
-        }
-      } else {
-        setTicketSource("seller_support_tickets");
-        const { data } = await supabase
+      // Also check seller_support_messages for any legacy or merged messages
+      try {
+        const { data: ssmRows } = await supabase
           .from("seller_support_messages")
           .select("*")
-          .eq("ticket_id", ticketId)
-          .order("created_at", { ascending: true });
+          .eq("ticket_id", ticketId);
 
-        if (!cancel) {
-          setMessages((data || []) as any);
-          setLoading(false);
+        if (ssmRows && ssmRows.length > 0) {
+          ssmRows.forEach((sm: any) => {
+            if (!formatted.some(m => m.id === sm.id || (m.content === (sm.content || sm.message) && Math.abs(new Date(m.created_at).getTime() - new Date(sm.created_at).getTime()) < 5000))) {
+              formatted.push({
+                id: sm.id,
+                ticket_id: ticketId,
+                sender_type: sm.sender_type || "admin",
+                sender_id: sm.sender_id || "",
+                sender_name: sm.sender_name || (sm.sender_type === "seller" ? "Seller" : "Admin"),
+                content: sm.content || sm.message || "",
+                attachments: sm.attachments || [],
+                created_at: sm.created_at,
+                read_at: sm.created_at,
+              });
+            }
+          });
+          formatted.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
         }
+      } catch {}
+
+      if (!isCancel()) {
+        setMessages(formatted);
+        setLoading(false);
+
+        // Mark unread as 0 for seller/admin
+        supabase.from("conversations").update({ seller_unread_count: 0 }).eq("id", ticketId).then();
+        supabase.from("messages").update({ is_read: true }).eq("conversation_id", ticketId).eq("sender_type", "buyer").eq("is_read", false).then();
       }
-    })();
+      return;
+    }
 
+    // 2. Check if ticketId exists in support_tickets table
+    const { data: stRow } = await supabase.from("support_tickets").select("id, subject").eq("id", ticketId).maybeSingle();
+
+    if (stRow) {
+      setTicketSource("support_tickets");
+      const { data: tmRows } = await supabase
+        .from("ticket_messages")
+        .select("*")
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true });
+
+      if (!isCancel()) {
+        const formatted: SupportMessage[] = (tmRows || []).map((m) => {
+          const rawAtts: string[] = m.attachments || [];
+          const atts: SupportAttachment[] = rawAtts.map((url) => ({
+            url,
+            path: url,
+            type: "application/octet-stream",
+            kind: url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? "image" : url.match(/\.(mp3|wav|ogg)$/i) ? "audio" : "file",
+            name: url.split("/").pop() || "Attachment",
+            size: 0,
+          }));
+
+          return {
+            id: m.id,
+            ticket_id: m.ticket_id,
+            sender_type: (m.sender_type as any) || "customer",
+            sender_id: m.sender_id || "",
+            sender_name: m.sender_type === "admin" ? "Admin" : m.sender_type === "staff" ? "Support Agent" : "User / Seller",
+            content: m.message,
+            attachments: atts,
+            created_at: m.created_at,
+            read_at: m.created_at,
+          };
+        });
+
+        setMessages(formatted);
+        setLoading(false);
+      }
+    } else {
+      setTicketSource("seller_support_tickets");
+      const { data } = await supabase
+        .from("seller_support_messages")
+        .select("*")
+        .eq("ticket_id", ticketId)
+        .order("created_at", { ascending: true });
+
+      if (!isCancel()) {
+        setMessages((data || []) as any);
+        setLoading(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    let cancel = false;
+    setLoading(true);
+    fetchChatMessages(() => cancel);
     return () => { cancel = true; };
-  }, [ticketId]);
+  }, [ticketId, sourceTable]);
 
-  // Realtime subscription
+  // Realtime subscription & 3s polling sync
   useEffect(() => {
     if (!ticketId) return;
 
-    if (ticketSource === "conversations") {
+    if (isDirectConv || ticketSource === "conversations") {
       const channel = supabase
         .channel(`conv-chat-${ticketId}`)
         .on(
           "postgres_changes",
-          { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${ticketId}` },
-          (payload: any) => {
-            const raw = payload.new;
-            const newMsg: SupportMessage = {
-              id: raw.id,
-              ticket_id: raw.conversation_id,
-              sender_type: raw.sender_type === "buyer" ? "customer" : (raw.sender_type || "seller"),
-              sender_id: raw.sender_id || "",
-              sender_name: raw.sender_type === "buyer" ? (convDetails?.buyer_name || "Customer") : (senderName || "Admin"),
-              content: raw.content,
-              attachments: [],
-              created_at: raw.created_at,
-              read_at: raw.created_at,
-            };
-            setMessages((prev) => (prev.some((x) => x.id === newMsg.id) ? prev : [...prev, newMsg]));
+          { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${ticketId}` },
+          () => {
+            fetchChatMessages(() => false);
           }
         )
         .subscribe();
 
+      const timer = setInterval(() => {
+        fetchChatMessages(() => false);
+      }, 3000);
+
       return () => {
         supabase.removeChannel(channel);
+        clearInterval(timer);
       };
     } else {
       const tableToListen = ticketSource === "support_tickets" ? "ticket_messages" : "seller_support_messages";
 
       const channel = supabase
         .channel(`support-chat-${ticketId}`)
-        .on("postgres_changes", { event: "INSERT", schema: "public", table: tableToListen, filter: `ticket_id=eq.${ticketId}` }, (payload: any) => {
-          const raw = payload.new;
-          if (ticketSource === "support_tickets") {
-            const formattedMsg: SupportMessage = {
-              id: raw.id,
-              ticket_id: raw.ticket_id,
-              sender_type: raw.sender_type || "customer",
-              sender_id: raw.sender_id || "",
-              sender_name: raw.sender_type === "admin" ? "Admin" : raw.sender_type === "staff" ? "Support Agent" : "User / Seller",
-              content: raw.message,
-              attachments: (raw.attachments || []).map((url: string) => ({
-                url,
-                path: url,
-                type: "application/octet-stream",
-                kind: url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? "image" : "file",
-                name: url.split("/").pop() || "Attachment",
-                size: 0,
-              })),
-              created_at: raw.created_at,
-              read_at: raw.created_at,
-            };
-            setMessages((m) => (m.some((x) => x.id === formattedMsg.id) ? m : [...m, formattedMsg]));
-          } else {
-            setMessages((m) => (m.some((x) => x.id === raw.id) ? m : [...m, raw]));
-          }
+        .on("postgres_changes", { event: "*", schema: "public", table: tableToListen, filter: `ticket_id=eq.${ticketId}` }, () => {
+          fetchChatMessages(() => false);
         })
         .subscribe();
 
-      return () => { supabase.removeChannel(channel); };
+      const timer = setInterval(() => {
+        fetchChatMessages(() => false);
+      }, 3000);
+
+      return () => {
+        supabase.removeChannel(channel);
+        clearInterval(timer);
+      };
     }
-  }, [ticketId, ticketSource, convDetails]);
+  }, [ticketId, ticketSource, isDirectConv]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -295,25 +311,41 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
       const preview = text.trim() || (uploads[0]?.kind === "image" ? "📷 Photo" : uploads[0] ? `📎 ${uploads[0].name}` : "");
       const nowIso = new Date().toISOString();
 
-      if (ticketSource === "conversations") {
+      if (isDirectConv || ticketSource === "conversations") {
         const newMsgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        
+        // 1. Insert into messages table
         const { error: msgErr } = await supabase.from("messages").insert({
           id: newMsgId,
           conversation_id: ticketId,
-          sender_id: senderId,
+          sender_id: senderId || "admin",
           sender_type: "seller",
           content: text.trim() || preview,
           created_at: nowIso,
           is_read: false,
         });
-        if (msgErr) throw msgErr;
+        if (msgErr) console.error("Message insert error:", msgErr);
+
+        // 2. Also insert into seller_support_messages for safety
+        try {
+          await supabase.from("seller_support_messages").insert({
+            id: newMsgId,
+            ticket_id: ticketId,
+            sender_type: senderType,
+            sender_id: senderId || "admin",
+            sender_name: senderName || "Admin",
+            content: text.trim() || preview,
+            created_at: nowIso,
+            attachments: uploads as any,
+          });
+        } catch {}
 
         // Optimistically add to messages
         const localMsg: SupportMessage = {
           id: newMsgId,
           ticket_id: ticketId,
           sender_type: senderType,
-          sender_id: senderId,
+          sender_id: senderId || "admin",
           sender_name: senderName || "Admin",
           content: text.trim() || preview,
           attachments: uploads,

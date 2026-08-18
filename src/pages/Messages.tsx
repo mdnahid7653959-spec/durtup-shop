@@ -217,12 +217,41 @@ export default function BuyerMessages() {
       if (error) {
         console.warn("Error fetching messages:", error);
       }
-      return (data || []) as Message[];
+      
+      const list = ((data || []) as Message[]).slice();
+
+      // Also merge any messages from seller_support_messages where ticket_id = selectedConvId
+      try {
+        const { data: ssm } = await supabase
+          .from("seller_support_messages")
+          .select("*")
+          .eq("ticket_id", selectedConvId);
+
+        if (ssm && ssm.length > 0) {
+          ssm.forEach((sm: any) => {
+            const smContent = sm.content || sm.message || "";
+            if (!list.some(m => m.id === sm.id || (m.content === smContent && Math.abs(new Date(m.created_at).getTime() - new Date(sm.created_at).getTime()) < 5000))) {
+              list.push({
+                id: sm.id,
+                conversation_id: selectedConvId,
+                sender_id: sm.sender_id || "admin",
+                sender_type: sm.sender_type === "buyer" ? "buyer" : "seller",
+                content: smContent,
+                is_read: sm.is_read ?? false,
+                created_at: sm.created_at || new Date().toISOString(),
+              });
+            }
+          });
+          list.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+        }
+      } catch {}
+
+      return list;
     },
     enabled: !!selectedConvId,
   });
 
-  // Realtime subscription for incoming messages from seller/admin
+  // Realtime subscription for incoming messages from seller/admin + 3s poll fallback
   useEffect(() => {
     if (!selectedConvId) return;
 
@@ -230,7 +259,16 @@ export default function BuyerMessages() {
       .channel(`buyer-chat-sync-${selectedConvId}`)
       .on(
         "postgres_changes",
-        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${selectedConvId}` },
+        { event: "*", schema: "public", table: "messages", filter: `conversation_id=eq.${selectedConvId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
+          queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
+          queryClient.invalidateQueries({ queryKey: ["single-conversation", selectedConvId] });
+        }
+      )
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "seller_support_messages", filter: `ticket_id=eq.${selectedConvId}` },
         () => {
           queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
           queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
@@ -239,8 +277,13 @@ export default function BuyerMessages() {
       )
       .subscribe();
 
+    const timer = setInterval(() => {
+      queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
+    }, 3000);
+
     return () => {
       supabase.removeChannel(channel);
+      clearInterval(timer);
     };
   }, [selectedConvId, queryClient]);
 
@@ -282,6 +325,7 @@ export default function BuyerMessages() {
         });
       }
 
+      // 1. Insert into messages table
       const { error } = await supabase.from("messages").insert({
         id: newMsgId,
         conversation_id: selectedConvId,
@@ -291,7 +335,21 @@ export default function BuyerMessages() {
         created_at: nowIso,
         is_read: false
       });
-      if (error) throw error;
+      if (error) console.error("Error inserting message into messages:", error);
+
+      // 2. Also insert into seller_support_messages table for compatibility
+      try {
+        await supabase.from("seller_support_messages").insert({
+          id: newMsgId,
+          ticket_id: selectedConvId,
+          sender_id: senderUserId,
+          sender_type: "buyer",
+          sender_name: user?.displayName || "Customer",
+          content,
+          created_at: nowIso,
+          attachments: []
+        });
+      } catch {}
 
       const currentUnread = selectedConv?.seller_unread_count ?? 0;
       await supabase.from("conversations").update({ 

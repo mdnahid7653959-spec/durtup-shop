@@ -10,7 +10,13 @@ import { cn } from "@/lib/utils";
 
 export default function AdminSellerSupport() {
   const { admin } = useAdminAuth();
-  const [selected, setSelected] = useState<string | null>(null);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedSource, setSelectedSource] = useState<"support_tickets" | "seller_support_tickets" | "conversations" | undefined>(undefined);
+
+  const handleSelect = (id: string, source?: "support_tickets" | "seller_support_tickets" | "conversations") => {
+    setSelectedId(id);
+    setSelectedSource(source);
+  };
 
   return (
     <AdminLayout title="Seller Support">
@@ -26,19 +32,23 @@ export default function AdminSellerSupport() {
         </Button>
       </div>
       <div className="flex h-[calc(100vh-200px)] border rounded-lg overflow-hidden bg-card">
-        <div className={cn("w-full md:w-80 border-r flex flex-col", selected ? "hidden md:flex" : "flex")}>
-          <SupportTicketList perspective="admin" selectedId={selected} onSelect={setSelected} />
+        <div className={cn("w-full md:w-80 border-r flex flex-col", selectedId ? "hidden md:flex" : "flex")}>
+          <SupportTicketList perspective="admin" selectedId={selectedId} onSelect={handleSelect} />
         </div>
-        <div className={cn("flex-1 flex flex-col", !selected ? "hidden md:flex" : "flex")}>
-          {selected && admin ? (
+        <div className={cn("flex-1 flex flex-col", !selectedId ? "hidden md:flex" : "flex")}>
+          {selectedId && admin ? (
             <SupportChatPanel
-              ticketId={selected}
+              ticketId={selectedId}
+              sourceTable={selectedSource}
               senderType="admin"
               senderId={admin.id}
               senderName={admin.displayName || "Admin"}
               headerTitle="Seller ↔ Staff Conversation"
               headerSubtitle="Full read/write monitoring"
-              onBack={() => setSelected(null)}
+              onBack={() => {
+                setSelectedId(null);
+                setSelectedSource(undefined);
+              }}
             />
           ) : (
             <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
