@@ -157,24 +157,14 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
 
 
 
-          {/* Action Buttons */}
-          <div className="mt-3 flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex-1 h-8 text-xs"
-              onClick={handleAddToCart}
-            >
-              <ShoppingCart className="h-3.5 w-3.5 mr-1" />
-              Cart
-            </Button>
+          {/* Action Button - Instant Order Now */}
+          <div className="mt-3">
             <Button
               size="sm"
-              className="flex-1 h-8 text-xs"
+              className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm py-2 rounded-lg shadow-sm active:scale-[0.98] transition-all"
               onClick={handleBuyNow}
             >
-              <Zap className="h-3.5 w-3.5 mr-1" />
-              Buy
+              Order Now
             </Button>
           </div>
         </div>

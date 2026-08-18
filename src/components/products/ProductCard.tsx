@@ -138,21 +138,13 @@ function ProductCardComponent({ product }: ProductCardProps) {
         </div>
       </div>
 
-      {/* Action Buttons - Instant Buy Now / Add to Cart */}
-      <div className="p-2.5 pt-0 mt-1 flex gap-1.5 items-center">
+      {/* Action Button - Instant Buy Now */}
+      <div className="p-2.5 pt-0 mt-1">
         <button
           onClick={handleBuyNow}
-          className="flex-1 bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-[11px] sm:text-xs py-1.5 sm:py-2 px-2 rounded-lg flex items-center justify-center shadow-sm active:scale-[0.97] transition-all"
+          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold text-xs sm:text-sm py-2 px-3 rounded-lg flex items-center justify-center shadow-sm active:scale-[0.98] transition-all cursor-pointer"
         >
           Order Now
-        </button>
-        <button
-          onClick={handleAddToCart}
-          className="p-1.5 sm:p-2 rounded-lg bg-orange-500/10 hover:bg-orange-500/20 text-orange-600 border border-orange-200 transition-colors active:scale-95 shrink-0"
-          title="Add to Cart"
-          aria-label="Add to cart"
-        >
-          <ShoppingCart className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
         </button>
       </div>
     </div>
