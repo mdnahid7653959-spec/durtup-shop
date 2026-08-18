@@ -1,7 +1,9 @@
 import { useEffect, useState } from "react";
-import { Edit, MoreHorizontal, Eye, Ban, CheckCircle, Mail, Phone, Calendar, Search, UserX, UserCheck, RefreshCw, MapPin, Trash2 } from "lucide-react";
+import { Edit, MoreHorizontal, Eye, Ban, CheckCircle, Mail, Phone, Calendar, Search, UserX, UserCheck, RefreshCw, MapPin, Trash2, Shield, Store, User } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useAdminCacheInvalidation } from "@/hooks/useRealtimeSync";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
@@ -124,38 +126,190 @@ export default function AdminUsers() {
 
   const fetchUsers = async () => {
     setLoading(true);
-    const { data: dbData } = await adminDb.select<Profile>("profiles", {
-      columns: "*",
-      orderBy: { col: "created_at", ascending: false },
-      limit: 100,
-      useCache: false,
-    });
+    const mergedMap = new Map<string, Profile>();
 
-    let localRegistered: Profile[] = [];
+    // 1. Always ensure Master Super Admin is present
+    mergedMap.set(masterAdminUser.id, masterAdminUser);
+
+    // 2. Fetch all profiles directly from Firestore (to prevent missing created_at docs from being dropped)
+    try {
+      const pSnap = await getDocs(collection(db, "profiles"));
+      pSnap.forEach((docSnap) => {
+        const data = docSnap.data() as any;
+        const uId = docSnap.id || data.id || data.user_id;
+        if (uId) {
+          const createdAt = data.created_at || data.updated_at || new Date().toISOString();
+          // Backfill missing created_at in Firestore if needed
+          if (!data.created_at) {
+            setDoc(doc(db, "profiles", uId), { created_at: createdAt }, { merge: true }).catch(() => {});
+          }
+
+          mergedMap.set(uId, {
+            id: uId,
+            user_id: data.user_id || uId,
+            email: data.email || (data.phone ? `${data.phone}@phone.durtup.shop` : "No email"),
+            full_name: data.full_name || data.name || data.displayName || "Customer",
+            phone: data.phone || null,
+            avatar_url: data.avatar_url || data.photoURL || null,
+            role: data.role || "customer",
+            is_active: data.is_active !== false,
+            created_at: createdAt,
+            updated_at: data.updated_at || createdAt,
+          });
+        }
+      });
+    } catch (e) {
+      console.warn("Direct Firestore profiles fetch:", e);
+    }
+
+    // 3. Query via supabase/adminDb adapter for profiles
+    try {
+      const { data: dbData } = await supabase.from("profiles").select("*");
+      (dbData || []).forEach((u: any) => {
+        const uId = u.id || u.user_id;
+        if (uId) {
+          const existing = mergedMap.get(uId);
+          mergedMap.set(uId, {
+            id: uId,
+            user_id: u.user_id || uId,
+            email: u.email || existing?.email || "No email",
+            full_name: u.full_name || existing?.full_name || "Customer",
+            phone: u.phone || existing?.phone || null,
+            avatar_url: u.avatar_url || existing?.avatar_url || null,
+            role: u.role || existing?.role || "customer",
+            is_active: u.is_active !== false,
+            created_at: u.created_at || existing?.created_at || new Date().toISOString(),
+            updated_at: u.updated_at || existing?.updated_at || new Date().toISOString(),
+          });
+        }
+      });
+    } catch (e) {}
+
+    // 4. Fetch all sellers from Firestore and database
+    try {
+      const sSnap = await getDocs(collection(db, "sellers"));
+      sSnap.forEach((docSnap) => {
+        const s = docSnap.data() as any;
+        const sId = docSnap.id || s.id || s.user_id;
+        if (sId) {
+          const existing = mergedMap.get(sId);
+          mergedMap.set(sId, {
+            id: sId,
+            user_id: s.user_id || sId,
+            email: s.email || existing?.email || "seller@durtup.shop",
+            full_name: s.shop_name || s.business_name || existing?.full_name || "Seller Store",
+            phone: s.phone || existing?.phone || null,
+            avatar_url: s.logo_url || s.avatar_url || existing?.avatar_url || null,
+            role: "seller",
+            is_active: s.approval_status !== "rejected" && s.approval_status !== "suspended",
+            created_at: s.created_at || existing?.created_at || new Date().toISOString(),
+            updated_at: s.updated_at || existing?.updated_at || new Date().toISOString(),
+          });
+        }
+      });
+    } catch (e) {}
+
+    // 5. Fetch all staff members from Firestore
+    try {
+      const stSnap = await getDocs(collection(db, "staff"));
+      stSnap.forEach((docSnap) => {
+        const st = docSnap.data() as any;
+        const stId = docSnap.id || st.id || st.user_id;
+        if (stId) {
+          const existing = mergedMap.get(stId);
+          mergedMap.set(stId, {
+            id: stId,
+            user_id: st.user_id || stId,
+            email: st.email || existing?.email || "staff@durtup.shop",
+            full_name: st.name || existing?.full_name || "Staff Member",
+            phone: st.phone || existing?.phone || null,
+            avatar_url: existing?.avatar_url || null,
+            role: st.role || "staff",
+            is_active: st.status !== "inactive",
+            created_at: st.created_at || existing?.created_at || new Date().toISOString(),
+            updated_at: st.updated_at || existing?.updated_at || new Date().toISOString(),
+          });
+        }
+      });
+    } catch (e) {}
+
+    // 6. Fetch customers from orders (ensures buyers with orders appear in Users)
+    try {
+      const oSnap = await getDocs(collection(db, "orders"));
+      oSnap.forEach((docSnap) => {
+        const o = docSnap.data() as any;
+        const custUserId = o.user_id;
+        const custEmail = o.customer_email || o.shipping_address?.email;
+        const custPhone = o.customer_phone || o.shipping_address?.phone;
+        const custName = o.customer_name || o.shipping_address?.name;
+
+        if (custUserId && mergedMap.has(custUserId)) {
+          const u = mergedMap.get(custUserId)!;
+          if (!u.phone && custPhone) u.phone = custPhone;
+          if ((!u.full_name || u.full_name === "Customer") && custName) u.full_name = custName;
+          if ((!u.email || u.email === "No email") && custEmail) u.email = custEmail;
+        } else if (custEmail || custPhone || custUserId) {
+          const targetKey = custUserId || (custEmail ? `cust-${custEmail}` : `cust-${custPhone}`);
+          if (!mergedMap.has(targetKey)) {
+            // Check if matches by email
+            const existingByEmail = Array.from(mergedMap.values()).find(
+              (x) => custEmail && x.email?.toLowerCase() === custEmail.toLowerCase()
+            );
+            if (existingByEmail) {
+              if (!existingByEmail.phone && custPhone) existingByEmail.phone = custPhone;
+            } else {
+              mergedMap.set(targetKey, {
+                id: targetKey,
+                user_id: custUserId || targetKey,
+                email: custEmail || (custPhone ? `${custPhone}@phone.durtup.shop` : "Customer"),
+                full_name: custName || "Customer",
+                phone: custPhone || null,
+                avatar_url: null,
+                role: "customer",
+                is_active: true,
+                created_at: o.created_at || new Date().toISOString(),
+                updated_at: o.created_at || new Date().toISOString(),
+              });
+            }
+          }
+        }
+      });
+    } catch (e) {}
+
+    // 7. Check localStorage registrations
     if (typeof window !== "undefined") {
       try {
-        const raw = localStorage.getItem("durtup_registered_users");
-        if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed)) localRegistered = parsed;
-        }
+        const keys = ["durtup_registered_users", "registered_users", "durtup_all_users"];
+        keys.forEach((k) => {
+          const raw = localStorage.getItem(k);
+          if (raw) {
+            const list = JSON.parse(raw);
+            if (Array.isArray(list)) {
+              list.forEach((u: any) => {
+                const uId = u.id || u.user_id;
+                if (uId && !mergedMap.has(uId)) {
+                  mergedMap.set(uId, {
+                    id: uId,
+                    user_id: u.user_id || uId,
+                    email: u.email || "No email",
+                    full_name: u.full_name || u.name || "Customer",
+                    phone: u.phone || null,
+                    avatar_url: u.avatar_url || null,
+                    role: u.role || "customer",
+                    is_active: u.is_active !== false,
+                    created_at: u.created_at || new Date().toISOString(),
+                    updated_at: u.updated_at || new Date().toISOString(),
+                  });
+                }
+              });
+            }
+          }
+        });
       } catch (e) {}
     }
 
-    const mergedMap = new Map<string, Profile>();
-    mergedMap.set(masterAdminUser.id, masterAdminUser);
-
-    (dbData || []).forEach((u) => {
-      if (u.id) mergedMap.set(u.id, u);
-    });
-
-    localRegistered.forEach((u) => {
-      if (u.id && !mergedMap.has(u.id)) {
-        mergedMap.set(u.id, u);
-      }
-    });
-
     const userList = Array.from(mergedMap.values());
+    userList.sort((a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime());
     setUsers(userList);
     setLoading(false);
   };
