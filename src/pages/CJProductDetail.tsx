@@ -249,7 +249,7 @@ export default function CJProductDetail() {
               {/* Main Image - Full Width on Mobile */}
               <div 
                 ref={imageContainerRef}
-                className="aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/70 shadow-sm relative touch-pan-y"
+                className="aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-50/80 dark:bg-card border border-border/70 shadow-sm relative touch-pan-y flex items-center justify-center"
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -257,7 +257,8 @@ export default function CJProductDetail() {
                 <img 
                   src={images[selectedImage]} 
                   alt={product.nameEn || product.name}
-                  className="w-full h-full object-contain p-2 sm:p-4 transition-opacity duration-300"
+                  className="w-full h-full object-contain object-center transition-opacity duration-300 select-none"
+                  loading="eager"
                   onError={(e) => {
                     e.currentTarget.src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop";
                   }}
@@ -311,21 +312,21 @@ export default function CJProductDetail() {
 
               {/* Thumbnail Gallery - Horizontal Scroll */}
               {images.length > 1 && (
-                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
+                <div className="flex gap-2 overflow-x-auto py-1 scrollbar-hide -mx-3 px-3 sm:mx-0 sm:px-0">
                   {images.slice(0, 8).map((img, i) => (
                     <button
                       key={i}
                       onClick={() => setSelectedImage(i)}
-                      className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-lg overflow-hidden border-2 transition-all active:scale-95 bg-white dark:bg-card ${
+                      className={`flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all active:scale-95 bg-neutral-50/80 dark:bg-card ${
                         selectedImage === i 
-                          ? 'border-primary ring-2 ring-primary/30' 
-                          : 'border-border hover:border-muted-foreground/50'
+                          ? 'border-primary ring-2 ring-primary/30 shadow-md scale-105' 
+                          : 'border-border hover:border-muted-foreground/50 opacity-80 hover:opacity-100'
                       }`}
                     >
                       <img 
                         src={img} 
                         alt={`View ${i + 1}`} 
-                        className="w-full h-full object-contain p-1" 
+                        className="w-full h-full object-cover transition-transform duration-200" 
                         loading="lazy"
                         onError={(e) => { 
                           e.currentTarget.src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=100&h=100&fit=crop"; 

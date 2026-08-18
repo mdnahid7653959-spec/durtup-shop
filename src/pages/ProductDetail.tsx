@@ -831,10 +831,10 @@ export default function ProductDetail() {
             <div className="w-full">
               {/* Main Image with clean, premium presentation */}
               <div className="flex justify-center mb-4">
-                <div className="relative w-full max-w-[380px] sm:max-w-[440px] lg:max-w-[480px]">
+                <div className="relative w-full max-w-full sm:max-w-[480px] lg:max-w-[540px]">
                   <div
                     ref={imageContainerRef}
-                    className="relative aspect-square rounded-2xl overflow-hidden bg-white dark:bg-card border border-border/70 shadow-sm cursor-zoom-in group"
+                    className="relative aspect-square w-full rounded-2xl overflow-hidden bg-neutral-50/80 dark:bg-card border border-border/70 shadow-sm cursor-zoom-in group flex items-center justify-center"
                     onClick={() => !showVideo && setLightboxOpen(true)}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
@@ -856,7 +856,8 @@ export default function ProductDetail() {
                       <img
                         src={images[selectedImage]}
                         alt={product.name}
-                        className="w-full h-full object-contain object-center p-2 sm:p-4 transition-transform duration-300 group-hover:scale-105"
+                        className="w-full h-full object-contain object-center transition-transform duration-300 group-hover:scale-105 select-none"
+                        loading="eager"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = defaultImages[0];
@@ -868,7 +869,7 @@ export default function ProductDetail() {
                     {!showVideo && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
-                        className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md text-white text-xs font-semibold shadow-lg hover:bg-primary transition-all hover:scale-105"
+                        className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md text-white text-xs font-semibold shadow-lg hover:bg-primary transition-all hover:scale-105 z-10"
                       >
                         <ZoomIn className="h-3.5 w-3.5" /> Tap to Zoom
                       </button>
@@ -876,14 +877,14 @@ export default function ProductDetail() {
 
                     {/* Featured badge */}
                     {product.is_featured && (
-                      <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-warning to-primary text-white text-xs font-bold shadow-md">
+                      <div className="absolute top-3 left-3 flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-warning to-primary text-white text-xs font-bold shadow-md z-10">
                         <Sparkles className="h-3 w-3" />
                         FEATURED
                       </div>
                     )}
 
                     {/* Image Counter Badge */}
-                    <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md">
+                    <div className="absolute top-3 right-14 sm:right-16 flex items-center gap-1 px-2.5 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-bold shadow-md z-10">
                       {selectedImage + 1} / {(product as any).video_url ? images.length + 1 : images.length}
                     </div>
 
@@ -894,7 +895,7 @@ export default function ProductDetail() {
                         setSelectedImage(Math.max(0, selectedImage - 1));
                         setShowVideo(false);
                       }}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0"
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all disabled:opacity-0 z-10"
                       disabled={selectedImage === 0}
                     >
                       <ChevronLeft className="h-5 w-5" />
@@ -910,7 +911,7 @@ export default function ProductDetail() {
                           }
                         }
                       }}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all"
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-primary hover:text-white transition-all z-10"
                     >
                       <ChevronRight className="h-5 w-5" />
                     </button>
@@ -918,25 +919,25 @@ export default function ProductDetail() {
                     {/* Share button */}
                     <button
                       onClick={(e) => { e.stopPropagation(); handleShare(); }}
-                      className="absolute top-3 right-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 backdrop-blur shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all"
+                      className="absolute top-3 right-3 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-white/90 dark:bg-card/90 backdrop-blur shadow-md flex items-center justify-center hover:bg-primary hover:text-white transition-all z-10"
                       aria-label="Share"
                     >
                       <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
                     </button>
 
                     {/* Image indicator dots */}
-                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden">
+                    <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5 sm:hidden z-10 bg-black/30 backdrop-blur-sm px-2 py-1 rounded-full">
                       {images.map((_, i) => (
-                        <div key={i} className={`h-2 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-primary w-6' : 'bg-black/20 w-2'}`} />
+                        <div key={i} className={`h-1.5 rounded-full transition-all ${selectedImage === i && !showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />
                       ))}
-                      {product.video_url && <div className={`h-2 rounded-full transition-all ${showVideo ? 'bg-primary w-6' : 'bg-black/20 w-2'}`} />}
+                      {product.video_url && <div className={`h-1.5 rounded-full transition-all ${showVideo ? 'bg-white w-5' : 'bg-white/50 w-1.5'}`} />}
                     </div>
                   </div>
                 </div>
               </div>
 
               {/* Thumbnail strip */}
-              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-1 px-1 no-scrollbar">
+              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-2 px-1 no-scrollbar">
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -944,16 +945,16 @@ export default function ProductDetail() {
                       setSelectedImage(i);
                       setShowVideo(false);
                     }}
-                    className={`w-14 h-14 sm:w-18 sm:h-18 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-white dark:bg-card hover:scale-105 ${
+                    className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex-shrink-0 bg-neutral-50/80 dark:bg-card hover:scale-105 ${
                       selectedImage === i && !showVideo
-                        ? 'border-primary ring-2 ring-primary/30 shadow-md shadow-primary/10'
-                        : 'border-border/60 hover:border-primary/50'
+                        ? 'border-primary ring-2 ring-primary/30 shadow-md shadow-primary/10 scale-105'
+                        : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
                     }`}
                   >
                     <img
                       src={img}
                       alt=""
-                      className="w-full h-full object-contain p-1"
+                      className="w-full h-full object-cover transition-transform duration-200"
                       onError={(e) => {
                         e.currentTarget.onerror = null;
                         e.currentTarget.src = defaultImages[0];
@@ -965,8 +966,8 @@ export default function ProductDetail() {
                 {product.video_url && (
                   <button
                     onClick={() => setShowVideo(true)}
-                    className={`w-14 h-14 sm:w-18 sm:h-18 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
-                      showVideo ? 'border-primary ring-2 ring-primary/30 shadow-md' : 'border-border/60 hover:border-primary/50'
+                    className={`w-14 h-14 sm:w-16 sm:h-16 lg:w-20 lg:h-20 rounded-xl overflow-hidden border-2 transition-all flex items-center justify-center bg-muted flex-shrink-0 relative hover:scale-105 ${
+                      showVideo ? 'border-primary ring-2 ring-primary/30 shadow-md scale-105' : 'border-border/60 hover:border-primary/50 opacity-80 hover:opacity-100'
                     }`}
                   >
                     <div className="absolute inset-0 bg-black/40 flex items-center justify-center z-10">
