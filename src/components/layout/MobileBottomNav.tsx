@@ -53,7 +53,7 @@ export function MobileBottomNav() {
   };
 
   return (
-    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border shadow-lg" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}>
+    <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-card/95 backdrop-blur-md border-t border-border shadow-lg max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 6px)' }}>
       <div className={`grid h-[60px]`} style={{ gridTemplateColumns: `repeat(${tabs.length}, 1fr)` }}>
         {tabs.map((tab) => {
           const isActive = location.pathname === tab.href || 

@@ -149,7 +149,7 @@ export function Header() {
   const categories = defaultCategories;
 
   return (
-    <header className="sticky top-0 z-50 w-full shadow-lg" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+    <header className="sticky top-0 z-50 w-full max-w-[100vw] overflow-x-clip shadow-lg" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
 
       {/* Main header */}
       <div className="bg-primary text-primary-foreground">

@@ -74,19 +74,19 @@ function MobileProductTopBar() {
   const navigate = useNavigate();
   const [q, setQ] = useState("");
   return (
-    <div className="md:hidden sticky top-0 z-40 bg-primary text-primary-foreground shadow-sm" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
-      <div className="flex items-center gap-2 px-2 py-1.5">
-        <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-white/10 rounded-md" aria-label="Back">
+    <div className="md:hidden sticky top-0 z-40 bg-primary text-primary-foreground shadow-sm w-full max-w-[100vw] overflow-hidden" style={{ paddingTop: 'env(safe-area-inset-top, 0px)' }}>
+      <div className="flex items-center gap-2 px-2 py-1.5 w-full max-w-full">
+        <button onClick={() => navigate(-1)} className="p-1.5 hover:bg-white/10 rounded-md shrink-0" aria-label="Back">
           <ChevronLeft className="h-5 w-5" />
         </button>
-        <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate(`/products?search=${encodeURIComponent(q)}`); }} className="flex-1">
+        <form onSubmit={(e) => { e.preventDefault(); if (q.trim()) navigate(`/products?search=${encodeURIComponent(q)}`); }} className="flex-1 min-w-0">
           <input type="search" placeholder="Search products..." value={q} onChange={(e) => setQ(e.target.value)}
             className="w-full h-8 rounded-md px-3 text-xs text-foreground bg-white placeholder:text-muted-foreground focus:outline-none" />
         </form>
-        <Link to="/wishlist" className="p-1.5 hover:bg-white/10 rounded-md" aria-label="Wishlist">
+        <Link to="/wishlist" className="p-1.5 hover:bg-white/10 rounded-md shrink-0" aria-label="Wishlist">
           <Heart className="h-5 w-5" />
         </Link>
-        <Link to="/cart" className="p-1.5 hover:bg-white/10 rounded-md" aria-label="Cart">
+        <Link to="/cart" className="p-1.5 hover:bg-white/10 rounded-md shrink-0" aria-label="Cart">
           <ShoppingCart className="h-5 w-5" />
         </Link>
       </div>
@@ -831,22 +831,22 @@ export default function ProductDetail() {
       <div className="hidden md:block"><Header /></div>
       <MobileProductTopBar />
 
-      <main className="flex-1 pb-40 md:pb-8">
-        <div className="container py-4 sm:py-8">
+      <main className="flex-1 pb-40 md:pb-8 w-full max-w-full overflow-hidden">
+        <div className="container py-4 sm:py-8 w-full max-w-full">
           {/* Breadcrumb - Hidden on mobile */}
-          <nav className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6">
-            <Link to="/" className="hover:text-primary">Home</Link>
+          <nav className="hidden sm:flex items-center gap-2 text-sm text-muted-foreground mb-6 max-w-full overflow-hidden">
+            <Link to="/" className="hover:text-primary shrink-0">Home</Link>
             <span>/</span>
-            <Link to="/products" className="hover:text-primary">Products</Link>
+            <Link to="/products" className="hover:text-primary shrink-0">Products</Link>
             <span>/</span>
-            <span className="text-foreground line-clamp-1">{product.name}</span>
+            <span className="text-foreground line-clamp-1 truncate">{product.name}</span>
           </nav>
 
-          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12">
+          <div className="grid lg:grid-cols-2 gap-6 sm:gap-8 lg:gap-12 w-full max-w-full min-w-0">
             {/* Product Images Section */}
-            <div className="w-full">
+            <div className="w-full max-w-full min-w-0">
               {/* Main Image with clean, premium presentation */}
-              <div className="flex justify-center mb-4">
+              <div className="flex justify-center mb-4 w-full max-w-full">
                 <div className="relative w-full max-w-full sm:max-w-[480px] lg:max-w-[540px]">
                   <div
                     ref={imageContainerRef}
@@ -953,7 +953,7 @@ export default function ProductDetail() {
               </div>
 
               {/* Thumbnail strip */}
-              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-2 px-1 no-scrollbar">
+              <div className="flex gap-2 sm:gap-3 justify-start sm:justify-center overflow-x-auto py-2 px-1 scrollbar-hide w-full max-w-full">
                 {images.map((img, i) => (
                   <button
                     key={i}
@@ -1005,7 +1005,7 @@ export default function ProductDetail() {
 
 
             {/* Product Info */}
-            <div className="space-y-5 sm:space-y-6">
+            <div className="w-full max-w-full min-w-0 space-y-5 sm:space-y-6">
               <div>
                 <div className="flex flex-wrap items-center gap-2 mb-3">
                   {product.is_featured && (
@@ -1216,17 +1216,21 @@ export default function ProductDetail() {
 
               {/* Description */}
               {product.description && (
-                <div className="pt-5 border-t">
+                <div className="pt-5 border-t w-full max-w-full overflow-hidden">
                   <h3 className="font-bold text-base sm:text-lg text-foreground mb-3 flex items-center gap-2">
                     <span className="w-1 h-5 bg-gradient-to-b from-primary to-warning rounded-full" />
                     Description
                   </h3>
                   {/<[a-z][\s\S]*>/i.test(product.description) ? (
                     <div
-                      className="text-muted-foreground text-sm leading-relaxed prose prose-sm max-w-none
-                        [&_img]:max-w-full [&_img]:rounded-lg [&_table]:w-full [&_table]:border-collapse
-                        [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2
-                        [&_a]:text-primary [&_a]:underline [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5"
+                      className="product-description-content text-muted-foreground text-sm leading-relaxed prose prose-sm max-w-none break-words overflow-hidden w-full
+                        [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg
+                        [&_table]:w-full [&_table]:max-w-full [&_table]:table-auto [&_table]:border-collapse [&_table]:block [&_table]:overflow-x-auto
+                        [&_td]:border [&_td]:border-border [&_td]:p-2 [&_td]:break-words
+                        [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:break-words
+                        [&_a]:text-primary [&_a]:underline [&_a]:break-all
+                        [&_ul]:list-disc [&_ul]:pl-5 [&_ol]:list-decimal [&_ol]:pl-5
+                        [&_p]:break-words [&_p]:max-w-full [&_div]:max-w-full [&_span]:max-w-full"
                       dangerouslySetInnerHTML={{
                         __html: product.description
                           .replace(/&nbsp;/gi, " ")
@@ -1234,11 +1238,14 @@ export default function ProductDetail() {
                           .replace(/&lt;/gi, "<")
                           .replace(/&gt;/gi, ">")
                           .replace(/&quot;/gi, '"')
-                          .replace(/&#39;/gi, "'"),
+                          .replace(/&#39;/gi, "'")
+                          .replace(/width\s*:\s*\d{3,}px/gi, "width: 100%")
+                          .replace(/min-width\s*:\s*\d{3,}px/gi, "min-width: 0px")
+                          .replace(/width="[0-9]{3,}"/gi, 'width="100%"'),
                       }}
                     />
                   ) : (
-                    <p className="text-muted-foreground text-sm leading-relaxed whitespace-pre-line">
+                    <p className="product-description-content text-muted-foreground text-sm leading-relaxed whitespace-pre-line break-words overflow-hidden max-w-full">
                       {product.description
                         .replace(/&nbsp;/gi, " ")
                         .replace(/&amp;/gi, "&")
@@ -1255,7 +1262,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Product Ratings & Reviews Section (Directly Below Description) */}
-          <div className="mt-8">
+          <div className="mt-8 w-full max-w-full min-w-0">
             <ProductReviews
               productId={product.id}
               ratingAverage={product.rating_average}
@@ -1265,7 +1272,7 @@ export default function ProductDetail() {
           </div>
 
           {/* Store Information */}
-          <div className="mt-8">
+          <div className="mt-8 w-full max-w-full min-w-0">
             {product.seller_id ? (
               <StoreDetails
                 sellerId={product.seller_id}
@@ -1313,24 +1320,26 @@ export default function ProductDetail() {
           </div>
 
           {/* Related Products - Full width below product grid */}
-          <RelatedProducts 
-            product={{
-              id: product.id,
-              name: product.name,
-              category_id: product.category_id,
-              brand_id: product.brand_id,
-              regular_price: product.regular_price,
-              discount_price: product.discount_price,
-              tags: product.tags,
-            }}
-            title="For You"
-            subtitle="Recommended items for you"
-            limit={12}
-          />
+          <div className="w-full max-w-full min-w-0">
+            <RelatedProducts 
+              product={{
+                id: product.id,
+                name: product.name,
+                category_id: product.category_id,
+                brand_id: product.brand_id,
+                regular_price: product.regular_price,
+                discount_price: product.discount_price,
+                tags: product.tags,
+              }}
+              title="For You"
+              subtitle="Recommended items for you"
+              limit={12}
+            />
+          </div>
         </div>
 
         {/* Mobile sticky bottom bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-2.5" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-2.5 max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
           <div className="flex items-center gap-2 max-w-lg mx-auto w-full">
             <Button
               variant={inWishlist ? "default" : "outline"}

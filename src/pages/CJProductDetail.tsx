@@ -243,9 +243,9 @@ export default function CJProductDetail() {
             <span className="text-foreground line-clamp-1 max-w-[200px]">{product.nameEn || product.name}</span>
           </nav>
 
-          <div className="grid lg:grid-cols-2 gap-4 lg:gap-10">
+          <div className="grid lg:grid-cols-2 gap-4 lg:gap-10 w-full max-w-full min-w-0">
             {/* Product Images - Mobile Optimized */}
-            <div className="space-y-2 sm:space-y-4">
+            <div className="space-y-2 sm:space-y-4 w-full max-w-full min-w-0">
               {/* Main Image - Full Width on Mobile */}
               <div 
                 ref={imageContainerRef}
@@ -339,7 +339,7 @@ export default function CJProductDetail() {
             </div>
 
             {/* Product Info - Mobile Optimized */}
-            <div className="space-y-4 sm:space-y-5">
+            <div className="space-y-4 sm:space-y-5 w-full max-w-full min-w-0">
               {/* Badge & Title */}
               <div className="space-y-2">
                 <Badge className="bg-gradient-to-r from-primary to-accent text-primary-foreground text-xs">International</Badge>
@@ -504,19 +504,27 @@ export default function CJProductDetail() {
 
               {/* Description */}
               {(product.descriptionEn || product.description) && (
-                <div className="space-y-2 pt-4 border-t">
+                <div className="space-y-2 pt-4 border-t w-full max-w-full overflow-hidden">
                   <h3 className="text-sm font-semibold">Description</h3>
                   <div 
-                    className="text-xs sm:text-sm text-muted-foreground prose prose-sm max-w-none prose-p:my-2 prose-p:leading-relaxed overflow-hidden
-                      [&_img]:max-w-full [&_img]:rounded-lg [&_table]:w-full [&_table]:border-collapse
-                      [&_td]:border [&_td]:border-border [&_td]:p-2 [&_th]:border [&_th]:border-border [&_th]:p-2"
+                    className="product-description-content text-xs sm:text-sm text-muted-foreground prose prose-sm max-w-none prose-p:my-2 prose-p:leading-relaxed overflow-hidden break-words w-full
+                      [&_img]:max-w-full [&_img]:h-auto [&_img]:rounded-lg [&_table]:w-full [&_table]:max-w-full [&_table]:border-collapse [&_table]:block [&_table]:overflow-x-auto
+                      [&_td]:border [&_td]:border-border [&_td]:p-2 [&_td]:break-words [&_th]:border [&_th]:border-border [&_th]:p-2 [&_th]:break-words
+                      [&_a]:text-primary [&_a]:underline [&_a]:break-all
+                      [&_p]:break-words [&_p]:max-w-full [&_div]:max-w-full [&_span]:max-w-full"
                     dangerouslySetInnerHTML={{ 
-                      __html: DOMPurify.sanitize(product.descriptionEn || product.description, {
-                        ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'span', 'b', 'i', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'img'],
-                        ALLOWED_ATTR: ['class', 'src', 'alt', 'width', 'height'],
-                        FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'style', 'link'],
-                        FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'href', 'action']
-                      })
+                      __html: DOMPurify.sanitize(
+                        (product.descriptionEn || product.description)
+                          .replace(/width\s*:\s*\d{3,}px/gi, "width: 100%")
+                          .replace(/min-width\s*:\s*\d{3,}px/gi, "min-width: 0px")
+                          .replace(/width="[0-9]{3,}"/gi, 'width="100%"'),
+                        {
+                          ALLOWED_TAGS: ['p', 'br', 'strong', 'em', 'u', 'ul', 'ol', 'li', 'span', 'b', 'i', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'table', 'tr', 'td', 'th', 'tbody', 'thead', 'img'],
+                          ALLOWED_ATTR: ['class', 'src', 'alt', 'width', 'height'],
+                          FORBID_TAGS: ['script', 'iframe', 'object', 'embed', 'form', 'input', 'style', 'link'],
+                          FORBID_ATTR: ['onerror', 'onload', 'onclick', 'onmouseover', 'onfocus', 'onblur', 'href', 'action']
+                        }
+                      )
                     }}
                   />
                 </div>
@@ -532,22 +540,24 @@ export default function CJProductDetail() {
           </div>
 
           {/* Related Products */}
-          <RelatedProducts 
-            product={{
-              id: product.id,
-              name: product.nameEn || product.name,
-              category_id: product.category || null,
-              regular_price: product.price,
-              discount_price: product.originalPrice || undefined,
-            }}
-            title="You May Also Like"
-            subtitle="Similar products based on your interests"
-            limit={12}
-          />
+          <div className="w-full max-w-full min-w-0">
+            <RelatedProducts 
+              product={{
+                id: product.id,
+                name: product.nameEn || product.name,
+                category_id: product.category || null,
+                regular_price: product.price,
+                discount_price: product.originalPrice || undefined,
+              }}
+              title="You May Also Like"
+              subtitle="Similar products based on your interests"
+              limit={12}
+            />
+          </div>
         </div>
 
         {/* Mobile sticky bottom bar - Enhanced */}
-        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3 sm:hidden z-40" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+        <div className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] p-3 sm:hidden z-40 max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
           <div className="flex items-center gap-2 max-w-lg mx-auto w-full">
             {/* Mini Quantity */}
             <div className="flex items-center border rounded-xl overflow-hidden bg-muted/50 shrink-0">
