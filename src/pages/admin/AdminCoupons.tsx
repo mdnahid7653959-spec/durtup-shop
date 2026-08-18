@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, MoreHorizontal, Copy } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -75,16 +77,44 @@ export default function AdminCoupons() {
   const { toast } = useToast();
 
   const fetchCoupons = async () => {
-    const { data, error } = await adminDb.select<Coupon>("coupons", {
-      columns: "*",
-      orderBy: { col: "created_at", ascending: false },
-    });
+    const firestoreCoupons: Coupon[] = [];
+    try {
+      const snap = await getDocs(collection(db, "coupons"));
+      snap.forEach((d) => {
+        const data = d.data();
+        firestoreCoupons.push({
+          id: d.id,
+          code: data.code || d.id,
+          description: data.description || null,
+          discount_type: data.discount_type || data.discountType || "percentage",
+          discount_value: Number(data.discount_value || data.discountValue || 0),
+          min_order_amount: data.min_order_amount !== undefined ? Number(data.min_order_amount) : null,
+          max_discount_amount: data.max_discount_amount !== undefined ? Number(data.max_discount_amount) : null,
+          usage_limit: data.usage_limit !== undefined ? Number(data.usage_limit) : null,
+          used_count: Number(data.used_count || 0),
+          start_date: data.start_date || null,
+          end_date: data.end_date || null,
+          is_active: data.is_active ?? true,
+        });
+      });
+    } catch (e) {
+      console.warn("Firestore coupons fetch warning:", e);
+    }
 
-    if (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to fetch coupons" });
+    if (firestoreCoupons.length > 0) {
+      setCoupons(firestoreCoupons);
     } else {
-      setCoupons(data || []);
+      const { data, error } = await adminDb.select<Coupon>("coupons", {
+        columns: "*",
+        orderBy: { col: "created_at", ascending: false },
+      });
+
+      if (error) {
+        console.error(error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch coupons" });
+      } else {
+        setCoupons(data || []);
+      }
     }
     setLoading(false);
   };
@@ -106,24 +136,40 @@ export default function AdminCoupons() {
     e.preventDefault();
     setSaving(true);
     
+    const rawCode = form.code.trim().toUpperCase();
+    const couponId = editingCoupon ? editingCoupon.id : `coup_${rawCode}_${Date.now()}`;
     const data = {
-      code: form.code.toUpperCase(),
+      id: couponId,
+      code: rawCode,
       description: form.description || null,
       discount_type: form.discount_type,
       discount_value: parseFloat(form.discount_value) || 0,
       min_order_amount: form.min_order_amount ? parseFloat(form.min_order_amount) : null,
       max_discount_amount: form.max_discount_amount ? parseFloat(form.max_discount_amount) : null,
       usage_limit: form.usage_limit ? parseInt(form.usage_limit) : null,
+      used_count: editingCoupon?.used_count || 0,
       start_date: form.start_date || null,
       end_date: form.end_date || null,
       is_active: form.is_active,
+      updated_at: new Date().toISOString(),
     };
 
+    // 1. Sync to Firestore
+    try {
+      await setDoc(doc(db, "coupons", couponId), data, { merge: true });
+      await setDoc(doc(db, "coupons", rawCode), data, { merge: true });
+    } catch (e) {
+      console.warn("Firestore coupon save warning:", e);
+    }
+
+    // 2. Sync to DB & Supabase
     let error: any = null;
     if (editingCoupon) {
       ({ error } = await adminDb.update("coupons", data, { id: editingCoupon.id }));
+      await supabase.from("coupons").update(data).eq("id", editingCoupon.id);
     } else {
       ({ error } = await adminDb.insert("coupons", data));
+      await supabase.from("coupons").insert(data);
     }
 
     if (error) {
@@ -173,7 +219,17 @@ export default function AdminCoupons() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this coupon?")) return;
     
+    const targetCoupon = coupons.find(c => c.id === id);
+    try {
+      await deleteDoc(doc(db, "coupons", id));
+      if (targetCoupon?.code) {
+        await deleteDoc(doc(db, "coupons", targetCoupon.code));
+      }
+    } catch (e) {}
+
     const { error } = await adminDb.remove("coupons", { id });
+    await supabase.from("coupons").delete().eq("id", id);
+
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     } else {

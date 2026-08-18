@@ -13,6 +13,8 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/firebaseAdapter";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { FileText, Image, Layout, Plus, Edit, Trash2, Eye, ExternalLink } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { format } from "date-fns";
@@ -90,9 +92,33 @@ export default function AdminCMS() {
         supabase.from("cms_banners").select("*").order("sort_order")
       ]);
 
-      if (pagesRes.data) setPages(pagesRes.data);
-      if (postsRes.data) setPosts(postsRes.data);
-      if (bannersRes.data) setBanners(bannersRes.data);
+      const fetchedPages: CMSPage[] = pagesRes.data || [];
+      const fetchedPosts: BlogPost[] = postsRes.data || [];
+      const fetchedBanners: Banner[] = bannersRes.data || [];
+
+      if (fetchedPages.length === 0) {
+        try {
+          const snap = await getDocs(collection(db, "cms_pages"));
+          snap.forEach((d) => {
+            const data = d.data();
+            fetchedPages.push({
+              id: d.id,
+              title: data.title || "Page",
+              slug: data.slug || d.id,
+              content: data.content || null,
+              is_published: data.is_published ?? true,
+              meta_title: data.meta_title || null,
+              meta_description: data.meta_description || null,
+              created_at: data.created_at || new Date().toISOString(),
+              updated_at: data.updated_at || new Date().toISOString(),
+            });
+          });
+        } catch (e) {}
+      }
+
+      setPages(fetchedPages);
+      setPosts(fetchedPosts);
+      setBanners(fetchedBanners);
     } catch (error) {
       console.error("Error fetching CMS data:", error);
     } finally {
@@ -109,14 +135,22 @@ export default function AdminCMS() {
   };
 
   const savePage = async () => {
+    const pSlug = pageForm.slug || generateSlug(pageForm.title);
+    const pId = editingPage ? editingPage.id : `page_${pSlug}_${Date.now()}`;
     const data = {
+      id: pId,
       title: pageForm.title,
-      slug: pageForm.slug || generateSlug(pageForm.title),
+      slug: pSlug,
       content: pageForm.content,
       is_published: pageForm.is_published,
       meta_title: pageForm.meta_title || null,
-      meta_description: pageForm.meta_description || null
+      meta_description: pageForm.meta_description || null,
+      updated_at: new Date().toISOString()
     };
+
+    try {
+      await setDoc(doc(db, "cms_pages", pId), data, { merge: true });
+    } catch (e) {}
 
     if (editingPage) {
       await supabase.from("cms_pages").update(data).eq("id", editingPage.id);
@@ -133,16 +167,24 @@ export default function AdminCMS() {
   };
 
   const savePost = async () => {
+    const postSlug = postForm.slug || generateSlug(postForm.title);
+    const postId = editingPost ? editingPost.id : `post_${postSlug}_${Date.now()}`;
     const data = {
+      id: postId,
       title: postForm.title,
-      slug: postForm.slug || generateSlug(postForm.title),
+      slug: postSlug,
       content: postForm.content,
       excerpt: postForm.excerpt || null,
       status: postForm.status,
       meta_title: postForm.meta_title || null,
       meta_description: postForm.meta_description || null,
-      published_at: postForm.status === "published" ? new Date().toISOString() : null
+      published_at: postForm.status === "published" ? new Date().toISOString() : null,
+      updated_at: new Date().toISOString()
     };
+
+    try {
+      await setDoc(doc(db, "blog_posts", postId), data, { merge: true });
+    } catch (e) {}
 
     if (editingPost) {
       await supabase.from("blog_posts").update(data).eq("id", editingPost.id);
@@ -160,12 +202,18 @@ export default function AdminCMS() {
 
   const deletePage = async (id: string) => {
     if (!confirm("Delete this page?")) return;
+    try {
+      await deleteDoc(doc(db, "cms_pages", id));
+    } catch (e) {}
     await supabase.from("cms_pages").delete().eq("id", id);
     fetchData();
   };
 
   const deletePost = async (id: string) => {
     if (!confirm("Delete this post?")) return;
+    try {
+      await deleteDoc(doc(db, "blog_posts", id));
+    } catch (e) {}
     await supabase.from("blog_posts").delete().eq("id", id);
     fetchData();
   };

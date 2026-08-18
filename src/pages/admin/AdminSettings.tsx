@@ -47,12 +47,12 @@ export default function AdminSettings() {
   });
 
   const [storeSettings, setStoreSettings] = useState({
-    storeName: "MegaMart",
-    storeEmail: "support@megamart.com",
-    storePhone: "+1 (555) 123-4567",
-    storeAddress: "123 Commerce Street, New York, NY 10001",
-    currency: "USD",
-    timezone: "America/New_York",
+    storeName: "Durtup.shop",
+    storeEmail: "support@durtup.shop",
+    storePhone: "+880 1700-000000",
+    storeAddress: "Dhaka, Bangladesh",
+    currency: "BDT",
+    timezone: "Asia/Dhaka",
   });
 
   const [marketingSettings, setMarketingSettings] = useState({

@@ -2,6 +2,8 @@ import { useState, useEffect, useCallback } from "react";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -245,32 +247,61 @@ export default function AdminSellers() {
 
   const fetchSellers = useCallback(async () => {
     try {
-      const adminSession = localStorage.getItem("megamart_admin_session");
-      const sessionToken = adminSession ? JSON.parse(adminSession).token : null;
+      let fetchedSellers: Seller[] = [];
 
-      if (!sessionToken) {
-        console.error("No admin session token found");
-        setLoading(false);
-        return;
+      try {
+        const sSnap = await getDocs(collection(db, "sellers"));
+        sSnap.forEach((d) => {
+          const data = d.data();
+          fetchedSellers.push({
+            id: d.id,
+            user_id: data.user_id || data.userId || d.id,
+            shop_name: data.shop_name || data.shopName || data.name || "Shop",
+            shop_slug: data.shop_slug || data.slug || d.id,
+            shop_logo: data.shop_logo || data.logo || null,
+            business_name: data.business_name || data.shop_name || null,
+            business_type: data.business_type || "Retail",
+            contact_phone: data.contact_phone || data.phone || "",
+            contact_email: data.contact_email || data.email || "",
+            status: (data.status || data.approval_status || "approved") as SellerStatus,
+            kyc_status: data.kyc_status || "approved",
+            kyc_rejected_reason: data.kyc_rejected_reason || null,
+            kyc_verified_at: data.kyc_verified_at || null,
+            kyc_verified_by: data.kyc_verified_by || null,
+            rejection_reason: data.rejection_reason || null,
+            warning_count: Number(data.warning_count || 0),
+            rating_average: Number(data.rating_average || 5.0),
+            rating_count: Number(data.rating_count || 0),
+            total_products: Number(data.total_products || 0),
+            total_orders: Number(data.total_orders || 0),
+            total_sales: Number(data.total_sales || 0),
+            commission_rate: data.commission_rate !== undefined ? Number(data.commission_rate) : 5,
+            is_featured: Boolean(data.is_featured),
+            created_at: data.created_at || new Date().toISOString(),
+            nid_front_image: data.nid_front_image || null,
+            nid_back_image: data.nid_back_image || null,
+            nid_number: data.nid_number || null,
+            id_document_type: data.id_document_type || "NID",
+            birth_certificate_number: data.birth_certificate_number || null,
+            birth_certificate_image: data.birth_certificate_image || null,
+            trade_license_number: data.trade_license_number || null,
+            trade_license_image: data.trade_license_image || null,
+            warehouse_address: data.warehouse_address || null,
+            bank_name: data.bank_name || null,
+            bank_account_number: data.bank_account_number || null,
+            mobile_banking_provider: data.mobile_banking_provider || null,
+            mobile_banking_number: data.mobile_banking_number || null,
+          });
+        });
+      } catch (e) {
+        console.warn("Firestore sellers fetch error:", e);
       }
 
-      let fetchedSellers: Seller[] = [];
-      try {
-        const { data, error } = await supabase.functions.invoke("admin-sellers", {
-          body: { action: "list", sessionToken },
-        });
-        if (!error && data?.success && Array.isArray(data.sellers)) {
-          fetchedSellers = data.sellers;
-        }
-      } catch {}
-
       if (fetchedSellers.length === 0) {
-        // Fallback to direct DB select
         const { data: dbSellers } = await adminDb.select<Seller>("sellers", { columns: "*" });
         if (dbSellers && dbSellers.length > 0) {
           fetchedSellers = dbSellers;
         } else {
-          // Default marketplace seller instance for administration
           fetchedSellers = [
             {
               id: "seller-durtup-official",
@@ -348,17 +379,47 @@ export default function AdminSellers() {
     setActionLoading(true);
 
     try {
-      const adminSession = localStorage.getItem("megamart_admin_session");
-      const sessionToken = adminSession ? JSON.parse(adminSession).token : null;
+      const now = new Date().toISOString();
+      const statusMap: Record<string, SellerStatus> = {
+        approve: "approved",
+        reject: "rejected",
+        suspend: "suspended",
+        ban: "banned",
+        unsuspend: "approved",
+      };
 
-      if (!sessionToken) {
-        throw new Error("No admin session found");
+      const targetStatus = statusMap[actionType];
+      if (targetStatus) {
+        // Sync to Firestore
+        try {
+          await setDoc(doc(db, "sellers", selectedSeller.id), {
+            status: targetStatus,
+            approval_status: targetStatus,
+            rejection_reason: actionReason || null,
+            updated_at: now
+          }, { merge: true });
+        } catch (e) {}
+
+        // Sync to DB
+        await adminDb.update(
+          "sellers",
+          {
+            status: targetStatus,
+            rejection_reason: actionReason || null,
+            updated_at: now,
+          },
+          { id: selectedSeller.id }
+        );
+        await supabase.from("sellers").update({
+          status: targetStatus,
+          approval_status: targetStatus,
+          rejection_reason: actionReason || null,
+        }).eq("id", selectedSeller.id);
       }
 
       // Handle dedicated KYC actions
       if (actionType === "approve_kyc") {
-        const now = new Date().toISOString();
-        const { error } = await adminDb.update(
+        await adminDb.update(
           "sellers",
           {
             kyc_status: "approved",
@@ -369,7 +430,14 @@ export default function AdminSellers() {
           },
           { id: selectedSeller.id }
         );
-        if (error) throw error;
+        try {
+          await setDoc(doc(db, "sellers", selectedSeller.id), {
+            kyc_status: "approved",
+            kyc_verified_at: now,
+            kyc_verified_by: admin.id,
+            status: selectedSeller.status === "pending" ? "approved" : selectedSeller.status,
+          }, { merge: true });
+        } catch (e) {}
 
         toast({
           title: "KYC Approved",
@@ -382,7 +450,7 @@ export default function AdminSellers() {
       }
 
       if (actionType === "reject_kyc") {
-        const { error } = await adminDb.update(
+        await adminDb.update(
           "sellers",
           {
             kyc_status: "rejected",
@@ -390,7 +458,12 @@ export default function AdminSellers() {
           },
           { id: selectedSeller.id }
         );
-        if (error) throw error;
+        try {
+          await setDoc(doc(db, "sellers", selectedSeller.id), {
+            kyc_status: "rejected",
+            kyc_rejected_reason: actionReason,
+          }, { merge: true });
+        } catch (e) {}
 
         toast({
           title: "KYC Rejected",
@@ -402,70 +475,6 @@ export default function AdminSellers() {
         fetchSellers();
         return;
       }
-
-      // Regular status actions via edge function
-      let emailType: string = "";
-      switch (actionType) {
-        case "approve":
-          emailType = "seller_approved";
-          break;
-        case "reject":
-          emailType = "seller_rejected";
-          break;
-        case "suspend":
-        case "ban":
-          emailType = "seller_suspended";
-          break;
-        case "unsuspend":
-          emailType = "seller_approved";
-          break;
-        default:
-          return;
-      }
-
-      const { data, error } = await supabase.functions.invoke("admin-sellers", {
-        body: {
-          action: actionType,
-          sellerId: selectedSeller.id,
-          reason: actionReason,
-          adminId: admin.id,
-          sessionToken,
-        },
-      });
-
-      if (error) throw error;
-      if (!data?.success) {
-        throw new Error(data?.error || "Failed to update seller");
-      }
-
-      // Update KYC fields synchronously when approving/rejecting seller account
-      if (actionType === "approve") {
-        const now = new Date().toISOString();
-        await adminDb.update(
-          "sellers",
-          {
-            kyc_status: "approved",
-            kyc_verified_at: now,
-            kyc_verified_by: admin.id,
-            kyc_rejected_reason: null,
-          },
-          { id: selectedSeller.id }
-        );
-      } else if (actionType === "reject") {
-        await adminDb.update(
-          "sellers",
-          {
-            kyc_status: "rejected",
-            kyc_rejected_reason: actionReason,
-          },
-          { id: selectedSeller.id }
-        );
-      }
-
-      sendNotificationEmail(emailType, selectedSeller.contact_email, {
-        shopName: selectedSeller.shop_name,
-        reason: actionReason,
-      });
 
       toast({
         title: "Success",

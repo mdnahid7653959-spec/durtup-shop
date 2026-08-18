@@ -15,7 +15,7 @@ import { useCJCart } from "@/hooks/useCJCart";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/firebaseAdapter";
 import { db } from "@/integrations/firebase/client";
-import { doc, setDoc } from "firebase/firestore";
+import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
 
@@ -211,6 +211,25 @@ export default function Checkout() {
 
         if (!error && data) {
           coupon = data;
+        } else {
+          // Check Firestore coupons collection
+          try {
+            const snap = await getDoc(doc(db, "coupons", rawCode));
+            if (snap.exists()) {
+              const fData = snap.data();
+              if (fData.is_active !== false) coupon = fData;
+            } else {
+              const allSnap = await getDocs(collection(db, "coupons"));
+              allSnap.forEach(d => {
+                const cData = d.data();
+                if ((cData.code === rawCode || d.id === rawCode) && cData.is_active !== false) {
+                  coupon = cData;
+                }
+              });
+            }
+          } catch (e) {
+            console.warn("Firestore coupon lookup error:", e);
+          }
         }
       }
 

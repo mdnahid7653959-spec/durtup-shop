@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, MoreHorizontal } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -51,16 +53,38 @@ export default function AdminBrands() {
   const { toast } = useToast();
 
   const fetchBrands = async () => {
-    const { data, error } = await adminDb.select<Brand>("brands", {
-      columns: "*",
-      orderBy: { col: "name", ascending: true },
-    });
+    const firestoreBrands: Brand[] = [];
+    try {
+      const snap = await getDocs(collection(db, "brands"));
+      snap.forEach((d) => {
+        const data = d.data();
+        firestoreBrands.push({
+          id: d.id,
+          name: data.name || data.title || "Brand",
+          slug: data.slug || d.id,
+          description: data.description || null,
+          logo_url: data.logo_url || data.logo || null,
+          is_active: data.is_active ?? true,
+        });
+      });
+    } catch (e) {
+      console.warn("Firestore brands fetch error:", e);
+    }
 
-    if (error) {
-      console.error(error);
-      toast({ variant: "destructive", title: "Error", description: "Failed to fetch brands" });
+    if (firestoreBrands.length > 0) {
+      setBrands(firestoreBrands);
     } else {
-      setBrands(data || []);
+      const { data, error } = await adminDb.select<Brand>("brands", {
+        columns: "*",
+        orderBy: { col: "name", ascending: true },
+      });
+
+      if (error) {
+        console.error(error);
+        toast({ variant: "destructive", title: "Error", description: "Failed to fetch brands" });
+      } else {
+        setBrands(data || []);
+      }
     }
     setLoading(false);
   };
@@ -77,19 +101,33 @@ export default function AdminBrands() {
     e.preventDefault();
     setSaving(true);
     
+    const brandSlug = form.slug || generateSlug(form.name);
+    const brandId = editingBrand ? editingBrand.id : `brand_${brandSlug}_${Date.now()}`;
     const data = {
-      name: form.name,
-      slug: form.slug || generateSlug(form.name),
+      id: brandId,
+      name: form.name.trim(),
+      slug: brandSlug,
       description: form.description || null,
       logo_url: form.logo_url || null,
       is_active: form.is_active,
+      updated_at: new Date().toISOString(),
     };
 
+    // 1. Sync to Firestore
+    try {
+      await setDoc(doc(db, "brands", brandId), data, { merge: true });
+    } catch (e) {
+      console.warn("Firestore brand save error:", e);
+    }
+
+    // 2. Sync to DB & Supabase
     let error: any = null;
     if (editingBrand) {
       ({ error } = await adminDb.update("brands", data, { id: editingBrand.id }));
+      await supabase.from("brands").update(data).eq("id", editingBrand.id);
     } else {
       ({ error } = await adminDb.insert("brands", data));
+      await supabase.from("brands").insert(data);
     }
 
     if (error) {
@@ -119,7 +157,13 @@ export default function AdminBrands() {
   const handleDelete = async (id: string) => {
     if (!confirm("Are you sure you want to delete this brand?")) return;
     
+    try {
+      await deleteDoc(doc(db, "brands", id));
+    } catch (e) {}
+
     const { error } = await adminDb.remove("brands", { id });
+    await supabase.from("brands").delete().eq("id", id);
+
     if (error) {
       toast({ variant: "destructive", title: "Error", description: error.message });
     } else {

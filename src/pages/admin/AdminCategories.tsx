@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import { Plus, Edit, Trash2, MoreHorizontal, RefreshCw } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc, deleteDoc } from "firebase/firestore";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -62,23 +64,43 @@ export default function AdminCategories() {
   ];
 
   const fetchCategories = async () => {
-    const { data, error } = await adminDb.select<Category>("categories", {
-      columns: "*",
-      orderBy: { col: "sort_order", ascending: true },
-    });
-    if (error || !data || data.length === 0) {
-      setCategories(defaultMasterCategories);
+    const firestoreCategories: Category[] = [];
+    try {
+      const snap = await getDocs(collection(db, "categories"));
+      snap.forEach((d) => {
+        const data = d.data();
+        firestoreCategories.push({
+          id: d.id,
+          name: data.name || data.title || "Category",
+          slug: data.slug || d.id,
+          description: data.description || null,
+          is_active: data.is_active ?? data.isActive ?? true,
+          sort_order: Number(data.sort_order || 0),
+        });
+      });
+    } catch (e) {
+      console.warn("Firestore categories error:", e);
+    }
+
+    if (firestoreCategories.length > 0) {
+      setCategories(firestoreCategories);
     } else {
-      setCategories(data);
+      const { data, error } = await adminDb.select<Category>("categories", {
+        columns: "*",
+        orderBy: { col: "sort_order", ascending: true },
+      });
+      if (error || !data || data.length === 0) {
+        setCategories(defaultMasterCategories);
+      } else {
+        setCategories(data);
+      }
     }
     setLoading(false);
   };
 
-
   useEffect(() => {
     fetchCategories();
 
-    // Set up real-time subscription
     const channel = supabase
       .channel("admin-categories-realtime")
       .on(
@@ -88,8 +110,7 @@ export default function AdminCategories() {
           schema: "public",
           table: "categories",
         },
-        (payload) => {
-          console.log("[Admin] Categories changed:", payload.eventType);
+        () => {
           fetchCategories();
         }
       )
@@ -104,7 +125,7 @@ export default function AdminCategories() {
     setRefreshing(true);
     await fetchCategories();
     invalidateCategories();
-    invalidateProducts(); // Products depend on categories
+    invalidateProducts();
     toast({ title: "Categories synced" });
     setRefreshing(false);
   };
@@ -116,31 +137,40 @@ export default function AdminCategories() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
+    const catSlug = form.slug || generateSlug(form.name);
+    const catId = editingCategory ? editingCategory.id : `cat_${catSlug}_${Date.now()}`;
     const data = {
-      name: form.name,
-      slug: form.slug || generateSlug(form.name),
+      id: catId,
+      name: form.name.trim(),
+      slug: catSlug,
       description: form.description || null,
       is_active: form.is_active,
+      updated_at: new Date().toISOString(),
     };
 
+    // 1. Sync to Firestore
+    try {
+      await setDoc(doc(db, "categories", catId), data, { merge: true });
+    } catch (e) {
+      console.warn("Firestore save category error:", e);
+    }
+
+    // 2. Sync to adminDb & Supabase
     let error: any = null;
     if (editingCategory) {
       ({ error } = await adminDb.update("categories", data, { id: editingCategory.id }));
+      await supabase.from("categories").update(data).eq("id", editingCategory.id);
     } else {
       ({ error } = await adminDb.insert("categories", data));
+      await supabase.from("categories").insert(data);
     }
 
-
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      toast({ title: `Category ${editingCategory ? "updated" : "created"}` });
-      setDialogOpen(false);
-      setForm({ name: "", slug: "", description: "", is_active: true });
-      setEditingCategory(null);
-      fetchCategories();
-      invalidateCategories(); // Sync with user pages
-    }
+    toast({ title: `Category ${editingCategory ? "updated" : "created"}` });
+    setDialogOpen(false);
+    setForm({ name: "", slug: "", description: "", is_active: true });
+    setEditingCategory(null);
+    fetchCategories();
+    invalidateCategories();
   };
 
   const handleEdit = (category: Category) => {
@@ -157,14 +187,16 @@ export default function AdminCategories() {
   const handleDelete = async (id: string) => {
     if (!confirm("Delete this category?")) return;
     
-    const { error } = await adminDb.remove("categories", { id });
-    if (error) {
-      toast({ variant: "destructive", title: "Error", description: error.message });
-    } else {
-      toast({ title: "Category deleted" });
-      fetchCategories();
-      invalidateCategories(); // Sync with user pages
-    }
+    try {
+      await deleteDoc(doc(db, "categories", id));
+    } catch (e) {}
+
+    await adminDb.remove("categories", { id });
+    await supabase.from("categories").delete().eq("id", id);
+    
+    toast({ title: "Category deleted" });
+    fetchCategories();
+    invalidateCategories();
   };
 
   return (

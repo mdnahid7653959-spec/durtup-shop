@@ -12,6 +12,8 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { Package, AlertTriangle, TrendingDown, Bell, Settings, Search, RefreshCw, Warehouse, Layers, ArrowUpRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 
@@ -91,13 +93,33 @@ export default function AdminInventory() {
   const fetchData = async () => {
     setLoading(true);
     try {
+      const fetchedProducts: Product[] = [];
+      try {
+        const snap = await getDocs(collection(db, "products"));
+        snap.forEach((d) => {
+          const data = d.data();
+          fetchedProducts.push({
+            id: d.id,
+            name: data.name || data.title || "Product",
+            sku: data.sku || null,
+            stock_quantity: Number(data.stock_quantity ?? data.stock ?? 0),
+            status: data.status || "active",
+          });
+        });
+      } catch (e) {}
+
       const [productsRes, alertsRes, stocksRes, warehousesRes] = await Promise.all([
         adminDb.select<Product>("products", { columns: "id, name, sku, stock_quantity, status", orderBy: { col: "stock_quantity", ascending: true } }),
         adminDb.select<InventoryAlert>("inventory_alerts"),
         adminDb.select<WarehouseStock>("warehouse_stock"),
         adminDb.select<WarehouseInfo>("warehouses", { columns: "id, name" }),
       ]);
-      if (productsRes.data) setProducts(productsRes.data);
+      
+      if (fetchedProducts.length > 0) {
+        setProducts(fetchedProducts);
+      } else if (productsRes.data) {
+        setProducts(productsRes.data);
+      }
       if (alertsRes.data) setAlerts(alertsRes.data);
       if (stocksRes.data) setWarehouseStocks(stocksRes.data);
       if (warehousesRes.data) setWarehouses(warehousesRes.data);
@@ -142,6 +164,17 @@ export default function AdminInventory() {
     if (newQuantity === product.stock_quantity) return;
 
     const previous = product.stock_quantity;
+
+    // 1. Sync to Firestore
+    try {
+      await setDoc(doc(db, "products", product.id), {
+        stock_quantity: newQuantity,
+        stock: newQuantity,
+        updated_at: new Date().toISOString()
+      }, { merge: true });
+    } catch (e) {}
+
+    // 2. Sync to DB
     const { error } = await adminDb.update("products", { stock_quantity: newQuantity }, { id: product.id });
     if (error) {
       toast({ variant: "destructive", title: "Error", description: "Failed to update stock" });

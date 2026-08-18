@@ -17,6 +17,8 @@ import {
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs, doc, updateDoc, setDoc } from "firebase/firestore";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
@@ -138,8 +140,53 @@ export default function AdminPayments() {
 
   const fetchPayments = async () => {
     try {
-      // First attempt using adminDb to bypass RLS with admin credentials fallback
-      const { data, error } = await adminDb.select<PaymentTransaction>("payments", {
+      const allTxns: PaymentTransaction[] = [];
+
+      // 1. Fetch from Firestore orders
+      try {
+        const orderSnap = await getDocs(collection(db, "orders"));
+        orderSnap.forEach((d) => {
+          const data = d.data();
+          const pMethod = data.payment_method || (data.is_cod ? "cod" : "online");
+          const pStatus = data.payment_status || (data.status === "delivered" || data.status === "completed" ? "paid" : "pending");
+          allTxns.push({
+            id: `pay_${d.id}`,
+            order_id: d.id,
+            user_id: data.user_id || data.customer_id || "guest",
+            payment_method: pMethod,
+            payment_provider: data.payment_provider || (pMethod === "bkash" ? "bKash" : pMethod === "nagad" ? "Nagad" : "COD"),
+            amount: Number(data.total_amount || data.total || data.subtotal || 0),
+            currency: "BDT",
+            status: pStatus,
+            provider_reference: data.trx_id || data.transaction_id || data.payment_id || null,
+            provider_status: pStatus,
+            provider_response: null,
+            transaction_id: data.trx_id || data.transaction_id || null,
+            refund_amount: data.refund_amount ? Number(data.refund_amount) : null,
+            refund_reason: data.refund_reason || null,
+            refunded_at: data.refunded_at || null,
+            paid_at: data.paid_at || (pStatus === "paid" ? data.created_at : null),
+            failed_at: data.failed_at || null,
+            created_at: data.created_at || new Date().toISOString(),
+            updated_at: data.updated_at || new Date().toISOString(),
+            metadata: data.payment_metadata || null,
+            orders: {
+              order_number: data.order_number || d.id.slice(0, 8).toUpperCase(),
+              total: Number(data.total_amount || data.total || 0),
+              status: data.status || "pending",
+              shipping_address: data.shipping_address || null,
+            },
+            customer: {
+              full_name: data.shipping_address?.full_name || data.customer_name || null,
+              phone: data.shipping_address?.phone || data.customer_phone || null,
+              email: data.customer_email || null,
+            }
+          });
+        });
+      } catch (e) {}
+
+      // 2. Fetch from DB
+      const { data: dbData } = await adminDb.select<PaymentTransaction>("payments", {
         columns: `
           *,
           orders:orders(order_number, total, status, shipping_address)
@@ -148,26 +195,17 @@ export default function AdminPayments() {
         limit: 200,
       } as any);
 
-      if (error || !data) {
-        // Fallback to direct client query
-        const { data: directData, error: directErr } = await supabase
-          .from("payments")
-          .select(`
-            *,
-            orders:orders(order_number, total, status, shipping_address)
-          `)
-          .order("created_at", { ascending: false })
-          .limit(200);
-
-        if (directErr) {
-          console.error("Fetch payments error:", directErr);
-          toast({ variant: "destructive", title: "Error", description: "Failed to load payment transactions" });
-        } else {
-          setPayments((directData as unknown as PaymentTransaction[]) || []);
-        }
-      } else {
-        setPayments((data as unknown as PaymentTransaction[]) || []);
+      if (dbData && dbData.length > 0) {
+        // Merge without duplicating
+        const existingIds = new Set(allTxns.map(t => t.order_id));
+        dbData.forEach(d => {
+          if (!existingIds.has(d.order_id)) {
+            allTxns.push(d);
+          }
+        });
       }
+
+      setPayments(allTxns);
     } catch (err) {
       console.error("Payments load error:", err);
       toast({ variant: "destructive", title: "Error", description: "Failed to load payment ledger" });

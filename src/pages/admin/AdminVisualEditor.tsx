@@ -12,6 +12,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/lib/firebaseAdapter";
+import { db } from "@/integrations/firebase/client";
+import { doc, setDoc, getDoc } from "firebase/firestore";
 import { useThemeConfig, defaultTheme, themePresets, applyThemeToDOM, ThemeConfig } from "@/hooks/useThemeConfig";
 import { 
   Palette, 
@@ -218,6 +220,19 @@ export default function AdminVisualEditor() {
   const fetchBannersAndConfig = async () => {
     setBannersLoading(true);
     try {
+      // 0. Check Firestore for home_theme first
+      try {
+        const themeDoc = await getDoc(doc(db, "settings", "home_theme"));
+        if (themeDoc.exists()) {
+          const tData = themeDoc.data();
+          if (tData.theme) setTheme(tData.theme);
+          if (tData.announcementBar) setAnnouncementBar(tData.announcementBar);
+          if (tData.headerConfig) setHeaderConfig(tData.headerConfig);
+          if (tData.heroBanners && Array.isArray(tData.heroBanners) && tData.heroBanners.length > 0) setHeroBanners(tData.heroBanners);
+          if (tData.promoBanners && Array.isArray(tData.promoBanners) && tData.promoBanners.length > 0) setPromoBanners(tData.promoBanners);
+        }
+      } catch (e) {}
+
       // 1. Banners
       const { data: bData } = await supabase
         .from("cms_banners")
@@ -229,13 +244,7 @@ export default function AdminVisualEditor() {
         const promos = bData.filter((b: any) => b.position === "promo" || b.position === "side");
         
         if (heroes.length > 0) setHeroBanners(heroes);
-        else setHeroBanners(getDefaultHeroBanners());
-
         if (promos.length > 0) setPromoBanners(promos);
-        else setPromoBanners(getDefaultPromoBanners());
-      } else {
-        setHeroBanners(getDefaultHeroBanners());
-        setPromoBanners(getDefaultPromoBanners());
       }
 
       // 2. Announcement & Header Config from site_config
@@ -582,6 +591,20 @@ export default function AdminVisualEditor() {
         { key: "announcement_bar", value: announcementBar, updated_at: new Date().toISOString() },
         { key: "site_header", value: headerConfig, updated_at: new Date().toISOString() }
       ], { onConflict: "key" });
+
+      // 4. Instant Sync to Firestore settings/home_theme
+      try {
+        await setDoc(doc(db, "settings", "home_theme"), {
+          theme,
+          announcementBar,
+          headerConfig,
+          heroBanners,
+          promoBanners,
+          updated_at: new Date().toISOString()
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Firestore home_theme sync error:", e);
+      }
 
       // Apply changes to DOM
       applyThemeToDOM(theme);

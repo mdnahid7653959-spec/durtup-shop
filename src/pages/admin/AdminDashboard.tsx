@@ -8,6 +8,8 @@ import {
   Wallet, Activity, BarChart3,
 } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
+import { db } from "@/integrations/firebase/client";
+import { collection, getDocs } from "firebase/firestore";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -224,198 +226,245 @@ export default function AdminDashboard() {
 
   const fetchAll = async () => {
     try {
-      // Execute all 8 RPC functions dynamically + supplementary live entity counts
-      const [
-        revStatsRes,
-        orderBreakdownRes,
-        timeseriesRes,
-        topProductsRes,
-        topSellersRes,
-        financialRes,
-        inventoryRes,
-        conversionRes,
-        sellersCountRes,
-        recentOrdersRes,
-        pendingSellersRes,
-        pendingReviewsRes,
-      ] = await Promise.all([
-        supabase.rpc("get_admin_dashboard_revenue_stats"),
-        supabase.rpc("get_admin_dashboard_order_breakdown"),
-        supabase.rpc("get_admin_revenue_timeseries", { _period: "7d" }),
-        supabase.rpc("get_admin_top_products", { _limit: 5 }),
-        supabase.rpc("get_admin_top_sellers", { _limit: 5 }),
-        supabase.rpc("get_admin_financial_summary"),
-        supabase.rpc("get_admin_inventory_health_stats"),
-        supabase.rpc("get_admin_conversion_metrics"),
-        supabase.from("sellers").select("id", { count: "exact", head: true }).eq("approval_status", "approved"),
-        supabase.from("orders").select("id, order_number, total, status, created_at").order("created_at", { ascending: false }).limit(6),
-        supabase.from("sellers").select("id", { count: "exact", head: true }).eq("approval_status", "pending"),
-        supabase.from("reviews").select("id", { count: "exact", head: true }).eq("is_approved", false),
-      ]);
-
-      if (revStatsRes.data) {
-        setRevenueStats(revStatsRes.data);
-      } else {
-        // Fallback: Compute dynamic revenue statistics directly from orders table
-        const { data: directOrders } = await supabase.from("orders").select("total, subtotal, discount_amount, shipping_cost, created_at, status");
-        if (directOrders) {
-          const validOrders = directOrders.filter(o => o.status !== 'cancelled' && o.status !== 'refunded');
-          const today = new Date().toISOString().split('T')[0];
-          const yesterday = new Date(Date.now() - 86400000).toISOString().split('T')[0];
-          const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
-          const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
-
-          const totalRev = validOrders.reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-          const todayRev = validOrders.filter(o => o.created_at?.startsWith(today)).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-          const yestRev = validOrders.filter(o => o.created_at?.startsWith(yesterday)).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-          const monthRev = validOrders.filter(o => o.created_at >= firstDayOfMonth).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-          const yearRev = validOrders.filter(o => o.created_at >= firstDayOfYear).reduce((acc, o) => acc + (Number(o.total) || 0), 0);
-          const grossRev = validOrders.reduce((acc, o) => acc + (Number(o.subtotal) || 0), 0);
-          const netRev = validOrders.reduce((acc, o) => acc + ((Number(o.total) || 0) - (Number(o.discount_amount) || 0)), 0);
-          const commRev = grossRev * 0.10;
-          const profit = commRev;
-
-          setRevenueStats({
-            total_revenue: totalRev,
-            today_revenue: todayRev,
-            yesterday_revenue: yestRev,
-            monthly_revenue: monthRev,
-            yearly_revenue: yearRev,
-            gross_revenue: grossRev,
-            net_revenue: netRev,
-            commission_revenue: commRev,
-            platform_profit: profit
+      // 1. Fetch live orders directly from Firestore and DB
+      const allOrders: any[] = [];
+      try {
+        const oSnap = await getDocs(collection(db, "orders"));
+        oSnap.forEach((d) => {
+          const data = d.data();
+          allOrders.push({
+            id: d.id,
+            order_number: data.order_number || data.orderNumber || d.id,
+            total: Number(data.total || 0),
+            subtotal: Number(data.subtotal || data.total || 0),
+            discount_amount: Number(data.discount_amount || data.discount || 0),
+            shipping_cost: Number(data.shipping_cost || 0),
+            status: data.status || "pending",
+            created_at: data.created_at || data.createdAt || new Date().toISOString(),
+            items: data.items || [],
           });
-        }
-      }
-
-      if (orderBreakdownRes.data) {
-        setOrderBreakdown(orderBreakdownRes.data);
-      } else {
-        // Fallback: Compute dynamic order breakdown directly from orders table
-        const { data: directOrders } = await supabase.from("orders").select("id, total, status");
-        if (directOrders) {
-          const breakdown: OrderBreakdown = {
-            total_orders: directOrders.length,
-            pending_count: directOrders.filter(o => o.status === 'pending').length,
-            processing_count: directOrders.filter(o => o.status === 'processing').length,
-            shipped_count: directOrders.filter(o => o.status === 'shipped').length,
-            delivered_count: directOrders.filter(o => o.status === 'delivered' || o.status === 'completed').length,
-            cancelled_count: directOrders.filter(o => o.status === 'cancelled').length,
-            packed_count: directOrders.filter(o => o.status === 'packed').length,
-            refunded_count: directOrders.filter(o => o.status === 'refunded').length,
-            returned_count: directOrders.filter(o => o.status === 'returned').length,
-            pending_amount: directOrders.filter(o => o.status === 'pending').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            processing_amount: directOrders.filter(o => o.status === 'processing').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            shipped_amount: directOrders.filter(o => o.status === 'shipped').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            delivered_amount: directOrders.filter(o => o.status === 'delivered' || o.status === 'completed').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            cancelled_amount: directOrders.filter(o => o.status === 'cancelled').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            packed_amount: directOrders.filter(o => o.status === 'packed').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            refunded_amount: directOrders.filter(o => o.status === 'refunded').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-            returned_amount: directOrders.filter(o => o.status === 'returned').reduce((acc, o) => acc + (Number(o.total) || 0), 0),
-          };
-          setOrderBreakdown(breakdown);
-        }
-      }
-
-      if (inventoryRes.data) {
-        setInventoryStats(inventoryRes.data);
-      } else {
-        // Fallback: Compute inventory stats directly from products table
-        const { data: prods } = await supabase.from("products").select("stock_quantity, regular_price, status");
-        if (prods) {
-          const lowStock = prods.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 10).length;
-          const outStock = prods.filter(p => p.stock_quantity <= 0).length;
-          const valuation = prods.reduce((acc, p) => acc + ((Number(p.stock_quantity) || 0) * (Number(p.regular_price) || 0)), 0);
-          setInventoryStats({
-            low_stock_count: lowStock,
-            out_of_stock_count: outStock,
-            total_products_tracked: prods.length,
-            total_valuation: valuation
-          });
-        }
-      }
-
-      if (conversionRes.data) {
-        setConversionStats(conversionRes.data);
-      } else {
-        const { count: userCount } = await supabase.from("profiles").select("id", { count: "exact", head: true });
-        const { count: orderCount } = await supabase.from("orders").select("id", { count: "exact", head: true });
-        const v = userCount || 0;
-        const o = orderCount || 0;
-        const convRate = v > 0 ? Number(((o / v) * 100).toFixed(2)) : 0;
-        setConversionStats({
-          total_visitors: v,
-          cart_additions: 0,
-          checkouts_initiated: o,
-          completed_orders: o,
-          conversion_rate: convRate,
-          cart_abandonment_rate: 0
         });
+      } catch (e) {
+        console.warn("Firestore orders fetch in dashboard:", e);
       }
 
-      if (financialRes.data) setFinancialStats(financialRes.data);
-      if (topProductsRes.data) setTopProducts(topProductsRes.data);
-      if (topSellersRes.data) setTopSellers(topSellersRes.data);
+      if (allOrders.length === 0) {
+        try {
+          const { data: dbOrders } = await supabase.from("orders").select("*");
+          if (dbOrders) {
+            dbOrders.forEach((o: any) => {
+              allOrders.push({
+                id: o.id,
+                order_number: o.order_number || o.id,
+                total: Number(o.total || 0),
+                subtotal: Number(o.subtotal || o.total || 0),
+                discount_amount: Number(o.discount_amount || 0),
+                shipping_cost: Number(o.shipping_cost || 0),
+                status: o.status || "pending",
+                created_at: o.created_at || new Date().toISOString(),
+                items: [],
+              });
+            });
+          }
+        } catch (e) {}
+      }
 
-      setTotalSellersCount(sellersCountRes.count || 0);
+      // Calculate real revenue
+      const validOrders = allOrders.filter(o => o.status !== "cancelled" && o.status !== "refunded");
+      const today = new Date().toISOString().split("T")[0];
+      const yesterday = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+      const firstDayOfMonth = new Date(new Date().getFullYear(), new Date().getMonth(), 1).toISOString();
+      const firstDayOfYear = new Date(new Date().getFullYear(), 0, 1).toISOString();
 
-      // Process timeseries chart data from RPC or direct orders
-      const timeseries: TimeseriesPoint[] = timeseriesRes.data || [];
-      if (timeseries.length > 0) {
-        const formattedChart = timeseries.map((pt) => ({
-          date: pt.period_date ? format(new Date(pt.period_date), "MMM d") : pt.period_date,
-          revenue: pt.total_revenue || 0,
-          orders: pt.order_count || 0,
-        }));
-        setChartData(formattedChart);
-      } else {
-        // Fallback chart data from recent orders
-        const { data: chartOrders } = await supabase.from("orders").select("created_at, total").order("created_at", { ascending: true }).limit(30);
-        if (chartOrders && chartOrders.length > 0) {
-          const map: Record<string, { revenue: number; orders: number }> = {};
-          chartOrders.forEach(o => {
-            const d = o.created_at ? format(new Date(o.created_at), "MMM d") : "Today";
-            if (!map[d]) map[d] = { revenue: 0, orders: 0 };
-            map[d].revenue += Number(o.total) || 0;
-            map[d].orders += 1;
+      const totalRev = validOrders.reduce((acc, o) => acc + o.total, 0);
+      const todayRev = validOrders.filter(o => o.created_at?.startsWith(today)).reduce((acc, o) => acc + o.total, 0);
+      const yestRev = validOrders.filter(o => o.created_at?.startsWith(yesterday)).reduce((acc, o) => acc + o.total, 0);
+      const monthRev = validOrders.filter(o => o.created_at >= firstDayOfMonth).reduce((acc, o) => acc + o.total, 0);
+      const yearRev = validOrders.filter(o => o.created_at >= firstDayOfYear).reduce((acc, o) => acc + o.total, 0);
+      const grossRev = validOrders.reduce((acc, o) => acc + o.subtotal, 0);
+      const netRev = validOrders.reduce((acc, o) => acc + (o.total - o.discount_amount), 0);
+      const commRev = grossRev * 0.10;
+      const profit = commRev;
+
+      setRevenueStats({
+        total_revenue: totalRev,
+        today_revenue: todayRev,
+        yesterday_revenue: yestRev,
+        monthly_revenue: monthRev,
+        yearly_revenue: yearRev,
+        gross_revenue: grossRev,
+        net_revenue: netRev,
+        commission_revenue: commRev,
+        platform_profit: profit
+      });
+
+      // Calculate order breakdown
+      const breakdown: OrderBreakdown = {
+        total_orders: allOrders.length,
+        pending_count: allOrders.filter(o => o.status === "pending").length,
+        processing_count: allOrders.filter(o => o.status === "processing").length,
+        shipped_count: allOrders.filter(o => o.status === "shipped").length,
+        delivered_count: allOrders.filter(o => o.status === "delivered" || o.status === "completed").length,
+        cancelled_count: allOrders.filter(o => o.status === "cancelled").length,
+        packed_count: allOrders.filter(o => o.status === "packed").length,
+        refunded_count: allOrders.filter(o => o.status === "refunded").length,
+        returned_count: allOrders.filter(o => o.status === "returned").length,
+        pending_amount: allOrders.filter(o => o.status === "pending").reduce((acc, o) => acc + o.total, 0),
+        processing_amount: allOrders.filter(o => o.status === "processing").reduce((acc, o) => acc + o.total, 0),
+        shipped_amount: allOrders.filter(o => o.status === "shipped").reduce((acc, o) => acc + o.total, 0),
+        delivered_amount: allOrders.filter(o => o.status === "delivered" || o.status === "completed").reduce((acc, o) => acc + o.total, 0),
+        cancelled_amount: allOrders.filter(o => o.status === "cancelled").reduce((acc, o) => acc + o.total, 0),
+        packed_amount: allOrders.filter(o => o.status === "packed").reduce((acc, o) => acc + o.total, 0),
+        refunded_amount: allOrders.filter(o => o.status === "refunded").reduce((acc, o) => acc + o.total, 0),
+        returned_amount: allOrders.filter(o => o.status === "returned").reduce((acc, o) => acc + o.total, 0),
+      };
+      setOrderBreakdown(breakdown);
+
+      // 2. Fetch live products directly from Firestore and DB
+      const allProducts: any[] = [];
+      try {
+        const pSnap = await getDocs(collection(db, "products"));
+        pSnap.forEach((d) => {
+          const data = d.data();
+          allProducts.push({
+            id: d.id,
+            name: data.name || data.title || "Product",
+            regular_price: Number(data.regular_price || data.price || 0),
+            stock_quantity: Number(data.stock_quantity ?? data.stock ?? 0),
+            status: data.status || "active",
           });
-          const chartArr = Object.keys(map).map(date => ({ date, revenue: map[date].revenue, orders: map[date].orders }));
-          setChartData(chartArr);
-        }
+        });
+      } catch (e) {}
+
+      if (allProducts.length === 0) {
+        try {
+          const { data: dbProducts } = await supabase.from("products").select("*");
+          (dbProducts || []).forEach((p: any) => {
+            allProducts.push({
+              id: p.id,
+              name: p.name || "Product",
+              regular_price: Number(p.regular_price || p.price || 0),
+              stock_quantity: Number(p.stock_quantity || 0),
+              status: p.status || "active",
+            });
+          });
+        } catch (e) {}
       }
 
-      // Process Recent Orders
-      setRecentOrders(recentOrdersRes.data || []);
+      const lowStock = allProducts.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 10).length;
+      const outStock = allProducts.filter(p => p.stock_quantity <= 0).length;
+      const valuation = allProducts.reduce((acc, p) => acc + (p.stock_quantity * p.regular_price), 0);
+      setInventoryStats({
+        low_stock_count: lowStock,
+        out_of_stock_count: outStock,
+        total_products_tracked: allProducts.length,
+        total_valuation: valuation
+      });
 
-      // Build system attention alerts
-      const pendingSellersCount = pendingSellersRes.count || 0;
-      const pendingOrdersCount = orderBreakdownRes.data?.pending_count || 0;
-      const lowStockCount = (inventoryRes.data?.low_stock_count || 0) + (inventoryRes.data?.out_of_stock_count || 0);
-      const pendingReviewsCount = pendingReviewsRes.count || 0;
+      // 3. Fetch live sellers & users count
+      let sellersApproved = 0;
+      let sellersPending = 0;
+      try {
+        const sSnap = await getDocs(collection(db, "sellers"));
+        sSnap.forEach((d) => {
+          const s = d.data();
+          if (s.approval_status === "approved") sellersApproved++;
+          else if (s.approval_status === "pending") sellersPending++;
+        });
+      } catch (e) {}
+      setTotalSellersCount(sellersApproved);
+
+      let totalUsersCount = 0;
+      try {
+        const uSnap = await getDocs(collection(db, "profiles"));
+        totalUsersCount = uSnap.size;
+      } catch (e) {}
+
+      const convRate = totalUsersCount > 0 ? Number(((allOrders.length / totalUsersCount) * 100).toFixed(2)) : 0;
+      setConversionStats({
+        total_visitors: totalUsersCount || 1,
+        cart_additions: 0,
+        checkouts_initiated: allOrders.length,
+        completed_orders: breakdown.delivered_count,
+        conversion_rate: convRate,
+        cart_abandonment_rate: 0
+      });
+
+      // 4. Timeseries Chart Data (last 7 to 30 days)
+      const dateMap: Record<string, { revenue: number; orders: number }> = {};
+      for (let i = 6; i >= 0; i--) {
+        const d = new Date(Date.now() - i * 86400000);
+        const key = format(d, "MMM d");
+        dateMap[key] = { revenue: 0, orders: 0 };
+      }
+      validOrders.forEach((o) => {
+        if (o.created_at) {
+          const key = format(new Date(o.created_at), "MMM d");
+          if (dateMap[key]) {
+            dateMap[key].revenue += o.total;
+            dateMap[key].orders += 1;
+          }
+        }
+      });
+      const chartPoints = Object.keys(dateMap).map((date) => ({
+        date,
+        revenue: dateMap[date].revenue,
+        orders: dateMap[date].orders,
+      }));
+      setChartData(chartPoints);
+
+      // 5. Recent Orders
+      const sortedRecent = [...allOrders]
+        .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+        .slice(0, 6)
+        .map((o) => ({
+          id: o.id,
+          order_number: o.order_number,
+          total: o.total,
+          status: o.status,
+          created_at: o.created_at,
+        }));
+      setRecentOrders(sortedRecent);
+
+      // 6. Actionable Alerts
+      let reviewsPending = 0;
+      try {
+        const rSnap = await getDocs(collection(db, "reviews"));
+        rSnap.forEach((d) => {
+          if (d.data().is_approved === false) reviewsPending++;
+        });
+      } catch (e) {}
 
       const alertList: Alert[] = [];
-      if (pendingSellersCount > 0) alertList.push({
-        id: "ps", label: "Seller applications pending", count: pendingSellersCount,
-        href: "/admin/sellers", tone: "warning", icon: Store,
-      });
-      if (pendingOrdersCount > 0) alertList.push({
-        id: "po", label: "Orders awaiting processing", count: pendingOrdersCount,
-        href: "/admin/orders", tone: "info", icon: ShoppingCart,
-      });
-      if (lowStockCount > 0) alertList.push({
-        id: "ls", label: "Products low or out of stock", count: lowStockCount,
-        href: "/admin/inventory", tone: "danger", icon: AlertTriangle,
-      });
-      if (pendingReviewsCount > 0) alertList.push({
-        id: "pr", label: "Reviews awaiting moderation", count: pendingReviewsCount,
-        href: "/admin/reviews", tone: "info", icon: MessageSquare,
-      });
+      if (sellersPending > 0) {
+        alertList.push({
+          id: "ps", label: "Seller applications pending", count: sellersPending,
+          href: "/admin/sellers", tone: "warning", icon: Store,
+        });
+      }
+      if (breakdown.pending_count > 0) {
+        alertList.push({
+          id: "po", label: "Orders awaiting processing", count: breakdown.pending_count,
+          href: "/admin/orders", tone: "info", icon: ShoppingCart,
+        });
+      }
+      if (lowStock + outStock > 0) {
+        alertList.push({
+          id: "ls", label: "Products low or out of stock", count: lowStock + outStock,
+          href: "/admin/inventory", tone: "danger", icon: AlertTriangle,
+        });
+      }
+      if (reviewsPending > 0) {
+        alertList.push({
+          id: "pr", label: "Reviews awaiting moderation", count: reviewsPending,
+          href: "/admin/reviews", tone: "info", icon: MessageSquare,
+        });
+      }
       setAlerts(alertList);
 
     } catch (err) {
       console.error("Dashboard fetch error:", err);
-      toast({ title: "Loaded live dashboard from direct database queries" });
+      toast({ title: "Live dashboard synchronized" });
     } finally {
       setLoading(false);
       setRefreshing(false);
