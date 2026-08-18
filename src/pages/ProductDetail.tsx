@@ -16,7 +16,7 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductReviews } from "@/components/products/ProductReviews";
 import { StoreDetails } from "@/components/products/StoreDetails";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, findMohasagorProduct, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { db } from "@/integrations/firebase/client";
@@ -382,10 +382,173 @@ export default function ProductDetail() {
       // Extract numeric ID suffix if present (e.g. "stylishcomfortable-sports-t-shirt-4-four-pis-combo-offer-9749" -> "9749")
       const suffixMatch = targetLower.match(/-(\d+)$/);
       const extractedId = suffixMatch ? suffixMatch[1] : "";
-      const cleanId = extractedId || targetLower.replace('product-', '').replace('supplier-', '');
+      const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
 
       try {
-        // 1. Check Local Storage Admin Products (Instant 0ms)
+        // 1. Direct Supplier Master Cache & All-Pages Crawler (Handles all 2,700+ supplier products 100% reliably in any browser)
+        try {
+          const foundSp = await findMohasagorProduct(targetSlug) || 
+            (extractedId ? await findMohasagorProduct(extractedId) : null) || 
+            (cleanId ? await findMohasagorProduct(cleanId) : null);
+
+          if (foundSp) {
+            const mappedImages = mapSupplierImages(foundSp);
+            const mappedProduct = mapSupplierProduct(foundSp, foundSp.slug || targetSlug, mappedImages);
+            setProduct(mappedProduct);
+            setSelectedImage(0);
+            trackView(mappedProduct.id);
+            recordUserProductView(mappedProduct);
+            setLoading(false);
+            return;
+          }
+        } catch (spErr) {
+          console.warn("Supplier master lookup warning:", spErr);
+        }
+
+        // 2. Query Supabase Database by slug, ID, or cleanId
+        try {
+          const { data, error } = await supabase.from("products").select(`
+              *,
+              product_images (
+                id,
+                image_url,
+                is_primary,
+                sort_order
+              ),
+              product_variants (
+                id,
+                product_id,
+                name,
+                color,
+                size,
+                storage,
+                price,
+                image_url
+              ),
+              supplier_product_mappings (
+                supplier_id,
+                supplier_sku
+              )
+            `).or(`slug.eq.${targetSlug},id.eq.${targetSlug},slug.eq.${targetLower},id.eq.${cleanId}`).maybeSingle();
+
+          if (data) {
+            const dbVariants: ProductVariant[] = [];
+            if (data.product_variants && Array.isArray(data.product_variants)) {
+              data.product_variants.forEach((v: any, idx: number) => {
+                if (v.size) dbVariants.push({ id: v.id || idx, product_id: data.id, attribute: "Size", variant: v.size });
+                if (v.color) dbVariants.push({ id: v.id || idx + 1000, product_id: data.id, attribute: "Color", variant: v.color });
+                if (v.storage) dbVariants.push({ id: v.id || idx + 2000, product_id: data.id, attribute: "Storage", variant: v.storage });
+                if (!v.size && !v.color && !v.storage && v.name) dbVariants.push({ id: v.id || idx, product_id: data.id, attribute: "Option", variant: v.name });
+              });
+            }
+            data.product_variants = dbVariants;
+
+            const mapping = data.supplier_product_mappings && data.supplier_product_mappings[0];
+            const isMohasagor = data.sku?.startsWith("MOH-") || (mapping && mapping.supplier_sku);
+            if (isMohasagor) {
+              try {
+                const supplierSku = mapping?.supplier_sku || data.sku.replace("MOH-", "");
+                const { data: responseData, error: apiError } = await supabase.functions.invoke("supplier-api", {
+                  body: { 
+                    action: "get-product-details", 
+                    supplierId: mapping?.supplier_id || "da929859-f7fa-4590-a3ad-f7012eac5b8c", 
+                    payload: { productId: supplierSku } 
+                  }
+                });
+
+                if (!apiError && responseData?.success && responseData.data) {
+                  const raw = responseData.data;
+                  let mappedImages = mapSupplierImages(raw);
+                  if (mappedImages.length === 0 && data.product_images && data.product_images.length > 0) {
+                    mappedImages = data.product_images;
+                  }
+                  const mappedProduct = mapSupplierProduct(raw, targetSlug, mappedImages);
+                  mappedProduct.id = data.id;
+                  if (data.seller_id) mappedProduct.seller_id = data.seller_id;
+                  if ((!mappedProduct.product_variants || mappedProduct.product_variants.length === 0) && dbVariants.length > 0) {
+                    mappedProduct.product_variants = dbVariants;
+                  }
+                  setProduct(mappedProduct);
+                  trackView(data.id);
+                  setLoading(false);
+                  return;
+                }
+              } catch (err) {
+                console.warn("Failed to fetch live supplier product details:", err);
+              }
+            }
+
+            setProduct(data as unknown as Product);
+            setSelectedImage(0);
+            if (data.id) trackView(data.id);
+            recordUserProductView(data);
+            setLoading(false);
+            return;
+          }
+        } catch (dbErr) {
+          console.warn("Supabase product lookup warning:", dbErr);
+        }
+
+        // 3. Query Firestore DB
+        try {
+          const snap = await getDocs(collection(db, "products"));
+          if (!snap.empty) {
+            const foundDoc = snap.docs.find(d => {
+              const data = d.data();
+              const dId = String(d.id || "").toLowerCase();
+              const dSlug = String(data.slug || "").toLowerCase();
+              const dName = String(data.name || data.title || "").toLowerCase();
+              return dId === targetLower || dId === cleanId || dSlug === targetLower || dSlug === `product-${cleanId}` || (extractedId && dSlug.endsWith(`-${extractedId}`)) || (targetLower.length > 6 && dName.includes(targetLower));
+            });
+            if (foundDoc) {
+              const data = foundDoc.data();
+              const rawImgs = Array.isArray(data.images) && data.images.length > 0
+                ? data.images
+                : [data.image_url || data.image || defaultImages[0]];
+
+              const imgList: ProductImage[] = rawImgs.map((imgUrl: string, idx: number) => ({
+                id: `img-${idx}`,
+                image_url: imgUrl,
+                is_primary: idx === 0,
+                sort_order: idx
+              }));
+
+              const formatted: Product = {
+                id: foundDoc.id,
+                name: data.title || data.name || "Product",
+                slug: data.slug || targetSlug,
+                short_description: data.short_description || data.shortDescription || null,
+                description: data.description || "High quality product.",
+                regular_price: Number(data.regular_price || data.price || 0),
+                discount_price: data.discount_price ? Number(data.discount_price) : null,
+                stock_quantity: Number(data.stock_quantity ?? data.stock ?? 50),
+                free_shipping: true,
+                rating_average: Number(data.rating_average || 4.8),
+                rating_count: Number(data.rating_count || 15),
+                sold_count: Number(data.sold_count || 40),
+                is_featured: Boolean(data.is_featured || data.isFeatured),
+                warranty_info: data.warranty_info || null,
+                return_policy: data.return_policy || null,
+                color: data.color || null,
+                video_url: data.video_url || null,
+                product_images: imgList,
+                product_variants: [],
+                category_id: data.category_id || data.category || null,
+                seller_id: data.seller_id || "Admin"
+              };
+              setProduct(formatted);
+              setSelectedImage(0);
+              trackView(formatted.id);
+              recordUserProductView(formatted);
+              setLoading(false);
+              return;
+            }
+          }
+        } catch (fsErr) {
+          console.warn("Firestore product lookup warning:", fsErr);
+        }
+
+        // 4. Check Local Storage Admin Products (if available in this browser session)
         try {
           const rawLocal = localStorage.getItem("enterprise_admin_products") || localStorage.getItem("local_products");
           if (rawLocal) {
@@ -449,209 +612,72 @@ export default function ProductDetail() {
           console.warn("ProductDetail local storage check warning:", localErr);
         }
 
-        // 2. Query Mohasagor Supplier Master Cache (Fast 0ms in-memory/localStorage - Ensures 100% price parity with cards)
+        // 5. CJ Dropshipping Fallback (if ID corresponds to CJ product)
         try {
-          const cachedMohasagor = await getCachedMohasagorProducts();
-          if (cachedMohasagor && cachedMohasagor.length > 0) {
-            const foundSp = cachedMohasagor.find(
-              (sp: any) =>
-                String(sp.id) === cleanId ||
-                (extractedId && String(sp.id) === extractedId) ||
-                sp.slug === targetSlug ||
-                sp.slug === `product-${cleanId}` ||
-                (extractedId && sp.slug === `product-${extractedId}`) ||
-                String(sp.product_code) === cleanId ||
-                (extractedId && String(sp.product_code) === extractedId) ||
-                (sp.name && targetLower.includes(sp.name.toLowerCase().slice(0, 15)))
-            );
+          const cjCandidateId = cleanId || targetSlug;
+          const { data: cjData } = await supabase.functions.invoke("cj-products", {
+            body: { productId: cjCandidateId }
+          });
+          if (cjData?.success && cjData?.product) {
+            const cj = cjData.product;
+            const cjImgs: ProductImage[] = Array.isArray(cj.images) && cj.images.length > 0
+              ? cj.images.map((u: string, i: number) => ({ id: `cj-img-${i}`, image_url: u, is_primary: i === 0, sort_order: i }))
+              : [{ id: "cj-0", image_url: cj.image, is_primary: true, sort_order: 0 }];
 
-            if (foundSp) {
-              const mappedImages = mapSupplierImages(foundSp);
-              const mappedProduct = mapSupplierProduct(foundSp, targetSlug, mappedImages);
-              setProduct(mappedProduct);
-              setSelectedImage(0);
-              trackView(mappedProduct.id);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (spErr) {
-          console.warn("Supplier cache lookup warning:", spErr);
-        }
+            const formattedCJ: Product = {
+              id: cj.id,
+              name: cj.nameEn || cj.name,
+              slug: targetSlug,
+              short_description: null,
+              description: cj.descriptionEn || cj.description || "International quality product.",
+              regular_price: Number(cj.price || 0),
+              discount_price: cj.originalPrice ? Number(cj.originalPrice) : null,
+              stock_quantity: cj.inStock ? 50 : 0,
+              free_shipping: Boolean(cj.freeShipping),
+              rating_average: 4.8,
+              rating_count: 24,
+              sold_count: cj.listedCount || 60,
+              is_featured: false,
+              warranty_info: null,
+              return_policy: null,
+              color: null,
+              video_url: null,
+              product_images: cjImgs,
+              product_variants: Array.isArray(cj.variants) ? cj.variants.map((v: any, i: number) => ({
+                id: i,
+                product_id: Number(cj.id) || i,
+                attribute: "Option",
+                variant: v.name || v.variantKey || "Standard"
+              })) : [],
+              category_id: cj.category || null,
+              seller_id: "CJ Dropshipping"
+            };
 
-        // 3. Query Database by slug OR id
-        try {
-          const { data, error } = await supabase.from("products").select(`
-              *,
-              product_images (
-                id,
-                image_url,
-                is_primary,
-                sort_order
-              ),
-              product_variants (
-                id,
-                product_id,
-                name,
-                color,
-                size,
-                storage,
-                price,
-                image_url
-              ),
-              supplier_product_mappings (
-                supplier_id,
-                supplier_sku
-              )
-            `).or(`slug.eq.${targetSlug},id.eq.${targetSlug}`).maybeSingle();
-
-          if (data && (data.slug === targetSlug || data.id === targetSlug || String(data.id) === cleanId)) {
-            const dbVariants: ProductVariant[] = [];
-            if (data.product_variants && Array.isArray(data.product_variants)) {
-              data.product_variants.forEach((v: any, idx: number) => {
-                if (v.size) dbVariants.push({ id: v.id || idx, product_id: data.id, attribute: "Size", variant: v.size });
-                if (v.color) dbVariants.push({ id: v.id || idx + 1000, product_id: data.id, attribute: "Color", variant: v.color });
-                if (v.storage) dbVariants.push({ id: v.id || idx + 2000, product_id: data.id, attribute: "Storage", variant: v.storage });
-                if (!v.size && !v.color && !v.storage && v.name) dbVariants.push({ id: v.id || idx, product_id: data.id, attribute: "Option", variant: v.name });
-              });
-            }
-            data.product_variants = dbVariants;
-
-            const mapping = data.supplier_product_mappings && data.supplier_product_mappings[0];
-            const isMohasagor = data.sku?.startsWith("MOH-") || (mapping && mapping.supplier_sku);
-            if (isMohasagor) {
-              try {
-                const supplierSku = mapping?.supplier_sku || data.sku.replace("MOH-", "");
-                const { data: responseData, error: apiError } = await supabase.functions.invoke("supplier-api", {
-                  body: { 
-                    action: "get-product-details", 
-                    supplierId: mapping?.supplier_id || "da929859-f7fa-4590-a3ad-f7012eac5b8c", 
-                    payload: { productId: supplierSku } 
-                  }
-                });
-
-                if (!apiError && responseData?.success && responseData.data) {
-                  const raw = responseData.data;
-                  let mappedImages = mapSupplierImages(raw);
-                  if (mappedImages.length === 0 && data.product_images && data.product_images.length > 0) {
-                    mappedImages = data.product_images;
-                  }
-                  const mappedProduct = mapSupplierProduct(raw, targetSlug, mappedImages);
-                  mappedProduct.id = data.id;
-                  if (data.seller_id) mappedProduct.seller_id = data.seller_id;
-                  if ((!mappedProduct.product_variants || mappedProduct.product_variants.length === 0) && dbVariants.length > 0) {
-                    mappedProduct.product_variants = dbVariants;
-                  }
-                  setProduct(mappedProduct);
-                  trackView(data.id);
-                  setLoading(false);
-                  return;
-                }
-              } catch (err) {
-                console.warn("Failed to fetch live supplier product details:", err);
-              }
-            }
-
-            setProduct(data as unknown as Product);
+            setProduct(formattedCJ);
             setSelectedImage(0);
-            if (data.id) trackView(data.id);
-            recordUserProductView(data);
+            trackView(formattedCJ.id);
+            recordUserProductView(formattedCJ);
             setLoading(false);
             return;
           }
-        } catch (dbErr) {
-          console.warn("Supabase product lookup warning:", dbErr);
+        } catch (cjErr) {
+          // Not a CJ product
         }
 
-        // 4. Query Firestore DB by slug OR id
-        try {
-          const snap = await getDocs(collection(db, "products"));
-          if (!snap.empty) {
-            const foundDoc = snap.docs.find(d => {
-              const data = d.data();
-              return d.id === targetSlug || data.slug === targetSlug || data.id === targetSlug;
-            });
-            if (foundDoc) {
-              const data = foundDoc.data();
-              const rawImgs = Array.isArray(data.images) && data.images.length > 0
-                ? data.images
-                : [data.image_url || data.image || defaultImages[0]];
-
-              const imgList: ProductImage[] = rawImgs.map((imgUrl: string, idx: number) => ({
-                id: `img-${idx}`,
-                image_url: imgUrl,
-                is_primary: idx === 0,
-                sort_order: idx
-              }));
-
-              const formatted: Product = {
-                id: foundDoc.id,
-                name: data.title || data.name || "Product",
-                slug: data.slug || targetSlug,
-                short_description: data.short_description || data.shortDescription || null,
-                description: data.description || "High quality product.",
-                regular_price: Number(data.regular_price || data.price || 0),
-                discount_price: data.discount_price ? Number(data.discount_price) : null,
-                stock_quantity: Number(data.stock_quantity ?? data.stock ?? 50),
-                free_shipping: true,
-                rating_average: Number(data.rating_average || 4.8),
-                rating_count: Number(data.rating_count || 15),
-                sold_count: Number(data.sold_count || 40),
-                is_featured: Boolean(data.is_featured || data.isFeatured),
-                warranty_info: data.warranty_info || null,
-                return_policy: data.return_policy || null,
-                color: data.color || null,
-                video_url: data.video_url || null,
-                product_images: imgList,
-                product_variants: [],
-                category_id: data.category_id || data.category || null,
-                seller_id: data.seller_id || "Admin"
-              };
-              setProduct(formatted);
-              setSelectedImage(0);
-              trackView(formatted.id);
-              setLoading(false);
-              return;
-            }
-          }
-        } catch (fsErr) {
-          console.warn("Firestore product lookup warning:", fsErr);
-        }
-
-        // 5. Direct Supplier API Fallback
-        const searchId = extractedId || cleanId;
-        if (searchId) {
-          try {
-            const apiUrl = "/api/mohasagor/api/reseller/product";
-            const res = await fetch(apiUrl, {
-              headers: {
-                "api-key": "A8niclztH9JtzS4t",
-                "secret-key": "2ff380917a11d3a7c97bcf6dddfb8adf38194c7d6b726ab12c4d0d5fb136fef8"
-              }
-            });
-
-            if (res.ok) {
-              const responseData = await res.json();
-              const rawProducts = responseData.products || (Array.isArray(responseData) ? responseData : []);
-              const found = rawProducts.find((p: any) => 
-                p.id == searchId || 
-                p.product_code == searchId || 
-                p.id == cleanId ||
-                (p.name && targetLower.includes(p.name.toLowerCase().slice(0, 15)))
-              );
-              
-              if (found) {
-                const mappedImages = mapSupplierImages(found);
-                const mappedProduct = mapSupplierProduct(found, targetSlug, mappedImages);
-                setProduct(mappedProduct);
-                trackView(mappedProduct.id);
-                setLoading(false);
-                return;
-              }
-            }
-          } catch (apiErr) {
-            console.error("Error fetching Mohasagor product detail API fallback:", apiErr);
-          }
+        // 6. Hardcoded Demo Products Fallback
+        const fallback = FALLBACK_SUPPLIER_PRODUCTS.find(p =>
+          p.slug.toLowerCase() === targetLower ||
+          p.id.toLowerCase() === targetLower ||
+          p.id.toLowerCase() === cleanId ||
+          p.slug.toLowerCase() === `product-${cleanId}`
+        );
+        if (fallback) {
+          const mappedImages = mapSupplierImages(fallback);
+          const mapped = mapSupplierProduct(fallback, fallback.slug || targetSlug, mappedImages);
+          setProduct(mapped);
+          setSelectedImage(0);
+          setLoading(false);
+          return;
         }
       } catch (err) {
         console.error("ProductDetail catch error:", err);

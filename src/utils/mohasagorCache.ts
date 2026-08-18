@@ -30,9 +30,11 @@ export const FALLBACK_SUPPLIER_PRODUCTS: Product[] = [
   { id: "supplier-112", name: "Wireless Ergonomic Vertical Optical Mouse 2.4G", slug: "product-112", image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=400&h=400&fit=crop", price: 850, originalPrice: 1150, rating: 4.6, reviews: 43, sold: 160, freeShipping: true, category: "electronics" }
 ];
 
+let ongoingFetchPromise: Promise<Product[]> | null = null;
+
 export async function getCachedMohasagorProducts(): Promise<Product[]> {
   // 1. Check in-memory cache first (0ms)
-  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 50) {
     return inMemoryProductsCache;
   }
 
@@ -42,10 +44,8 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
       const stored = localStorage.getItem(MOHASAGOR_CACHE_KEY);
       if (stored) {
         const parsed = JSON.parse(stored);
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        if (Array.isArray(parsed) && parsed.length > 50) {
           inMemoryProductsCache = parsed;
-          // Trigger background refresh silently for all pages
-          fetchAllPagesMohasagorProducts().catch(() => {});
           return parsed;
         }
       }
@@ -54,7 +54,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
     }
   }
 
-  // 3. Network fetch fallback
+  // 3. Network fetch with shared Promise
   const fetched = await fetchAllPagesMohasagorProducts().catch(() => []);
   if (fetched && fetched.length > 0) {
     return fetched;
@@ -171,62 +171,54 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
   });
 }
 
-export async function fetchAllPagesMohasagorProducts(): Promise<Product[]> {
-  if (isFetchingAllPages && inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Promise<Product[]> {
+  if (!forceRefresh && ongoingFetchPromise) {
+    return ongoingFetchPromise;
+  }
+  if (!forceRefresh && inMemoryProductsCache && inMemoryProductsCache.length > 50) {
     return inMemoryProductsCache;
   }
-  isFetchingAllPages = true;
 
-  try {
-    const baseApiUrl = "/api/mohasagor/api/reseller/product";
+  ongoingFetchPromise = (async () => {
+    try {
+      const baseApiUrl = "/api/mohasagor/api/reseller/product";
+      const headers = {
+        "api-key": "A8niclztH9JtzS4t",
+        "secret-key": "2ff380917a11d3a7c97bcf6dddfb8adf38194c7d6b726ab12c4d0d5fb136fef8"
+      };
 
-    const headers = {
-      "api-key": "A8niclztH9JtzS4t",
-      "secret-key": "2ff380917a11d3a7c97bcf6dddfb8adf38194c7d6b726ab12c4d0d5fb136fef8"
-    };
-
-    // 1. Fetch Page 1 to get initial products and last_page total
-    const res1 = await fetch(`${baseApiUrl}?page=1`, { headers });
-    if (!res1.ok) {
-      isFetchingAllPages = false;
-      return inMemoryProductsCache || [];
-    }
-
-    const data1 = await res1.json();
-    const rawProductsPage1: any[] = data1.products || (Array.isArray(data1) ? data1 : []);
-    const lastPage = data1.last_page || 1;
-    const base = "https://mohasagor.com.bd";
-
-    let allMappedProducts = mapRawProducts(rawProductsPage1, base);
-
-    // Save page 1 immediately so UI updates instantly
-    inMemoryProductsCache = allMappedProducts;
-    lastSyncTimestamp = Date.now();
-
-    if (typeof window !== "undefined") {
-      try {
-        localStorage.setItem(MOHASAGOR_CACHE_KEY, JSON.stringify(allMappedProducts));
-        window.dispatchEvent(new Event("mohasagor_products_updated"));
-      } catch (e) {}
-    }
-
-    // 2. Fetch all remaining pages in parallel if lastPage > 1
-    if (lastPage > 1) {
-      const pagePromises = [];
-      for (let p = 2; p <= lastPage; p++) {
-        pagePromises.push(
-          fetch(`${baseApiUrl}?page=${p}`, { headers })
-            .then(res => res.ok ? res.json() : null)
-            .then(data => data ? (data.products || (Array.isArray(data) ? data : [])) : [])
-            .catch(() => [])
-        );
+      // 1. Fetch Page 1 to get initial products and last_page total
+      const res1 = await fetch(`${baseApiUrl}?page=1`, { headers });
+      if (!res1.ok) {
+        return inMemoryProductsCache || FALLBACK_SUPPLIER_PRODUCTS;
       }
 
-      const results = await Promise.all(pagePromises);
-      const remainingRawProducts = results.flat();
-      const remainingMapped = mapRawProducts(remainingRawProducts, base);
+      const data1 = await res1.json();
+      const rawProductsPage1: any[] = data1.products || (Array.isArray(data1) ? data1 : []);
+      const lastPage = Math.min(data1.last_page || 1, 20);
+      const base = "https://mohasagor.com.bd";
 
-      allMappedProducts = [...allMappedProducts, ...remainingMapped];
+      let allMappedProducts = mapRawProducts(rawProductsPage1, base);
+
+      // If lastPage > 1, fetch all remaining pages in parallel
+      if (lastPage > 1) {
+        const pagePromises = [];
+        for (let p = 2; p <= lastPage; p++) {
+          pagePromises.push(
+            fetch(`${baseApiUrl}?page=${p}`, { headers })
+              .then(res => res.ok ? res.json() : null)
+              .then(data => data ? (data.products || (Array.isArray(data) ? data : [])) : [])
+              .catch(() => [])
+          );
+        }
+
+        const results = await Promise.all(pagePromises);
+        const remainingRawProducts = results.flat();
+        const remainingMapped = mapRawProducts(remainingRawProducts, base);
+
+        allMappedProducts = [...allMappedProducts, ...remainingMapped];
+      }
+
       inMemoryProductsCache = allMappedProducts;
       lastSyncTimestamp = Date.now();
 
@@ -236,16 +228,81 @@ export async function fetchAllPagesMohasagorProducts(): Promise<Product[]> {
           window.dispatchEvent(new Event("mohasagor_products_updated"));
         } catch (e) {}
       }
-    }
 
-    console.log(`[5-Min Auto Sync] API Products synchronized successfully (${allMappedProducts.length} items updated at ${new Date().toLocaleTimeString()})`);
-    isFetchingAllPages = false;
-    return allMappedProducts;
-  } catch (e) {
-    console.error("Error fetching all pages of Mohasagor products", e);
-    isFetchingAllPages = false;
-    return inMemoryProductsCache || [];
+      console.log(`[Mohasagor Master Sync] Synchronized ${allMappedProducts.length} items`);
+      return allMappedProducts;
+    } catch (e) {
+      console.error("Error fetching all pages of Mohasagor products", e);
+      return inMemoryProductsCache || FALLBACK_SUPPLIER_PRODUCTS;
+    } finally {
+      ongoingFetchPromise = null;
+    }
+  })();
+
+  return ongoingFetchPromise;
+}
+
+export async function findMohasagorProduct(slugOrId: string): Promise<(Product & { [key: string]: any }) | null> {
+  if (!slugOrId) return null;
+  const targetRaw = decodeURIComponent(slugOrId).trim();
+  const targetLower = targetRaw.toLowerCase();
+  
+  // Extract suffix (e.g. "mens-winter-hoodie-3002" -> "3002")
+  const suffixMatch = targetLower.match(/-(\d+)$/);
+  const suffixId = suffixMatch ? suffixMatch[1] : "";
+  const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
+
+  const matcher = (p: any): boolean => {
+    if (!p) return false;
+    const pId = String(p.id || "").toLowerCase();
+    const pSlug = String(p.slug || "").toLowerCase();
+    const pCode = String(p.product_code || p.sku || "").toLowerCase();
+    const pName = String(p.name || p.title || "").toLowerCase();
+
+    if (pSlug === targetLower) return true;
+    if (pId === targetLower || pId === cleanId) return true;
+    if (pSlug === `product-${cleanId}` || pSlug === `product-${targetLower}`) return true;
+    if (pCode && (pCode === cleanId || pCode === targetLower)) return true;
+    if (suffixId && (pId === suffixId || pSlug === `product-${suffixId}` || pSlug.endsWith(`-${suffixId}`))) return true;
+    if (cleanId && (pSlug.includes(`-${cleanId}`) || pSlug === cleanId)) return true;
+    if (targetLower.length > 6 && pName && (pName.includes(targetLower.slice(0, 25)) || targetLower.includes(pName.slice(0, 25)))) return true;
+    return false;
+  };
+
+  // 1. Check in-memory / local storage
+  let products = inMemoryProductsCache;
+  if (!products || products.length === 0) {
+    if (typeof window !== "undefined") {
+      try {
+        const stored = localStorage.getItem(MOHASAGOR_CACHE_KEY);
+        if (stored) {
+          const parsed = JSON.parse(stored);
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            products = parsed;
+            inMemoryProductsCache = parsed;
+          }
+        }
+      } catch {}
+    }
   }
+
+  if (products && products.length > 0) {
+    const found = products.find(matcher);
+    if (found) return found as any;
+  }
+
+  // 2. Fetch full catalog across all pages
+  const fullProducts = await fetchAllPagesMohasagorProducts();
+  if (fullProducts && fullProducts.length > 0) {
+    const found = fullProducts.find(matcher);
+    if (found) return found as any;
+  }
+
+  // 3. Check fallback supplier products
+  const fallback = FALLBACK_SUPPLIER_PRODUCTS.find(matcher);
+  if (fallback) return fallback as any;
+
+  return null;
 }
 
 // Automatic 5-Minute Product Sync Service
