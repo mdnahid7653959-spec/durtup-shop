@@ -341,22 +341,10 @@ export default function CJProducts() {
                     ) : (
                       <>
                         Load More Products
-                        {pagination && (
-                          <span className="ml-2 text-muted-foreground">
-                            ({products.length} of {pagination.total})
-                          </span>
-                        )}
                       </>
                     )}
                   </Button>
                 </div>
-              )}
-
-              {/* All loaded message */}
-              {pagination && !hasMore && products.length > 0 && (
-                <p className="text-center text-sm text-muted-foreground mt-8">
-                  Showing all {products.length} products
-                </p>
               )}
             </>
           ) : (

@@ -215,17 +215,9 @@ export function CJTrendingProducts() {
                     Loading...
                   </> : <>
                     Load More Products
-                    {pagination && <span className="ml-2 text-muted-foreground">
-                        ({products.length} of {pagination.total})
-                      </span>}
                   </>}
               </Button>
             </div>}
-
-          {/* Show count info */}
-          {pagination && !hasMore && products.length > 0 && <p className="text-center text-sm text-muted-foreground mt-4">
-              Showing all {products.length} products
-            </p>}
         </div>
       </div>
     </section>;

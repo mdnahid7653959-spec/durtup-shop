@@ -239,17 +239,6 @@ export default function CategoryPage() {
             {category?.description && (
               <p className="text-sm text-muted-foreground line-clamp-2">{category.description}</p>
             )}
-            <div className="flex items-center gap-2 mt-2">
-              <Badge variant="secondary" className="text-xs">
-                {totalCount} Products
-              </Badge>
-              {cjProducts.length > 0 && (
-                <Badge variant="outline" className="flex items-center gap-1 text-xs">
-                  <Globe className="h-3 w-3" />
-                  {cjProducts.length} International
-                </Badge>
-              )}
-            </div>
           </div>
 
           {totalCount > 0 ? (

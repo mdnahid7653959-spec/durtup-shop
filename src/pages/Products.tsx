@@ -336,9 +336,6 @@ export default function Products() {
                   <h1 className="text-xl sm:text-2xl font-bold text-foreground min-w-0 truncate">
                     {pageHeading}
                   </h1>
-                  <p className="text-xs text-muted-foreground mt-0.5">
-                    Showing <span className="font-semibold text-foreground">{totalCount}</span> products found
-                  </p>
                 </div>
                 
                 <Button variant="outline" className="lg:hidden" onClick={() => setShowFilters(!showFilters)}>
@@ -405,7 +402,7 @@ export default function Products() {
                     <div className="flex items-center gap-4 mb-4">
                       <Badge variant="secondary" className="flex items-center gap-1">
                         <Globe className="h-3 w-3" />
-                        {cjProducts.length} International
+                        International Products
                       </Badge>
                     </div>
                   )}
