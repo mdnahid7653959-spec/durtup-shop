@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 import { 
   Eye, 
   MoreHorizontal, 
@@ -93,6 +94,9 @@ interface Order {
   tracking_number?: string | null;
   created_at: string;
   updated_at: string | null;
+  customer_name?: string;
+  customer_phone?: string;
+  customer_email?: string;
 }
 
 interface OrderItem {
@@ -141,7 +145,9 @@ const paymentStatusColors: Record<string, string> = {
 };
 
 export default function AdminOrders() {
+  const navigate = useNavigate();
   const [orders, setOrders] = useState<Order[]>([]);
+  const [profilesMap, setProfilesMap] = useState<Record<string, any>>({});
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -172,6 +178,31 @@ export default function AdminOrders() {
   const fetchOrders = async () => {
     setLoading(true);
     
+    // Fetch all profiles to map users to orders
+    try {
+      const pSnap = await getDocs(collection(db, "profiles"));
+      const pMap: Record<string, any> = {};
+      pSnap.forEach((docSnap) => {
+        const data = docSnap.data();
+        const uId = docSnap.id || data.id || data.user_id;
+        const prof = {
+          id: uId,
+          user_id: data.user_id || uId,
+          full_name: data.full_name || data.name || "Customer",
+          email: data.email || null,
+          phone: data.phone || null,
+          avatar_url: data.avatar_url || data.photoURL || null,
+          role: data.role || "customer",
+        };
+        if (uId) pMap[uId] = prof;
+        if (data.email) pMap[data.email.toLowerCase()] = prof;
+        if (data.phone) pMap[data.phone] = prof;
+      });
+      setProfilesMap(pMap);
+    } catch (e) {
+      console.warn("Profiles map fetch error:", e);
+    }
+
     // Direct DB query first
     try {
       const { data: dbOrders, error: dbErr } = await supabase
@@ -805,6 +836,68 @@ export default function AdminOrders() {
     return phone ? `${addressText}\n📞 ${phone}` : addressText;
   };
 
+  const resolveCustomer = (order: Order) => {
+    // 1. Try match by user_id
+    if (order.user_id && profilesMap[order.user_id]) {
+      const p = profilesMap[order.user_id];
+      return {
+        id: p.id || order.user_id,
+        user_id: p.user_id || order.user_id,
+        name: p.full_name || order.shipping_address?.name || order.customer_name || "Customer",
+        phone: p.phone || order.shipping_address?.phone || order.customer_phone || null,
+        email: p.email || order.shipping_address?.email || order.customer_email || null,
+        avatar_url: p.avatar_url || null,
+        role: p.role || "customer",
+        isRegistered: true,
+      };
+    }
+
+    // 2. Try match by email
+    const email = order.shipping_address?.email || order.customer_email;
+    if (email && profilesMap[email.toLowerCase()]) {
+      const p = profilesMap[email.toLowerCase()];
+      return {
+        id: p.id || order.user_id || "guest",
+        user_id: p.user_id || order.user_id || "guest",
+        name: p.full_name || order.shipping_address?.name || order.customer_name || "Customer",
+        phone: p.phone || order.shipping_address?.phone || order.customer_phone || null,
+        email: p.email || email,
+        avatar_url: p.avatar_url || null,
+        role: p.role || "customer",
+        isRegistered: true,
+      };
+    }
+
+    // 3. Try match by phone
+    const phone = order.shipping_address?.phone || order.customer_phone;
+    if (phone && profilesMap[phone]) {
+      const p = profilesMap[phone];
+      return {
+        id: p.id || order.user_id || "guest",
+        user_id: p.user_id || order.user_id || "guest",
+        name: p.full_name || order.shipping_address?.name || order.customer_name || "Customer",
+        phone: p.phone || phone,
+        email: p.email || email || null,
+        avatar_url: p.avatar_url || null,
+        role: p.role || "customer",
+        isRegistered: true,
+      };
+    }
+
+    // 4. Default from shipping address / order details
+    const name = order.shipping_address?.full_name || order.shipping_address?.name || order.customer_name || "Customer";
+    return {
+      id: order.user_id || "guest",
+      user_id: order.user_id || "guest",
+      name: name,
+      phone: phone || null,
+      email: email || null,
+      avatar_url: null,
+      role: order.user_id && order.user_id !== "guest" ? "customer" : "guest",
+      isRegistered: !!(order.user_id && order.user_id !== "guest"),
+    };
+  };
+
   return (
     <AdminLayout title="Orders">
       <div className="space-y-6">
@@ -877,7 +970,7 @@ export default function AdminOrders() {
         <div className="flex flex-col sm:flex-row gap-4">
           <div className="relative flex-1 max-w-sm">
             <Input
-              placeholder="Search order # or tracking #..."
+              placeholder="Search order #, customer, or tracking #..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
             />
@@ -904,17 +997,18 @@ export default function AdminOrders() {
             <TableHeader>
               <TableRow>
                 <TableHead>Order</TableHead>
+                <TableHead>Customer</TableHead>
                 <TableHead>Date</TableHead>
                 <TableHead>Status Transition</TableHead>
                 <TableHead>Payment</TableHead>
                 <TableHead>Total</TableHead>
-                <TableHead className="w-[70px]"></TableHead>
+                <TableHead className="w-[70px] text-right"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8">
+                  <TableCell colSpan={7} className="text-center py-8">
                     <div className="flex items-center justify-center gap-2">
                       <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent" />
                       Loading orders...
@@ -923,117 +1017,175 @@ export default function AdminOrders() {
                 </TableRow>
               ) : filteredOrders.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={7} className="text-center py-8 text-muted-foreground">
                     No orders found
                   </TableCell>
                 </TableRow>
               ) : (
-                filteredOrders.map((order) => (
-                  <TableRow key={order.id}>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium font-mono">#{order.order_number}</p>
-                        <p className="text-xs text-muted-foreground capitalize">
-                          {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method || 'COD'}
-                        </p>
-                        {order.tracking_number && (
-                          <p className="text-[11px] text-purple-600 font-mono flex items-center gap-1 mt-0.5">
-                            <Truck className="h-3 w-3" />
-                            {order.tracking_number}
+                filteredOrders.map((order) => {
+                  const cust = resolveCustomer(order);
+                  const searchTarget = cust.phone || cust.email || (cust.user_id && cust.user_id !== "guest" ? cust.user_id : "") || cust.name;
+                  return (
+                    <TableRow key={order.id} className="hover:bg-muted/40 transition-colors">
+                      <TableCell>
+                        <div>
+                          <p className="font-medium font-mono text-foreground">#{order.order_number}</p>
+                          <p className="text-xs text-muted-foreground capitalize">
+                            {order.payment_method === 'cod' ? 'Cash on Delivery' : order.payment_method || 'COD'}
                           </p>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="text-sm">
-                        <p>{new Date(order.created_at).toLocaleDateString('en-BD')}</p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(order.created_at).toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' })}
-                        </p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={order.status}
-                        onValueChange={(v) => updateStatus(order.id, v)}
-                      >
-                        <SelectTrigger className="w-32 h-8 p-0 border-0 bg-transparent">
-                          <Badge className={statusColors[order.status] || "bg-muted"}>{order.status}</Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="processing">Processing</SelectItem>
-                          <SelectItem value="shipped">Shipped</SelectItem>
-                          <SelectItem value="delivered">Delivered</SelectItem>
-                          <SelectItem value="cancelled">Cancelled</SelectItem>
-                          <SelectItem value="refunded">Refunded</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell>
-                      <Select
-                        value={order.payment_status}
-                        onValueChange={(v) => updatePaymentStatus(order.id, v)}
-                      >
-                        <SelectTrigger className="w-24 h-8 p-0 border-0 bg-transparent">
-                          <Badge className={paymentStatusColors[order.payment_status] || "bg-muted"}>
-                            {order.payment_status}
-                          </Badge>
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
-                          <SelectItem value="failed">Failed</SelectItem>
-                          <SelectItem value="refunded">Refunded</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </TableCell>
-                    <TableCell className="font-medium text-primary">৳{order.total.toFixed(0)}</TableCell>
-                    <TableCell>
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button variant="ghost" size="icon">
-                            <MoreHorizontal className="h-4 w-4" />
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="bg-popover">
-                          <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
-                            <Eye className="h-4 w-4 mr-2" />
-                            View Details & Timelines
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(order);
-                            setInvoiceModalOpen(true);
-                          }}>
-                            <Printer className="h-4 w-4 mr-2" />
-                            Print Invoice
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(order);
-                            setPackingSlipOpen(true);
-                          }}>
-                            <PackageCheck className="h-4 w-4 mr-2" />
-                            Print Packing Slip
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => {
-                            setSelectedOrder(order);
-                            setShippingLabelOpen(true);
-                          }}>
-                            <Tag className="h-4 w-4 mr-2" />
-                            Print Shipping Label
-                          </DropdownMenuItem>
-                          <DropdownMenuItem 
-                            onClick={() => handleDeleteOrder(order.id, order.order_number)}
-                            className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
-                          >
-                            <Trash2 className="h-4 w-4 mr-2" />
-                            Delete Order
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                    </TableCell>
-                  </TableRow>
-                ))
+                          {order.tracking_number && (
+                            <p className="text-[11px] text-purple-600 dark:text-purple-400 font-mono flex items-center gap-1 mt-0.5">
+                              <Truck className="h-3 w-3" />
+                              {order.tracking_number}
+                            </p>
+                          )}
+                        </div>
+                      </TableCell>
+
+                      {/* Customer / Buyer Column with direct link to user profile page */}
+                      <TableCell>
+                        <div className="flex items-start gap-2.5 max-w-[210px]">
+                          <div className="w-8 h-8 rounded-full bg-orange-100 dark:bg-orange-950/60 text-orange-700 dark:text-orange-300 flex items-center justify-center font-bold text-xs shrink-0 border border-orange-200 dark:border-orange-800 overflow-hidden mt-0.5">
+                            {cust.avatar_url ? (
+                              <img src={cust.avatar_url} alt="" className="w-full h-full object-cover" />
+                            ) : (
+                              (cust.name?.charAt(0) || "U").toUpperCase()
+                            )}
+                          </div>
+                          <div className="min-w-0 flex-1 space-y-0.5">
+                            <p className="font-semibold text-xs text-foreground truncate" title={cust.name}>
+                              {cust.name}
+                            </p>
+                            {cust.phone && (
+                              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                <Phone className="h-3 w-3 shrink-0 opacity-70" />
+                                <span className="truncate">{cust.phone}</span>
+                              </p>
+                            )}
+                            {cust.email && !cust.phone && (
+                              <p className="text-[11px] text-muted-foreground flex items-center gap-1">
+                                <Mail className="h-3 w-3 shrink-0 opacity-70" />
+                                <span className="truncate">{cust.email}</span>
+                              </p>
+                            )}
+                            <Link
+                              to={`/admin/users?search=${encodeURIComponent(searchTarget || "")}`}
+                              className="inline-flex items-center gap-1 text-[11px] font-semibold text-orange-600 hover:text-orange-700 dark:text-orange-400 hover:underline pt-0.5"
+                              onClick={(e) => e.stopPropagation()}
+                              title="View this user profile in Admin Users"
+                            >
+                              <User className="h-3 w-3" />
+                              <span>User Profile</span>
+                              <ExternalLink className="h-2.5 w-2.5" />
+                            </Link>
+                          </div>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <div className="text-sm">
+                          <p>{new Date(order.created_at).toLocaleDateString('en-BD')}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(order.created_at).toLocaleTimeString('en-BD', { hour: '2-digit', minute: '2-digit' })}
+                          </p>
+                        </div>
+                      </TableCell>
+
+                      <TableCell>
+                        <Select
+                          value={order.status}
+                          onValueChange={(v) => updateStatus(order.id, v)}
+                        >
+                          <SelectTrigger className="w-32 h-8 p-0 border-0 bg-transparent">
+                            <Badge className={statusColors[order.status] || "bg-muted"}>{order.status}</Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="processing">Processing</SelectItem>
+                            <SelectItem value="shipped">Shipped</SelectItem>
+                            <SelectItem value="delivered">Delivered</SelectItem>
+                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      <TableCell>
+                        <Select
+                          value={order.payment_status}
+                          onValueChange={(v) => updatePaymentStatus(order.id, v)}
+                        >
+                          <SelectTrigger className="w-24 h-8 p-0 border-0 bg-transparent">
+                            <Badge className={paymentStatusColors[order.payment_status] || "bg-muted"}>
+                              {order.payment_status}
+                            </Badge>
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="pending">Pending</SelectItem>
+                            <SelectItem value="paid">Paid</SelectItem>
+                            <SelectItem value="failed">Failed</SelectItem>
+                            <SelectItem value="refunded">Refunded</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </TableCell>
+
+                      <TableCell className="font-bold text-foreground">৳{order.total.toFixed(0)}</TableCell>
+
+                      <TableCell className="text-right">
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <MoreHorizontal className="h-4 w-4" />
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="bg-popover">
+                            <DropdownMenuItem onClick={() => viewOrderDetails(order)}>
+                              <Eye className="h-4 w-4 mr-2" />
+                              View Details & Timelines
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => {
+                                navigate(`/admin/users?search=${encodeURIComponent(searchTarget || "")}`);
+                              }}
+                              className="cursor-pointer font-medium text-orange-600 dark:text-orange-400"
+                            >
+                              <User className="h-4 w-4 mr-2" />
+                              View Customer in Users Page
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedOrder(order);
+                              setInvoiceModalOpen(true);
+                            }}>
+                              <Printer className="h-4 w-4 mr-2" />
+                              Print Invoice
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedOrder(order);
+                              setPackingSlipOpen(true);
+                            }}>
+                              <PackageCheck className="h-4 w-4 mr-2" />
+                              Print Packing Slip
+                            </DropdownMenuItem>
+                            <DropdownMenuItem onClick={() => {
+                              setSelectedOrder(order);
+                              setShippingLabelOpen(true);
+                            }}>
+                              <Tag className="h-4 w-4 mr-2" />
+                              Print Shipping Label
+                            </DropdownMenuItem>
+                            <DropdownMenuItem 
+                              onClick={() => handleDeleteOrder(order.id, order.order_number)}
+                              className="text-destructive focus:text-destructive focus:bg-destructive/10 cursor-pointer"
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Delete Order
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
               )}
             </TableBody>
           </Table>
@@ -1196,32 +1348,70 @@ export default function AdminOrders() {
               )}
 
               {/* Customer Info */}
-              {customerInfo && (
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-sm flex items-center gap-2">
-                      <User className="h-4 w-4" />
-                      Customer Information
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-2 text-sm">
-                    <div className="flex items-center gap-2">
-                      <User className="h-4 w-4 text-muted-foreground" />
-                      {customerInfo.full_name || "No name"}
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Mail className="h-4 w-4 text-muted-foreground" />
-                      {customerInfo.email}
-                    </div>
-                    {customerInfo.phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        {customerInfo.phone}
+              {(() => {
+                const cust = selectedOrder ? resolveCustomer(selectedOrder) : null;
+                const activeCust = {
+                  name: customerInfo?.full_name || cust?.name || "Customer",
+                  email: customerInfo?.email || cust?.email || "No email",
+                  phone: customerInfo?.phone || cust?.phone || null,
+                  userId: selectedOrder?.user_id || cust?.user_id || "guest",
+                  avatar: cust?.avatar_url || null,
+                  role: cust?.role || "customer"
+                };
+                const searchTarget = activeCust.phone || activeCust.email || (activeCust.userId !== "guest" ? activeCust.userId : "") || activeCust.name;
+
+                return (
+                  <Card className="border-orange-500/20 bg-orange-50/5 dark:bg-orange-950/10">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="text-sm flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <User className="h-4 w-4 text-orange-500" />
+                          <span>Customer & Account Profile</span>
+                        </div>
+                        <Badge variant="outline" className="text-xs uppercase bg-background">
+                          {activeCust.role}
+                        </Badge>
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-3 text-sm">
+                      <div className="flex items-center justify-between gap-4 flex-wrap">
+                        <div className="space-y-1.5">
+                          <div className="flex items-center gap-2">
+                            <User className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-semibold text-foreground">{activeCust.name}</span>
+                          </div>
+                          {activeCust.email && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Mail className="h-3.5 w-3.5" />
+                              <span>{activeCust.email}</span>
+                            </div>
+                          )}
+                          {activeCust.phone && (
+                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                              <Phone className="h-3.5 w-3.5" />
+                              <span>{activeCust.phone}</span>
+                            </div>
+                          )}
+                        </div>
+
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => {
+                            setDetailsOpen(false);
+                            navigate(`/admin/users?search=${encodeURIComponent(searchTarget || "")}`);
+                          }}
+                          className="font-semibold text-xs gap-1.5 border-orange-300 text-orange-700 hover:bg-orange-50 dark:border-orange-800 dark:text-orange-300"
+                        >
+                          <User className="h-3.5 w-3.5" />
+                          <span>Open in Users Page</span>
+                          <ExternalLink className="h-3 w-3 ml-0.5" />
+                        </Button>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
-              )}
+                    </CardContent>
+                  </Card>
+                );
+              })()}
 
               {/* Addresses */}
               <div className="grid md:grid-cols-2 gap-4">

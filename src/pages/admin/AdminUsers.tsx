@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { Edit, MoreHorizontal, Eye, Ban, CheckCircle, Mail, Phone, Calendar, Search, UserX, UserCheck, RefreshCw, MapPin, Trash2, Shield, Store, User } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
@@ -86,14 +87,23 @@ interface Address {
 }
 
 export default function AdminUsers() {
+  const [searchParams] = useSearchParams();
+  const urlSearch = searchParams.get("search") || searchParams.get("id") || searchParams.get("phone") || searchParams.get("email") || "";
   const [users, setUsers] = useState<Profile[]>([]);
   const [loading, setLoading] = useState(true);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(urlSearch);
   const [roleFilter, setRoleFilter] = useState<string>("all");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [refreshing, setRefreshing] = useState(false);
   const { toast } = useToast();
   const { invalidateUsers } = useAdminCacheInvalidation();
+
+  useEffect(() => {
+    const q = searchParams.get("search") || searchParams.get("id") || searchParams.get("phone") || searchParams.get("email");
+    if (q !== null && q !== undefined) {
+      setSearchQuery(q);
+    }
+  }, [searchParams]);
 
   // Edit Dialog State
   const [editDialogOpen, setEditDialogOpen] = useState(false);
@@ -461,10 +471,21 @@ export default function AdminUsers() {
 
   // Filter users
   const filteredUsers = users.filter(user => {
+    const q = searchQuery.toLowerCase().trim();
+    if (!q) {
+      const matchesRole = roleFilter === "all" || user.role === roleFilter;
+      const matchesStatus = statusFilter === "all" || 
+        (statusFilter === "active" && user.is_active) ||
+        (statusFilter === "inactive" && !user.is_active);
+      return matchesRole && matchesStatus;
+    }
+
     const matchesSearch = 
-      (user.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) || false) ||
-      user.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (user.phone?.includes(searchQuery) || false);
+      (user.full_name?.toLowerCase().includes(q) || false) ||
+      user.email.toLowerCase().includes(q) ||
+      (user.phone?.includes(q) || false) ||
+      (user.id?.toLowerCase().includes(q) || false) ||
+      (user.user_id?.toLowerCase().includes(q) || false);
     
     const matchesRole = roleFilter === "all" || user.role === roleFilter;
     const matchesStatus = statusFilter === "all" || 
