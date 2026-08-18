@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
-import { Heart, ShoppingCart, Star, Shield, RotateCcw, Minus, Plus, Loader2, Play, ChevronLeft, ChevronRight, Share2, Zap, MessageSquare, ShieldCheck, Store, Truck, Award, Sparkles, TrendingUp, Package, ZoomIn, ZoomOut, X, Maximize2, Ruler, Check } from "lucide-react";
+import { Home, Heart, ShoppingCart, Star, Shield, RotateCcw, Minus, Plus, Loader2, Play, ChevronLeft, ChevronRight, Share2, Zap, MessageSquare, ShieldCheck, Store, Truck, Award, Sparkles, TrendingUp, Package, ZoomIn, ZoomOut, X, Maximize2, Ruler, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/firebaseAdapter";
@@ -306,7 +306,8 @@ export default function ProductDetail() {
   const [zoomScale, setZoomScale] = useState(1);
   const variantSelectorRef = useRef<HTMLDivElement>(null);
   const {
-    addToCart
+    addToCart,
+    itemCount: cartCount
   } = useCart();
   const {
     isInWishlist,
@@ -1441,13 +1442,14 @@ export default function ProductDetail() {
           </div>
         </div>
 
-        {/* Mobile sticky bottom bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-2 max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+        {/* Mobile sticky bottom task bar */}
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/98 backdrop-blur-lg border-t border-border shadow-[0_-4px_25px_rgba(0,0,0,0.12)] px-2.5 pt-1.5 max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 8px)' }}>
           <div className="max-w-lg mx-auto w-full space-y-1.5">
+            {/* Selected Variant Indicator Pill */}
             {product.product_variants && product.product_variants.length > 0 && (
               <div 
                 onClick={() => variantSelectorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
-                className="flex items-center justify-between px-3 py-1 rounded-lg bg-muted/70 text-[11px] cursor-pointer hover:bg-muted active:scale-98 transition-all"
+                className="flex items-center justify-between px-3 py-1 rounded-lg bg-muted/80 border border-border/50 text-[11px] cursor-pointer hover:bg-muted active:scale-[0.99] transition-all"
               >
                 <div className="flex items-center gap-1.5 truncate">
                   <span className="text-muted-foreground font-medium">Selected:</span>
@@ -1455,35 +1457,92 @@ export default function ProductDetail() {
                     {Object.entries(selectedVariants).map(([k, v]) => `${k}: ${v}`).join(" • ") || "Select Size / Color"}
                   </span>
                 </div>
-                <span className="text-[10px] text-muted-foreground font-medium shrink-0 ml-1 underline">Change</span>
+                <span className="text-[10px] text-primary font-bold shrink-0 ml-1.5 flex items-center gap-0.5">
+                  Change →
+                </span>
               </div>
             )}
-            <div className="flex items-center gap-2 w-full">
-              <Button
-                variant={inWishlist ? "default" : "outline"}
-                className="h-11 w-11 shrink-0 p-0 rounded-xl"
-                onClick={handleWishlistToggle}
-                aria-label="Wishlist"
-              >
-                <Heart className={`h-5 w-5 ${inWishlist ? "fill-current" : ""}`} />
-              </Button>
-              <Button
-                variant="outline"
-                className="flex-1 h-11 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl min-w-0"
-                onClick={handleAddToCart}
-                disabled={addingToCart}
-              >
-                {addingToCart ? <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" /> : <ShoppingCart className="h-4 w-4 mr-1 shrink-0" />}
-                <span className="truncate">Cart</span>
-              </Button>
-              <Button
-                className="flex-1 h-11 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 min-w-0"
-                onClick={handleBuyNow}
-                disabled={buyingNow}
-              >
-                {buyingNow ? <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" /> : <Zap className="h-4 w-4 mr-1 shrink-0" />}
-                <span className="truncate">Buy Now</span>
-              </Button>
+
+            {/* Bottom Task Bar Controls */}
+            <div className="flex items-center gap-1 w-full">
+              {/* Left Task Bar Quick Navigation Icons */}
+              <div className="flex items-center gap-0.5 shrink-0">
+                <Link
+                  to="/"
+                  className="flex flex-col items-center justify-center min-w-[36px] py-1 px-1 text-muted-foreground hover:text-primary transition-colors active:scale-90"
+                  aria-label="Home"
+                >
+                  <Home className="h-[19px] w-[19px]" />
+                  <span className="text-[9px] font-medium mt-0.5 leading-none">Home</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleContactSeller}
+                  disabled={contactingSeller}
+                  className="flex flex-col items-center justify-center min-w-[36px] py-1 px-1 text-muted-foreground hover:text-primary transition-colors active:scale-90"
+                  aria-label="Chat"
+                >
+                  {contactingSeller ? (
+                    <Loader2 className="h-[19px] w-[19px] animate-spin text-primary" />
+                  ) : (
+                    <MessageSquare className="h-[19px] w-[19px]" />
+                  )}
+                  <span className="text-[9px] font-medium mt-0.5 leading-none">Chat</span>
+                </button>
+
+                <Link
+                  to="/cart"
+                  className="flex flex-col items-center justify-center min-w-[36px] py-1 px-1 text-muted-foreground hover:text-primary transition-colors relative active:scale-90"
+                  aria-label="Cart"
+                >
+                  <div className="relative">
+                    <ShoppingCart className="h-[19px] w-[19px]" />
+                    {cartCount > 0 && (
+                      <span className="absolute -top-1.5 -right-2 min-w-[15px] h-[15px] rounded-full bg-destructive text-destructive-foreground text-[9px] font-bold flex items-center justify-center px-0.5 shadow-sm">
+                        {cartCount > 99 ? "99+" : cartCount}
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[9px] font-medium mt-0.5 leading-none">Cart</span>
+                </Link>
+
+                <button
+                  type="button"
+                  onClick={handleWishlistToggle}
+                  className={cn(
+                    "flex flex-col items-center justify-center min-w-[36px] py-1 px-1 transition-colors active:scale-90",
+                    inWishlist ? "text-orange-600" : "text-muted-foreground hover:text-primary"
+                  )}
+                  aria-label={inWishlist ? "Remove from wishlist" : "Add to wishlist"}
+                >
+                  <Heart className={cn("h-[19px] w-[19px]", inWishlist && "fill-orange-600 text-orange-600")} />
+                  <span className="text-[9px] font-medium mt-0.5 leading-none">Wish</span>
+                </button>
+              </div>
+
+              {/* Right Action Buttons: Add to Cart & Buy Now */}
+              <div className="flex items-center gap-1.5 flex-1 min-w-0">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="flex-1 h-10 px-1 text-xs font-bold rounded-xl border-primary/30 text-primary hover:bg-primary/5 active:scale-[0.98] min-w-0"
+                  onClick={handleAddToCart}
+                  disabled={addingToCart}
+                >
+                  {addingToCart ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin shrink-0" /> : <ShoppingCart className="h-3.5 w-3.5 mr-1 shrink-0" />}
+                  <span className="truncate">Add to Cart</span>
+                </Button>
+                <Button
+                  size="sm"
+                  className="flex-1 h-10 px-1 text-xs font-bold rounded-xl bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white shadow-md shadow-orange-500/25 active:scale-[0.98] min-w-0"
+                  onClick={handleBuyNow}
+                  disabled={buyingNow}
+                >
+                  {buyingNow ? <Loader2 className="h-3.5 w-3.5 mr-1 animate-spin shrink-0" /> : <Zap className="h-3.5 w-3.5 mr-1 shrink-0" />}
+                  <span className="truncate">Buy Now</span>
+                </Button>
+              </div>
             </div>
           </div>
         </div>
