@@ -85,6 +85,12 @@ export default function CJProductDetail() {
   };
 
   useEffect(() => {
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    setSelectedImage(0);
+    setQuantity(1);
+    setSelectedVariant(null);
+    setLoading(true);
+
     async function fetchProduct() {
       if (!id) return;
 

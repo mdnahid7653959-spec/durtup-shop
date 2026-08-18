@@ -425,16 +425,24 @@ export default function ProductDetail() {
           initial[attr] = sorted[0];
         }
       });
-      setSelectedVariants(prev => Object.keys(prev).length === 0 ? initial : prev);
+      setSelectedVariants(initial);
+    } else {
+      setSelectedVariants({});
     }
   };
 
   useEffect(() => {
+    // Scroll instantly to the very top (image and header) whenever slug changes
+    window.scrollTo({ top: 0, left: 0, behavior: "instant" });
+    setSelectedImage(0);
+    setShowVideo(false);
+    setQuantity(1);
+    setSelectedVariants({});
+    setZoomScale(1);
+    setLightboxOpen(false);
+
     async function fetchProduct() {
       if (!slug) return;
-      if (!product && !initialProd) {
-        setLoading(true);
-      }
       const targetSlug = decodeURIComponent(slug).trim();
       const targetLower = targetSlug.toLowerCase();
       
@@ -442,6 +450,21 @@ export default function ProductDetail() {
       const suffixMatch = targetLower.match(/-(\d+)$/);
       const extractedId = suffixMatch ? suffixMatch[1] : "";
       const cleanId = targetLower.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
+
+      // Check synchronous cache / preloadedProduct first to render instantly
+      const syncProduct = findMohasagorProductSync(targetSlug) || 
+        (extractedId ? findMohasagorProductSync(extractedId) : null) || 
+        (cleanId ? findMohasagorProductSync(cleanId) : null) ||
+        (location.state as any)?.preloadedProduct;
+
+      if (syncProduct && syncProduct.name) {
+        const mappedImages = mapSupplierImages(syncProduct);
+        const mappedProduct = mapSupplierProduct(syncProduct, syncProduct.slug || targetSlug, mappedImages);
+        applyLoadedProduct(mappedProduct);
+        setLoading(false);
+      } else {
+        setLoading(true);
+      }
 
       try {
         // 1. Direct Supplier Master Cache & All-Pages Crawler (Handles all 2,700+ supplier products 100% reliably in any browser)
