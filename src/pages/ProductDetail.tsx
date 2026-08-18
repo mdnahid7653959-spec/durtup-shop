@@ -1438,7 +1438,7 @@ export default function ProductDetail() {
               }}
               title="For You"
               subtitle="Recommended items for you"
-              limit={12}
+              limit={100}
             />
           </div>
         </div>

@@ -231,6 +231,14 @@ export function useRelatedProducts(productContext: ProductContext | null, limit:
 
   useEffect(() => {
     fetchRelatedProducts();
+
+    const handleUpdate = () => {
+      fetchRelatedProducts();
+    };
+    window.addEventListener("mohasagor_products_updated", handleUpdate);
+    return () => {
+      window.removeEventListener("mohasagor_products_updated", handleUpdate);
+    };
   }, [fetchRelatedProducts]);
 
   return { products, loading, error, refetch: fetchRelatedProducts };

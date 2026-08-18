@@ -61,20 +61,27 @@ function RelatedProductsComponent({
     return mappedProducts.slice(0, displayCount);
   }, [mappedProducts, displayCount]);
 
-  // Infinite Scroll Auto-Load on Scroll (1000px ahead)
+  const loadMore = () => {
+    setDisplayCount((prev) => Math.min(prev + 18, mappedProducts.length));
+  };
+
+  // Infinite Scroll Auto-Load on Scroll (1200px ahead)
   useEffect(() => {
-    if (!sentinelRef.current) return;
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries[0].isIntersecting) {
-          setDisplayCount((prev) => (prev < mappedProducts.length ? prev + 18 : prev));
+        if (entries[0].isIntersecting && displayCount < mappedProducts.length) {
+          setDisplayCount((prev) => Math.min(prev + 18, mappedProducts.length));
         }
       },
-      { rootMargin: "1000px" }
+      { rootMargin: "1200px" }
     );
-    observer.observe(sentinelRef.current);
+
+    observer.observe(sentinel);
     return () => observer.disconnect();
-  }, [mappedProducts.length]);
+  }, [displayCount, mappedProducts.length]);
 
   if (!loading && products.length === 0) return null;
 
@@ -116,7 +123,11 @@ function RelatedProductsComponent({
               {/* Infinite Scroll Sentinel & Indicator */}
               <div className="mt-8 pt-4 border-t flex flex-col items-center justify-center text-center gap-2">
                 {visibleProducts.length < mappedProducts.length ? (
-                  <div ref={sentinelRef} className="flex items-center gap-2 text-xs font-semibold text-primary animate-pulse py-2">
+                  <div 
+                    ref={sentinelRef} 
+                    onClick={loadMore}
+                    className="flex items-center gap-2 text-xs font-semibold text-primary animate-pulse py-2 cursor-pointer hover:underline"
+                  >
                     <RefreshCw className="h-4 w-4 animate-spin" /> Scroll down to load more products...
                   </div>
                 ) : (
