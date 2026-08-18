@@ -457,11 +457,12 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
 
   public async search(rawQuery: string, options: SearchOptions = {}): Promise<SearchResult> {
     await this.buildIndex();
-    const queryStr = rawQuery.toLowerCase().trim();
+    const queryRaw = (rawQuery || "").trim();
+    const queryNorm = normalizeText(queryRaw);
 
     // 1. Expand query with bilingual synonym engine
-    const { expandedTerms, matchedRules } = synonymManager.expandQuery(queryStr);
-    const queryTokens = queryStr ? queryStr.split(/[\s,+/_-]+/).filter(t => t.length > 0) : [];
+    const { expandedTerms, matchedRules } = synonymManager.expandQuery(queryRaw);
+    const queryTokens = queryNorm ? tokenizeText(queryNorm, true) : [];
 
     // 2. Score and rank products
     const scoredProducts: SearchProductResult[] = [];
@@ -470,97 +471,92 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
       let score = 0;
       let matchType: SearchProductResult["matchType"] = "partial";
 
-      const pName = (p.name || "").toLowerCase();
-      const pDesc = (p.description || p.short_description || "").toLowerCase();
-      const pCat = (p.category || "").toLowerCase();
-      const pBrand = (p.brand || "").toLowerCase();
-      const pSku = (p.sku || "").toLowerCase();
-      const pId = String(p.id || "");
-      const pTags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
+      const pName = p.name || "";
+      const pNameNorm = normalizeText(pName);
+      const pDescNorm = normalizeText(p.description || p.short_description || "");
+      const pCatNorm = normalizeText(p.category || "");
+      const pBrandNorm = normalizeText(p.brand || "");
+      const pSkuNorm = normalizeText(p.sku || "");
+      const pId = String(p.id || "").toLowerCase().trim();
+      const pTags = Array.isArray(p.tags) ? p.tags.map((t: string) => normalizeText(t)) : [];
 
       // If no search query, give all products a base score so they appear when browsing/filtering
-      if (!queryStr) {
+      if (!queryNorm) {
         score = 10;
         matchType = "partial";
       } else {
         // A. Exact SKU / ID Match
-        if (pSku === queryStr || pId === queryStr || pSku.includes(queryStr)) {
-          score += 200;
+        if (pSkuNorm === queryNorm || pId === queryNorm || (pSkuNorm.length >= 3 && pSkuNorm.includes(queryNorm))) {
+          score += 300;
           matchType = "sku";
         }
 
-        // B. Full Phrase Matches on Name
-        if (pName === queryStr) {
-          score += 150;
+        // B. Full Phrase Matches on Normalized Name
+        if (pNameNorm === queryNorm) {
+          score += 250;
           matchType = "exact";
-        } else if (pName.startsWith(queryStr)) {
-          score += 110;
+        } else if (pNameNorm.startsWith(queryNorm)) {
+          score += 180;
           matchType = "prefix";
-        } else if (pName.includes(queryStr)) {
-          score += 85;
+        } else if (pNameNorm.includes(queryNorm)) {
+          score += 120;
           matchType = "partial";
         }
 
-        // C. Multi-token flexible matching (Matches words in any order)
+        // C. Multi-token flexible matching (Matches words in any order without stop-word noise)
         if (queryTokens.length > 0) {
           let matchedTokensCount = 0;
           for (const token of queryTokens) {
-            if (pName.includes(token)) {
+            if (token.length < 2) continue;
+            if (pNameNorm.includes(token)) {
               matchedTokensCount++;
-              score += 35;
-            } else if (pCat.includes(token) || pBrand.includes(token)) {
+              score += 40;
+            } else if (pCatNorm.includes(token) || pBrandNorm.includes(token)) {
               matchedTokensCount += 0.5;
-              score += 20;
-            } else if (pDesc.includes(token)) {
-              score += 10;
+              score += 25;
+            } else if (pDescNorm.includes(token)) {
+              score += 15;
             }
           }
 
-          // Bonus if ALL query words appear in the product title
+          // Massive bonus if ALL query tokens appear in the product title (e.g. "magic flip n cook", "casual shirt")
           if (queryTokens.length > 1 && matchedTokensCount >= queryTokens.length) {
-            score += 80;
+            score += 100;
             if (matchType !== "exact") matchType = "exact";
           } else if (matchedTokensCount > 0) {
-            score += Math.floor(matchedTokensCount * 15);
+            score += Math.floor(matchedTokensCount * 20);
           }
         }
 
-        // D. Category / Brand Includes
-        if (pCat.includes(queryStr) || (queryStr.length > 3 && queryStr.includes(pCat))) {
+        // D. Category / Brand Match
+        if (pCatNorm && (pCatNorm.includes(queryNorm) || (queryNorm.length > 3 && queryNorm.includes(pCatNorm)))) {
           score += 50;
           if (matchType === "partial") matchType = "semantic";
         }
-        if (pBrand.includes(queryStr)) {
+        if (pBrandNorm && (pBrandNorm.includes(queryNorm) || (queryNorm.length > 3 && queryNorm.includes(pBrandNorm)))) {
           score += 45;
-        }
-        if (pDesc.includes(queryStr)) {
-          score += 25;
         }
 
         // E. Check Expanded Terms & Synonyms
         for (const term of expandedTerms) {
-          if (!term || term === queryStr) continue;
-          if (pName.includes(term)) {
-            score += 55;
+          if (!term) continue;
+          const termNorm = normalizeText(term);
+          if (!termNorm || termNorm === queryNorm) continue;
+          if (pNameNorm.includes(termNorm)) {
+            score += 60;
             if (matchType !== "exact" && matchType !== "sku") matchType = "synonym";
-          }
-          if (pCat.includes(term)) {
+          } else if (pCatNorm.includes(termNorm)) {
             score += 40;
-          }
-          if (pTags.some((tag: string) => tag.includes(term))) {
-            score += 30;
           }
         }
 
         // F. Fuzzy Typo Matching for queries >= 3 chars
-        if (score === 0 && queryStr.length >= 3) {
-          const queryToks = tokenizeText(queryStr);
-          const nameToks = tokenizeText(pName);
-
-          for (const qTok of queryToks) {
+        if (score === 0 && queryTokens.length > 0) {
+          const nameToks = tokenizeText(pNameNorm, true);
+          for (const qTok of queryTokens) {
             for (const nTok of nameToks) {
               const fuzzy = fuzzyMatchToken(qTok, nTok);
-              if (fuzzy.isMatch) {
+              if (fuzzy.isMatch && fuzzy.score >= 60) {
                 score += fuzzy.score;
                 matchType = "fuzzy";
               }
@@ -569,10 +565,12 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
         }
       }
 
-      // Apply Boosters for popular/rated/featured items
-      if (score > 0) {
+      // Only include items with significant score when querying
+      const minScoreThreshold = queryNorm ? 30 : 1;
+
+      if (score >= minScoreThreshold) {
         if (p.rating_average) score += Number(p.rating_average) * 2;
-        if (p.sold_count) score += Math.min(25, Number(p.sold_count) * 0.15);
+        if (p.sold_count) score += Math.min(20, Number(p.sold_count) * 0.1);
         if (p.is_featured) score += 10;
         if (p.is_best_seller) score += 10;
         if (p.in_stock !== false) score += 10;

@@ -48,24 +48,36 @@ export function getStringSimilarity(a: string, b: string): number {
 }
 
 /**
- * Normalizes text for search (removes special characters, converts to lowercase)
+ * Stop words that should not trigger broad substring matches
+ */
+export const SEARCH_STOP_WORDS = new Set([
+  "a", "an", "the", "in", "on", "at", "to", "for", "of", "with", "by", "and", "or", "is", "it", "n", "s", "d"
+]);
+
+/**
+ * Normalizes text for search (handles curly apostrophes, quotes, special characters, converts to lowercase)
  */
 export function normalizeText(text: string): string {
   if (!text) return "";
   return text
     .toLowerCase()
-    .replace(/[^\w\s\u0980-\u09FF-]/g, " ")
+    .replace(/[\u2018\u2019\u201B\u2032\u2035\u0027\u0060\u00B4]/g, " ") // replace all curly/straight apostrophes and backticks with space
+    .replace(/[\u201C\u201D\u201E\u201F\u2033\u2036\u0022]/g, " ") // replace all curly/straight quotes with space
+    .replace(/[^\w\s\u0980-\u09FF-]/g, " ") // allow word characters, space, hyphens, and Bengali
     .replace(/\s+/g, " ")
     .trim();
 }
 
 /**
- * Tokenizes a string into array of normalized words
+ * Tokenizes a string into array of normalized words with stop word filtering
  */
-export function tokenizeText(text: string): string[] {
+export function tokenizeText(text: string, filterStopWords = true): string[] {
   const normalized = normalizeText(text);
   if (!normalized) return [];
-  return normalized.split(" ").filter((t) => t.length > 0);
+  const tokens = normalized.split(" ").filter((t) => t.length > 0);
+  if (!filterStopWords) return tokens;
+  const filtered = tokens.filter((t) => !SEARCH_STOP_WORDS.has(t) || /^\d+$/.test(t));
+  return filtered.length > 0 ? filtered : tokens;
 }
 
 /**
@@ -75,9 +87,12 @@ export function fuzzyMatchToken(queryToken: string, targetToken: string): { isMa
   const q = queryToken.toLowerCase().trim();
   const t = targetToken.toLowerCase().trim();
 
+  if (!q || !t) return { isMatch: false, score: 0 };
   if (q === t) return { isMatch: true, score: 100 };
   if (t.startsWith(q)) return { isMatch: true, score: 85 };
-  if (t.includes(q)) return { isMatch: true, score: 70 };
+
+  // Only do substring inclusion if queryToken is at least 3 characters long
+  if (q.length >= 3 && t.includes(q)) return { isMatch: true, score: 70 };
 
   // For words longer than 3 characters, calculate Levenshtein fuzzy distance
   if (q.length >= 4 && t.length >= 4) {
