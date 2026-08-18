@@ -76,16 +76,16 @@ export function PrintableInvoiceModal({
           <div className="flex justify-between items-start border-b pb-6">
             <div>
               <img
-                src="/darzo-logo.png"
-                alt="Darzo Logo"
+                src="/durtup-logo.png"
+                alt="Durtup Logo"
                 className="h-10 w-auto object-contain mb-2"
                 onError={(e) => {
                   (e.target as HTMLElement).style.display = "none";
                 }}
               />
-              <h1 className="text-2xl font-bold tracking-tight text-slate-900">DARZO E-COMMERCE</h1>
+              <h1 className="text-2xl font-bold tracking-tight text-slate-900">DURTUP.SHOP E-COMMERCE</h1>
               <p className="text-xs text-slate-500">Banani C/A, Dhaka-1213, Bangladesh</p>
-              <p className="text-xs text-slate-500">BIN: 004829104-0102 | Support: support@darzo.com</p>
+              <p className="text-xs text-slate-500">BIN: 004829104-0102 | Support: support@durtup.shop</p>
             </div>
             <div className="text-right">
               <span className="inline-block px-3 py-1 bg-slate-900 text-white font-bold text-xs uppercase tracking-wider rounded mb-2">

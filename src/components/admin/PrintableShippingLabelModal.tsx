@@ -101,7 +101,7 @@ export function PrintableShippingLabelModal({
             {/* Sender / Return Info */}
             <div className="py-2 border-b text-[10px] text-slate-600 leading-tight">
               <span className="font-bold text-slate-900">SHIP FROM: </span>
-              Darzo Logistics Hub, House 42, Road 11, Banani, Dhaka-1213 | Phone: +880 9610-000000
+              Durtup Logistics Hub, House 42, Road 11, Banani, Dhaka-1213 | Phone: +880 9610-000000
             </div>
 
             {/* Recipient Deliver To Box */}

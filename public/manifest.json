@@ -1,41 +1,27 @@
 {
-  "name": "Darzo.com - Shop Smart, Shop Global",
-  "short_name": "Darzo.com",
-  "description": "Shop millions of products at unbeatable prices with fast, reliable shipping worldwide.",
+  "name": "Durtup.shop - Shop Millions of Products",
+  "short_name": "Durtup.shop",
+  "description": "Shop millions of products at unbeatable prices with fast, reliable shipping.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#f97316",
+  "theme_color": "#FF5400",
   "orientation": "portrait-primary",
   "icons": [
     {
-      "src": "/darzo-logo.png",
+      "src": "/durtup-logo.png",
       "sizes": "192x192",
       "type": "image/png",
       "purpose": "any maskable"
     },
     {
-      "src": "/darzo-logo.png",
+      "src": "/durtup-logo.png",
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "any maskable"
     }
   ],
   "categories": ["shopping", "lifestyle"],
-  "screenshots": [
-    {
-      "src": "/screenshots/home.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
-    },
-    {
-      "src": "/screenshots/mobile.png",
-      "sizes": "750x1334",
-      "type": "image/png",
-      "form_factor": "narrow"
-    }
-  ],
   "shortcuts": [
     {
       "name": "Admin Panel",

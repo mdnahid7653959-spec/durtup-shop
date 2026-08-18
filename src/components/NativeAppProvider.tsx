@@ -73,10 +73,10 @@ export const NativeAppProvider: React.FC<NativeAppProviderProps> = ({ children }
     return (
       <div className="fixed inset-0 bg-primary flex items-center justify-center">
         <div className="text-center">
-          <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-3xl flex items-center justify-center shadow-2xl overflow-hidden">
-            <img src="/darzo-logo.png" alt="Darzo" className="w-20 h-20 object-contain" />
+          <div className="w-24 h-24 mx-auto mb-4 bg-white rounded-3xl flex items-center justify-center shadow-2xl overflow-hidden p-2">
+            <img src="/durtup-logo.png" alt="Durtup.shop" className="w-20 h-20 object-contain" />
           </div>
-          <h1 className="text-white text-2xl font-bold">Darzo</h1>
+          <h1 className="text-white text-2xl font-bold">Durtup.shop</h1>
           <div className="mt-4">
             <div className="w-8 h-8 border-4 border-white border-t-transparent rounded-full animate-spin mx-auto" />
           </div>

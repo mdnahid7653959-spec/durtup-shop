@@ -98,8 +98,8 @@ function SidebarContent({ onItemClick }: { onItemClick?: () => void }) {
       <div className="p-4 sm:p-6 border-b">
         <Link to="/" className="flex items-center gap-2" onClick={onItemClick}>
           <img 
-            src="/darzo-logo.png" 
-            alt="Darzo.com" 
+            src="/durtup-logo.png" 
+            alt="Durtup.shop" 
             className="h-9 w-auto object-contain"
           />
           <div>

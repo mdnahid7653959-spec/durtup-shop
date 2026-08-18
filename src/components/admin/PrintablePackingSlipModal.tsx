@@ -65,7 +65,7 @@ export function PrintablePackingSlipModal({
           <div className="flex justify-between items-start border-b-2 border-slate-900 pb-4">
             <div>
               <h1 className="text-3xl font-black tracking-tight text-slate-900">PACKING SLIP</h1>
-              <p className="text-xs text-slate-600 font-bold">DARZO FULFILLMENT CENTER</p>
+              <p className="text-xs text-slate-600 font-bold">DURTUP.SHOP FULFILLMENT CENTER</p>
             </div>
             <div className="text-right text-xs">
               <p className="font-bold text-sm text-slate-900">Order #{order.order_number}</p>

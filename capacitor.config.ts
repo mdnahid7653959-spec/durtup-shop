@@ -2,7 +2,7 @@ import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
   appId: 'com.megamart.app',
-  appName: 'Darzo',
+  appName: 'Durtup.shop',
   webDir: 'dist',
   
   // Server configuration for production/development
