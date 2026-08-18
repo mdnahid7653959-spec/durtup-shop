@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Paperclip, Send, Mic, Square, Loader2, MessageSquare, FileText, Image as ImageIcon, ArrowLeft } from "lucide-react";
+import { Paperclip, Send, Mic, Square, Loader2, MessageSquare, FileText, Image as ImageIcon, ArrowLeft, ExternalLink, Package, Store } from "lucide-react";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
+import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
 
 export interface SupportAttachment {
   url: string;
@@ -83,7 +84,8 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
-  const [ticketSource, setTicketSource] = useState<"support_tickets" | "seller_support_tickets">("seller_support_tickets");
+  const [ticketSource, setTicketSource] = useState<"support_tickets" | "seller_support_tickets" | "conversations">("seller_support_tickets");
+  const [convDetails, setConvDetails] = useState<any>(null);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
   const endRef = useRef<HTMLDivElement>(null);
@@ -93,7 +95,67 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
     (async () => {
       setLoading(true);
 
-      // Check if ticketId exists in support_tickets table
+      // 1. Check if ticketId is a conversation (buyer-seller product/store chat)
+      const { data: convRow } = await supabase.from("conversations").select("*").eq("id", ticketId).maybeSingle();
+
+      if (convRow) {
+        setTicketSource("conversations");
+
+        // Fetch buyer profile & product details
+        const { data: buyerProf } = await supabase.from("profiles").select("full_name, email, phone").eq("id", convRow.buyer_id).maybeSingle();
+        let productInfo: any = null;
+        if (convRow.product_id) {
+          const catalog = await getCachedMohasagorProducts().catch(() => []);
+          productInfo = catalog.find((p: any) => p.id === convRow.product_id || p.slug === convRow.product_id);
+          if (!productInfo) {
+            const { data: dbProd } = await supabase.from("products").select("id, name, slug, image, discount_price, regular_price").eq("id", convRow.product_id).maybeSingle();
+            productInfo = dbProd;
+          }
+        }
+
+        if (!cancel) {
+          setConvDetails({
+            ...convRow,
+            buyer_name: buyerProf?.full_name || buyerProf?.email || "Customer",
+            buyer_email: buyerProf?.email,
+            product_name: productInfo?.name,
+            product_image: productInfo?.image,
+            product_price: productInfo?.discount_price || productInfo?.regular_price || productInfo?.price,
+            product_slug: productInfo?.slug,
+          });
+        }
+
+        // Fetch messages from "messages" table
+        const { data: msgRows } = await supabase
+          .from("messages")
+          .select("*")
+          .eq("conversation_id", ticketId)
+          .order("created_at", { ascending: true });
+
+        if (!cancel) {
+          const formatted: SupportMessage[] = (msgRows || []).map((m: any) => ({
+            id: m.id,
+            ticket_id: m.conversation_id,
+            sender_type: m.sender_type === "buyer" ? "customer" : (m.sender_type || "seller"),
+            sender_id: m.sender_id || "",
+            sender_name: m.sender_type === "buyer" ? (buyerProf?.full_name || "Customer") : (senderName || "Admin"),
+            content: m.content,
+            attachments: [],
+            created_at: m.created_at,
+            read_at: m.created_at,
+          }));
+
+          setMessages(formatted);
+          setLoading(false);
+
+          // Mark unread as 0 for seller/admin
+          supabase.from("conversations").update({ seller_unread_count: 0 }).eq("id", ticketId).then();
+          supabase.from("messages").update({ is_read: true }).eq("conversation_id", ticketId).eq("sender_type", "buyer").eq("is_read", false).then();
+        }
+        return;
+      }
+
+      // 2. Check if ticketId exists in support_tickets table
       const { data: stRow } = await supabase.from("support_tickets").select("id, subject").eq("id", ticketId).maybeSingle();
 
       if (stRow) {
@@ -152,40 +214,71 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
 
   // Realtime subscription
   useEffect(() => {
-    const tableToListen = ticketSource === "support_tickets" ? "ticket_messages" : "seller_support_messages";
+    if (!ticketId) return;
 
-    const channel = supabase
-      .channel(`support-chat-${ticketId}`)
-      .on("postgres_changes", { event: "INSERT", schema: "public", table: tableToListen, filter: `ticket_id=eq.${ticketId}` }, (payload: any) => {
-        const raw = payload.new;
-        if (ticketSource === "support_tickets") {
-          const formattedMsg: SupportMessage = {
-            id: raw.id,
-            ticket_id: raw.ticket_id,
-            sender_type: raw.sender_type || "customer",
-            sender_id: raw.sender_id || "",
-            sender_name: raw.sender_type === "admin" ? "Admin" : raw.sender_type === "staff" ? "Support Agent" : "User / Seller",
-            content: raw.message,
-            attachments: (raw.attachments || []).map((url: string) => ({
-              url,
-              path: url,
-              type: "application/octet-stream",
-              kind: url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? "image" : "file",
-              name: url.split("/").pop() || "Attachment",
-              size: 0,
-            })),
-            created_at: raw.created_at,
-            read_at: raw.created_at,
-          };
-          setMessages((m) => (m.some((x) => x.id === formattedMsg.id) ? m : [...m, formattedMsg]));
-        } else {
-          setMessages((m) => (m.some((x) => x.id === raw.id) ? m : [...m, raw]));
-        }
-      })
-      .subscribe();
+    if (ticketSource === "conversations") {
+      const channel = supabase
+        .channel(`conv-chat-${ticketId}`)
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${ticketId}` },
+          (payload: any) => {
+            const raw = payload.new;
+            const newMsg: SupportMessage = {
+              id: raw.id,
+              ticket_id: raw.conversation_id,
+              sender_type: raw.sender_type === "buyer" ? "customer" : (raw.sender_type || "seller"),
+              sender_id: raw.sender_id || "",
+              sender_name: raw.sender_type === "buyer" ? (convDetails?.buyer_name || "Customer") : (senderName || "Admin"),
+              content: raw.content,
+              attachments: [],
+              created_at: raw.created_at,
+              read_at: raw.created_at,
+            };
+            setMessages((prev) => (prev.some((x) => x.id === newMsg.id) ? prev : [...prev, newMsg]));
+          }
+        )
+        .subscribe();
 
-    return () => { supabase.removeChannel(channel); };
-  }, [ticketId, ticketSource]);
+      return () => {
+        supabase.removeChannel(channel);
+      };
+    } else {
+      const tableToListen = ticketSource === "support_tickets" ? "ticket_messages" : "seller_support_messages";
+
+      const channel = supabase
+        .channel(`support-chat-${ticketId}`)
+        .on("postgres_changes", { event: "INSERT", schema: "public", table: tableToListen, filter: `ticket_id=eq.${ticketId}` }, (payload: any) => {
+          const raw = payload.new;
+          if (ticketSource === "support_tickets") {
+            const formattedMsg: SupportMessage = {
+              id: raw.id,
+              ticket_id: raw.ticket_id,
+              sender_type: raw.sender_type || "customer",
+              sender_id: raw.sender_id || "",
+              sender_name: raw.sender_type === "admin" ? "Admin" : raw.sender_type === "staff" ? "Support Agent" : "User / Seller",
+              content: raw.message,
+              attachments: (raw.attachments || []).map((url: string) => ({
+                url,
+                path: url,
+                type: "application/octet-stream",
+                kind: url.match(/\.(jpg|jpeg|png|webp|gif)$/i) ? "image" : "file",
+                name: url.split("/").pop() || "Attachment",
+                size: 0,
+              })),
+              created_at: raw.created_at,
+              read_at: raw.created_at,
+            };
+            setMessages((m) => (m.some((x) => x.id === formattedMsg.id) ? m : [...m, formattedMsg]));
+          } else {
+            setMessages((m) => (m.some((x) => x.id === raw.id) ? m : [...m, raw]));
+          }
+        })
+        .subscribe();
+
+      return () => { supabase.removeChannel(channel); };
+    }
+  }, [ticketId, ticketSource, convDetails]);
 
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -200,8 +293,45 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
       const uploads: SupportAttachment[] = [];
       for (const f of pendingFiles) uploads.push(await uploadFile(f, ticketId));
       const preview = text.trim() || (uploads[0]?.kind === "image" ? "📷 Photo" : uploads[0] ? `📎 ${uploads[0].name}` : "");
+      const nowIso = new Date().toISOString();
 
-      if (ticketSource === "support_tickets") {
+      if (ticketSource === "conversations") {
+        const newMsgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
+        const { error: msgErr } = await supabase.from("messages").insert({
+          id: newMsgId,
+          conversation_id: ticketId,
+          sender_id: senderId,
+          sender_type: "seller",
+          content: text.trim() || preview,
+          created_at: nowIso,
+          is_read: false,
+        });
+        if (msgErr) throw msgErr;
+
+        // Optimistically add to messages
+        const localMsg: SupportMessage = {
+          id: newMsgId,
+          ticket_id: ticketId,
+          sender_type: senderType,
+          sender_id: senderId,
+          sender_name: senderName || "Admin",
+          content: text.trim() || preview,
+          attachments: uploads,
+          created_at: nowIso,
+          read_at: nowIso,
+        };
+        setMessages((prev) => (prev.some((m) => m.id === localMsg.id) ? prev : [...prev, localMsg]));
+
+        // Update conversation
+        const { data: convData } = await supabase.from("conversations").select("buyer_unread_count").eq("id", ticketId).maybeSingle();
+        await supabase.from("conversations").update({
+          last_message_at: nowIso,
+          last_message: text.trim() || preview,
+          seller_unread_count: 0,
+          buyer_unread_count: ((convData?.buyer_unread_count || 0) + 1),
+        }).eq("id", ticketId);
+
+      } else if (ticketSource === "support_tickets") {
         const msgPayload = {
           ticket_id: ticketId,
           sender_id: senderId,
@@ -214,7 +344,7 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
         const { error: insertErr } = await supabase.from("ticket_messages").insert(msgPayload);
         if (insertErr) throw insertErr;
 
-        await supabase.from("support_tickets").update({ status: "open", updated_at: new Date().toISOString() }).eq("id", ticketId);
+        await supabase.from("support_tickets").update({ status: "open", updated_at: nowIso }).eq("id", ticketId);
       } else {
         const isAdmin = senderType === "admin";
         const msgPayload = {
@@ -235,7 +365,7 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
         }
 
         const { data: t } = await supabase.from("seller_support_tickets").select("staff_unread_count,seller_unread_count").eq("id", ticketId).single();
-        const updates: any = { last_message_at: new Date().toISOString(), last_message_preview: preview.slice(0, 120), status: "open" };
+        const updates: any = { last_message_at: nowIso, last_message_preview: preview.slice(0, 120), status: "open" };
         if (senderType === "seller") updates.staff_unread_count = (t?.staff_unread_count || 0) + 1;
         else updates.seller_unread_count = (t?.seller_unread_count || 0) + 1;
 
@@ -267,11 +397,43 @@ export function SupportChatPanel({ ticketId, senderType, senderId, senderName, r
             </Button>
           )}
           <div>
-            <h3 className="font-semibold text-sm">{headerTitle || "Support Conversation"}</h3>
-            <p className="text-xs text-muted-foreground">{headerSubtitle || `Ticket ID: #${ticketId.slice(0, 8)}`}</p>
+            <h3 className="font-semibold text-sm">
+              {convDetails?.buyer_name ? `Chat with ${convDetails.buyer_name}` : (headerTitle || "Support Conversation")}
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              {convDetails?.buyer_email ? `Customer: ${convDetails.buyer_email}` : (headerSubtitle || `Ticket ID: #${ticketId.slice(0, 8)}`)}
+            </p>
           </div>
         </div>
       </div>
+
+      {/* Product Reference Card if chatting about a product */}
+      {convDetails?.product_name && (
+        <div className="px-4 py-2.5 bg-muted/40 border-b flex items-center justify-between gap-3">
+          <div className="flex items-center gap-3 min-w-0">
+            {convDetails.product_image ? (
+              <img src={convDetails.product_image} alt="" className="w-9 h-9 rounded-lg object-cover border shrink-0 bg-white" />
+            ) : (
+              <div className="w-9 h-9 rounded-lg bg-primary/10 flex items-center justify-center shrink-0">
+                <Package className="h-4 w-4 text-primary" />
+              </div>
+            )}
+            <div className="min-w-0">
+              <p className="text-xs font-semibold text-foreground truncate">{convDetails.product_name}</p>
+              {convDetails.product_price && (
+                <p className="text-[11px] font-bold text-orange-600">৳{Number(convDetails.product_price).toLocaleString()}</p>
+              )}
+            </div>
+          </div>
+          {convDetails.product_slug && (
+            <Button variant="ghost" size="sm" asChild className="h-7 text-xs gap-1 shrink-0">
+              <a href={`/product/${convDetails.product_slug}`} target="_blank" rel="noopener noreferrer">
+                View Product <ExternalLink className="h-3 w-3" />
+              </a>
+            </Button>
+          )}
+        </div>
+      )}
 
       {/* Messages */}
       <ScrollArea className="flex-1 p-4">

@@ -10,7 +10,7 @@ import { cn } from "@/lib/utils";
 
 export interface SupportTicketRow {
   id: string;
-  source_table: "support_tickets" | "seller_support_tickets";
+  source_table: "support_tickets" | "seller_support_tickets" | "conversations";
   seller_id?: string | null;
   user_id?: string | null;
   subject: string;
@@ -23,12 +23,15 @@ export interface SupportTicketRow {
   display_name?: string;
   shop_logo?: string;
   ticket_number?: string | null;
+  product_id?: string | null;
+  product_name?: string | null;
+  product_image?: string | null;
 }
 
 interface Props {
   perspective: "staff" | "admin";
   selectedId: string | null;
-  onSelect: (id: string, sourceTable?: "support_tickets" | "seller_support_tickets") => void;
+  onSelect: (id: string, sourceTable?: "support_tickets" | "seller_support_tickets" | "conversations") => void;
 }
 
 export function SupportTicketList({ perspective, selectedId, onSelect }: Props) {
@@ -120,7 +123,7 @@ export function SupportTicketList({ perspective, selectedId, onSelect }: Props) 
         };
       });
 
-      // 3. Fetch buyer conversations
+      // 3. Fetch buyer conversations (Live store chats & product inquiries)
       const { data: convRows } = await supabase
         .from("conversations")
         .select("*")
@@ -132,26 +135,48 @@ export function SupportTicketList({ perspective, selectedId, onSelect }: Props) 
         (buyerProfs || []).forEach((p: any) => profilesMap.set(p.id, p));
       }
 
+      // Fetch last messages for conversations
+      const convIds = (convRows || []).map((c: any) => c.id);
+      let convLastMsgsMap = new Map<string, { content: string; created_at: string }>();
+      if (convIds.length > 0) {
+        const { data: convMsgs } = await supabase
+          .from("messages")
+          .select("conversation_id, content, created_at")
+          .in("conversation_id", convIds)
+          .order("created_at", { ascending: false });
+
+        (convMsgs || []).forEach((m: any) => {
+          if (!convLastMsgsMap.has(m.conversation_id)) {
+            convLastMsgsMap.set(m.conversation_id, { content: m.content, created_at: m.created_at });
+          }
+        });
+      }
+
       const formattedConvs: SupportTicketRow[] = (convRows || []).map((r: any) => {
         const buyerProf = profilesMap.get(r.buyer_id);
+        const lastMsg = convLastMsgsMap.get(r.id);
+        const buyerName = buyerProf?.full_name || buyerProf?.email || "Customer";
+
         return {
           id: r.id,
-          source_table: "support_tickets",
+          source_table: "conversations",
           user_id: r.buyer_id,
-          subject: `Chat: ${buyerProf?.full_name || "Customer Chat"}`,
-          category: "Live Chat",
+          seller_id: r.seller_id,
+          subject: r.product_id ? `Product Chat (${r.product_id})` : `Chat with ${buyerName}`,
+          category: r.product_id ? "Product Inquiry" : "Store Chat",
           status: "open",
-          ticket_number: r.id,
-          last_message_at: r.last_message_at || r.created_at,
-          last_message_preview: r.last_message || "Product Inquiry Chat",
+          ticket_number: r.id.slice(0, 12),
+          last_message_at: lastMsg?.created_at || r.last_message_at || r.created_at,
+          last_message_preview: lastMsg?.content || r.last_message || "Product Inquiry Chat",
           seller_unread_count: r.seller_unread_count || 0,
           staff_unread_count: r.seller_unread_count || 0,
-          display_name: buyerProf?.full_name || "Customer",
+          display_name: buyerName,
+          product_id: r.product_id,
         };
       });
 
       // Combine and sort by last_message_at desc
-      const combined = [...formattedSupportTickets, ...formattedSellerTickets, ...formattedConvs].sort((a, b) => {
+      const combined = [...formattedConvs, ...formattedSupportTickets, ...formattedSellerTickets].sort((a, b) => {
         const timeA = new Date(a.last_message_at || 0).getTime();
         const timeB = new Date(b.last_message_at || 0).getTime();
         return timeB - timeA;
@@ -170,6 +195,7 @@ export function SupportTicketList({ perspective, selectedId, onSelect }: Props) 
     const ch1 = supabase
       .channel("support-tickets-list-seller")
       .on("postgres_changes", { event: "*", schema: "public", table: "seller_support_tickets" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "seller_support_messages" }, () => load())
       .subscribe();
 
     const ch2 = supabase
@@ -178,9 +204,16 @@ export function SupportTicketList({ perspective, selectedId, onSelect }: Props) 
       .on("postgres_changes", { event: "INSERT", schema: "public", table: "ticket_messages" }, () => load())
       .subscribe();
 
+    const ch3 = supabase
+      .channel("support-tickets-list-convs")
+      .on("postgres_changes", { event: "*", schema: "public", table: "conversations" }, () => load())
+      .on("postgres_changes", { event: "*", schema: "public", table: "messages" }, () => load())
+      .subscribe();
+
     return () => {
       supabase.removeChannel(ch1);
       supabase.removeChannel(ch2);
+      supabase.removeChannel(ch3);
     };
   }, []);
 

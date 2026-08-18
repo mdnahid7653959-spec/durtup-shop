@@ -232,6 +232,28 @@ export default function BuyerMessages() {
     enabled: !!selectedConvId,
   });
 
+  // Realtime subscription for incoming messages from seller/admin
+  useEffect(() => {
+    if (!selectedConvId) return;
+
+    const channel = supabase
+      .channel(`buyer-chat-sync-${selectedConvId}`)
+      .on(
+        "postgres_changes",
+        { event: "INSERT", schema: "public", table: "messages", filter: `conversation_id=eq.${selectedConvId}` },
+        () => {
+          queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
+          queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
+          queryClient.invalidateQueries({ queryKey: ["single-conversation", selectedConvId] });
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [selectedConvId, queryClient]);
+
   // Mark as read
   useEffect(() => {
     if (!selectedConvId || !user?.id) return;

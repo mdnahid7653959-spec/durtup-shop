@@ -742,13 +742,12 @@ export default function ProductDetail() {
       const targetSellerId = product?.seller_id || "admin";
       const targetProductId = product?.id || null;
       const convId = `conv-${authUser.id}-${targetSellerId}${targetProductId ? `-${targetProductId}` : ''}`;
+      const nowIso = new Date().toISOString();
 
       const { data: existing } = await supabase
         .from("conversations")
         .select("id")
-        .eq("buyer_id", authUser.id)
-        .eq("seller_id", targetSellerId)
-        .eq("product_id", targetProductId)
+        .eq("id", convId)
         .maybeSingle();
 
       if (existing?.id) {
@@ -761,8 +760,25 @@ export default function ProductDetail() {
             buyer_id: authUser.id,
             seller_id: targetSellerId,
             product_id: targetProductId,
-            created_at: new Date().toISOString()
+            last_message_at: nowIso,
+            last_message: `Inquiry about: ${product?.name || "Product"}`,
+            seller_unread_count: 1,
+            buyer_unread_count: 0,
+            created_at: nowIso
           });
+
+        await supabase
+          .from("messages")
+          .insert({
+            id: `msg-${Date.now()}-${Math.random().toString(36).substring(2, 6)}`,
+            conversation_id: convId,
+            sender_id: authUser.id,
+            sender_type: "buyer",
+            content: `Hi, I am inquiring about "${product?.name || "this product"}".`,
+            created_at: nowIso,
+            is_read: false
+          });
+
         navigate(`/messages/${convId}`);
       }
     } catch (err) {
