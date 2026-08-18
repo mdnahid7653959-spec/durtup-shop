@@ -36,13 +36,16 @@ const adapterFileToDataUrl = (file: Blob | File): Promise<string> => {
 class FirebaseQueryBuilder {
   private colName: string;
   private conditions: any[] = [];
+  private rawConditions: Array<{ field: string; op: string; value: any }> = [];
   private orderBys: any[] = [];
+  private rawOrderBys: Array<{ field: string; ascending: boolean }> = [];
   private limitNum: number | null = null;
   private isSingle = false;
   private isMaybeSingle = false;
   private updateData: any = null;
   private isDelete = false;
   private isInsert = false;
+  private insertData: any = null;
   private orFilter: string | null = null;
 
   constructor(colName: string) {
@@ -55,6 +58,7 @@ class FirebaseQueryBuilder {
 
   eq(field: string, value: any) {
     if (value !== undefined && value !== null) {
+      this.rawConditions.push({ field, op: "==", value });
       this.conditions.push(where(field, "==", value));
     }
     return this;
@@ -62,33 +66,39 @@ class FirebaseQueryBuilder {
 
   neq(field: string, value: any) {
     if (value !== undefined && value !== null) {
+      this.rawConditions.push({ field, op: "!=", value });
       this.conditions.push(where(field, "!=", value));
     }
     return this;
   }
 
   gt(field: string, value: any) {
+    this.rawConditions.push({ field, op: ">", value });
     this.conditions.push(where(field, ">", value));
     return this;
   }
 
   gte(field: string, value: any) {
+    this.rawConditions.push({ field, op: ">=", value });
     this.conditions.push(where(field, ">=", value));
     return this;
   }
 
   lt(field: string, value: any) {
+    this.rawConditions.push({ field, op: "<", value });
     this.conditions.push(where(field, "<", value));
     return this;
   }
 
   lte(field: string, value: any) {
+    this.rawConditions.push({ field, op: "<=", value });
     this.conditions.push(where(field, "<=", value));
     return this;
   }
 
   in(field: string, values: any[]) {
     if (values && values.length > 0) {
+      this.rawConditions.push({ field, op: "in", value: values });
       this.conditions.push(where(field, "in", values.slice(0, 10)));
     }
     return this;
@@ -100,7 +110,9 @@ class FirebaseQueryBuilder {
   }
 
   order(field: string, opts?: { ascending?: boolean; nullsFirst?: boolean }) {
-    this.orderBys.push(fsOrderBy(field, opts?.ascending ? "asc" : "desc"));
+    const isAsc = opts?.ascending !== false;
+    this.rawOrderBys.push({ field, ascending: isAsc });
+    this.orderBys.push(fsOrderBy(field, isAsc ? "asc" : "desc"));
     return this;
   }
 
@@ -143,10 +155,23 @@ class FirebaseQueryBuilder {
 
   private async executeFetch() {
     const colRef = collection(db, this.colName);
-    const constraints: any[] = [...this.conditions, ...this.orderBys];
-    if (this.limitNum) constraints.push(fsLimit(this.limitNum));
-    const q = fsQuery(colRef, ...constraints);
-    return await getDocs(q);
+    try {
+      const constraints: any[] = [...this.conditions, ...this.orderBys];
+      if (this.limitNum) constraints.push(fsLimit(this.limitNum));
+      const q = fsQuery(colRef, ...constraints);
+      return await getDocs(q);
+    } catch (err: any) {
+      // If composite index error occurs, try query with conditions only
+      try {
+        const constraints: any[] = [...this.conditions];
+        if (this.limitNum) constraints.push(fsLimit(this.limitNum));
+        const q = fsQuery(colRef, ...constraints);
+        return await getDocs(q);
+      } catch (err2: any) {
+        // Fallback: fetch all and let in-memory filtering handle it
+        return await getDocs(colRef);
+      }
+    }
   }
 
   async then(resolve: (res: { data: any; error: any; count?: number }) => void, reject?: (reason: any) => void) {
@@ -176,7 +201,7 @@ class FirebaseQueryBuilder {
             await setDoc(newDocRef, {
               id: generatedId,
               ...item,
-              created_at: new Date().toISOString(),
+              created_at: item.created_at || new Date().toISOString(),
               updated_at: new Date().toISOString()
             });
             results.push({ id: generatedId, ...item });
@@ -207,13 +232,10 @@ class FirebaseQueryBuilder {
         }
 
         // If not found in query, check if any condition was on id or order_number and setDoc directly
-        for (const cond of this.conditions) {
+        for (const cond of this.rawConditions) {
           try {
-            const rawCond = cond as any;
-            const field = rawCond?._field?.segments?.[0] || rawCond?.field;
-            const val = rawCond?._value?.value || rawCond?.val || rawCond?.value;
-            if (field === "id" && val) {
-              await setDoc(doc(db, this.colName, val.toString()), {
+            if (cond.field === "id" && cond.value) {
+              await setDoc(doc(db, this.colName, cond.value.toString()), {
                 ...this.updateData,
                 updated_at: new Date().toISOString()
               }, { merge: true });
@@ -236,6 +258,27 @@ class FirebaseQueryBuilder {
 
       const snapshot = await this.executeFetch();
       let list: any[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Apply in-memory filtering for conditions (safeguard)
+      if (this.rawConditions.length > 0) {
+        list = list.filter(item => {
+          return this.rawConditions.every(cond => {
+            const itemVal = item[cond.field];
+            if (cond.op === "==") {
+              return String(itemVal) === String(cond.value) || (cond.field === "id" && String(item.id) === String(cond.value));
+            }
+            if (cond.op === "!=") {
+              return String(itemVal) !== String(cond.value);
+            }
+            if (cond.op === ">") return Number(itemVal) > Number(cond.value);
+            if (cond.op === ">=") return Number(itemVal) >= Number(cond.value);
+            if (cond.op === "<") return Number(itemVal) < Number(cond.value);
+            if (cond.op === "<=") return Number(itemVal) <= Number(cond.value);
+            if (cond.op === "in") return Array.isArray(cond.value) && cond.value.map(String).includes(String(itemVal));
+            return true;
+          });
+        });
+      }
 
       if (this.orFilter) {
         const clauses = this.orFilter.split(',').map(s => s.trim()).filter(Boolean);
@@ -260,6 +303,25 @@ class FirebaseQueryBuilder {
             }
             return false;
           });
+        });
+      }
+
+      // Apply in-memory ordering
+      if (this.rawOrderBys.length > 0 && list.length > 1) {
+        list.sort((a, b) => {
+          for (const ord of this.rawOrderBys) {
+            const valA = a[ord.field];
+            const valB = b[ord.field];
+            if (valA === valB) continue;
+            if (valA === null || valA === undefined) return ord.ascending ? 1 : -1;
+            if (valB === null || valB === undefined) return ord.ascending ? -1 : 1;
+            if (typeof valA === "string" && typeof valB === "string") {
+              const cmp = valA.localeCompare(valB);
+              return ord.ascending ? cmp : -cmp;
+            }
+            return ord.ascending ? (valA > valB ? 1 : -1) : (valA < valB ? 1 : -1);
+          }
+          return 0;
         });
       }
 

@@ -14,6 +14,7 @@ import { ArrowLeft, Send, Loader2, ShieldCheck, ExternalLink, Package } from "lu
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { toast } from "sonner";
 
 interface Conversation {
   id: string;
@@ -141,23 +142,21 @@ export default function BuyerMessages() {
     queryKey: ["single-conversation", selectedConvId],
     queryFn: async () => {
       if (!selectedConvId) return null;
-      const { data } = await supabase.from("conversations").select("*").eq("id", selectedConvId).maybeSingle();
-      
-      // Extract target product ID from conversation record OR route parameter
-      let targetProductId = data?.product_id;
-      if (!targetProductId && selectedConvId.includes("mohasagor")) {
-        const parts = selectedConvId.split("-");
-        const idx = parts.findIndex(p => p.includes("mohasagor"));
-        if (idx !== -1) {
-          targetProductId = parts.slice(idx).join("-");
-        }
-      }
+      const { data, error } = await supabase
+        .from("conversations")
+        .select("*")
+        .eq("id", selectedConvId)
+        .maybeSingle();
 
-      let seller_name = "Durtup Official Support";
-      const sellerId = data?.seller_id || "admin";
-      if (sellerId !== "admin" && sellerId !== "durtup_official") {
-        const { data: sellerData } = await supabase.from("sellers").select("shop_name").eq("id", sellerId).maybeSingle();
-        seller_name = sellerData?.shop_name || "Store Partner";
+      if (error) throw error;
+      if (!data) return null;
+
+      let seller_name = "Store Partner";
+      if (data.seller_id === "admin" || data.seller_id === "durtup_official") {
+        seller_name = "Durtup Official Store";
+      } else {
+        const { data: s } = await supabase.from("sellers").select("shop_name").eq("id", data.seller_id).maybeSingle();
+        if (s?.shop_name) seller_name = s.shop_name;
       }
 
       let product_name: string | undefined;
@@ -165,44 +164,32 @@ export default function BuyerMessages() {
       let product_price: number | undefined;
       let product_slug: string | undefined;
 
-      if (targetProductId) {
-        const catalog = await getCachedMohasagorProducts();
-        const matched = catalog.find(p => p.id === targetProductId || p.slug === targetProductId);
-        if (matched) {
-          product_name = matched.name;
-          product_image = matched.image;
-          product_price = matched.price;
-          product_slug = matched.slug;
+      if (data.product_id) {
+        const catalog = await getCachedMohasagorProducts().catch(() => []);
+        const found = catalog.find((p: any) => p.id === data.product_id || p.slug === data.product_id);
+        if (found) {
+          product_name = found.name;
+          product_image = found.image;
+          product_price = found.price;
+          product_slug = found.slug;
         } else {
-          const { data: prod } = await supabase
-            .from("products")
-            .select("id, name, slug, discount_price, regular_price, image")
-            .eq("id", targetProductId)
-            .maybeSingle();
-          if (prod) {
-            product_name = prod.name;
-            product_slug = prod.slug;
-            product_image = prod.image;
-            product_price = prod.discount_price || prod.regular_price;
+          const { data: p } = await supabase.from("products").select("name, image, discount_price, regular_price, slug").eq("id", data.product_id).maybeSingle();
+          if (p) {
+            product_name = p.name;
+            product_image = p.image;
+            product_price = p.discount_price || p.regular_price;
+            product_slug = p.slug;
           }
         }
       }
 
       return {
-        id: selectedConvId,
-        buyer_id: data?.buyer_id || user?.id || "",
-        seller_id: sellerId,
-        product_id: targetProductId || null,
-        last_message_at: data?.last_message_at || new Date().toISOString(),
-        buyer_unread_count: data?.buyer_unread_count || 0,
-        seller_unread_count: data?.seller_unread_count || 0,
-        created_at: data?.created_at || new Date().toISOString(),
+        ...data,
         seller_name,
         product_name,
         product_image,
         product_price,
         product_slug,
-        last_message: data?.last_message
       } as Conversation;
     },
     enabled: !!selectedConvId
@@ -226,7 +213,10 @@ export default function BuyerMessages() {
         .select("*")
         .eq("conversation_id", selectedConvId)
         .order("created_at", { ascending: true });
-      if (error) throw error;
+
+      if (error) {
+        console.warn("Error fetching messages:", error);
+      }
       return (data || []) as Message[];
     },
     enabled: !!selectedConvId,
@@ -256,10 +246,11 @@ export default function BuyerMessages() {
 
   // Mark as read
   useEffect(() => {
-    if (!selectedConvId || !user?.id) return;
+    const uid = user?.id || (user as any)?.uid;
+    if (!selectedConvId || !uid) return;
     supabase.from("conversations").update({ buyer_unread_count: 0 }).eq("id", selectedConvId).then();
     supabase.from("messages").update({ is_read: true }).eq("conversation_id", selectedConvId).eq("sender_type", "seller").eq("is_read", false).then();
-  }, [selectedConvId, user?.id]);
+  }, [selectedConvId, user]);
 
   // Scroll to bottom
   useEffect(() => {
@@ -269,31 +260,36 @@ export default function BuyerMessages() {
   // Send message mutation
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
-      if (!selectedConvId || !user?.id) throw new Error("Missing user session");
+      const senderUserId = user?.id || (user as any)?.uid;
+      if (!selectedConvId || !senderUserId) throw new Error("Please log in to send a message");
 
       const nowIso = new Date().toISOString();
+      const newMsgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
 
       // Ensure conversation exists in DB
       const { data: existing } = await supabase.from("conversations").select("id").eq("id", selectedConvId).maybeSingle();
       if (!existing?.id) {
         await supabase.from("conversations").insert({
           id: selectedConvId,
-          buyer_id: user.id,
+          buyer_id: senderUserId,
           seller_id: selectedConv?.seller_id || "admin",
           product_id: selectedConv?.product_id || null,
           last_message_at: nowIso,
+          last_message: content,
+          seller_unread_count: 1,
+          buyer_unread_count: 0,
           created_at: nowIso
         });
       }
 
-      const newMsgId = `msg-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`;
       const { error } = await supabase.from("messages").insert({
         id: newMsgId,
         conversation_id: selectedConvId,
-        sender_id: user.id,
+        sender_id: senderUserId,
         sender_type: "buyer",
         content,
-        created_at: nowIso
+        created_at: nowIso,
+        is_read: false
       });
       if (error) throw error;
 
@@ -303,19 +299,54 @@ export default function BuyerMessages() {
         last_message: content,
         seller_unread_count: (typeof currentUnread === 'number' ? currentUnread : 0) + 1 
       }).eq("id", selectedConvId);
+
+      return {
+        id: newMsgId,
+        conversation_id: selectedConvId,
+        sender_id: senderUserId,
+        sender_type: "buyer",
+        content,
+        is_read: false,
+        created_at: nowIso
+      };
     },
-    onSuccess: () => {
-      setMessageText("");
+    onMutate: async (newContent: string) => {
+      await queryClient.cancelQueries({ queryKey: ["conversation-messages", selectedConvId] });
+      const previousMessages = queryClient.getQueryData<Message[]>(["conversation-messages", selectedConvId]) || [];
+      const senderUserId = user?.id || (user as any)?.uid || "buyer";
+      const optimisticMsg: Message = {
+        id: `temp-${Date.now()}`,
+        conversation_id: selectedConvId!,
+        sender_id: senderUserId,
+        sender_type: "buyer",
+        content: newContent,
+        is_read: false,
+        created_at: new Date().toISOString()
+      };
+      queryClient.setQueryData<Message[]>(["conversation-messages", selectedConvId], (old = []) => [...old, optimisticMsg]);
+      return { previousMessages };
+    },
+    onError: (err: any, _newContent, context) => {
+      if (context?.previousMessages) {
+        queryClient.setQueryData(["conversation-messages", selectedConvId], context.previousMessages);
+      }
+      toast.error(err?.message || "Failed to send message");
+    },
+    onSettled: () => {
       queryClient.invalidateQueries({ queryKey: ["conversation-messages", selectedConvId] });
       queryClient.invalidateQueries({ queryKey: ["buyer-conversations"] });
       queryClient.invalidateQueries({ queryKey: ["single-conversation", selectedConvId] });
     },
   });
 
-  const handleSend = (e: React.FormEvent) => {
+  const handleSend = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!messageText.trim()) return;
-    sendMessage.mutate(messageText.trim());
+    const text = messageText.trim();
+    if (!text || sendMessage.isPending) return;
+    setMessageText("");
+    try {
+      await sendMessage.mutateAsync(text);
+    } catch {}
   };
 
   useEffect(() => {
