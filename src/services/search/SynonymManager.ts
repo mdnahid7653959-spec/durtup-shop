@@ -13,45 +13,69 @@ export interface SynonymRule {
 // Built-in initial bilingual synonym dictionary for instant out-of-the-box matching
 const DEFAULT_SYNONYMS: SynonymRule[] = [
   {
-    id: "syn-motorcycle",
-    term: "motorcycle",
-    synonyms: ["bike", "motor bike", "motorbike", "two wheeler", "বাইক", "মোটরসাইকেল", "মটরসাইকেল"],
+    id: "syn-shirt",
+    term: "shirt",
+    synonyms: ["t-shirt", "tshirt", "polo", "katua", "casual shirt", "formal shirt", "combo shirt", "half sleeve", "full sleeve", "শার্ট", "টি শার্ট", "টি-শার্ট", "কাতুয়া", "গেঞ্জি", "পোলো"],
     language: "bilingual"
   },
   {
-    id: "syn-mobile",
-    term: "mobile phone",
-    synonyms: ["mobile", "phone", "smartphone", "cell phone", "cellphone", "মোবাইল", "ফোন", "স্মার্টফোন"],
+    id: "syn-panjabi",
+    term: "panjabi",
+    synonyms: ["punjabi", "kabli", "kurta", "পাঞ্জাবি", "পাঞ্জাবী", "কাবলি", "কুর্তা", "পাঞ্জাবীর কাপড়"],
     language: "bilingual"
   },
   {
-    id: "syn-laptop",
-    term: "laptop",
-    synonyms: ["notebook", "computer", "pc", "desktop", "ল্যাপটপ", "কম্পিউটার", "পিসি"],
+    id: "syn-pant",
+    term: "pant",
+    synonyms: ["trouser", "jeans", "gabardine", "joggers", "cargo", "প্যান্ট", "জিন্স", "গেবার্ডিন", "পাজামা"],
     language: "bilingual"
   },
   {
-    id: "syn-clothing",
-    term: "clothing",
-    synonyms: ["shirt", "pant", "dress", "t-shirt", "tshirt", "jeans", "পোশাক", "জামাকাপড়", "শার্ট", "প্যান্ট"],
+    id: "syn-trimmer",
+    term: "trimmer",
+    synonyms: ["clipper", "shaver", "hair trimmer", "nose trimmer", "beard trimmer", "hair clipper", "ট্রিমার", "শেভার", "নাক ট্রিমার", "দাড়ি কাটার মেশিন"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-fan",
+    term: "fan",
+    synonyms: ["mini fan", "hand fan", "portable fan", "rechargeable fan", "table fan", "ফ্যান", "মিনি ফ্যান", "হাত ফ্যান", "চার্জার ফ্যান"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-microphone",
+    term: "microphone",
+    synonyms: ["mic", "wireless mic", "collar mic", "k35", "k8", "k9", "vlogging mic", "মাইক্রোফোন", "মাইক", "কলার মাইক"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-speaker",
+    term: "speaker",
+    synonyms: ["bluetooth speaker", "soundbox", "portable speaker", "mini speaker", "স্পিকার", "সাউন্ডবক্স", "ব্লুটুথ স্পিকার"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-charger",
+    term: "charger",
+    synonyms: ["adapter", "cable", "usb cable", "fast charger", "multi charger", "socket", "power strip", "চার্জার", "ক্যাবল", "মাল্টিপ্লাগ"],
     language: "bilingual"
   },
   {
     id: "syn-headphones",
     term: "headphones",
-    synonyms: ["earphones", "earbuds", "headset", "airpods", "হেডফোন", "ইয়ারফোন"],
+    synonyms: ["earphones", "earbuds", "headset", "airpods", "tws", "wireless earbuds", "হেডফোন", "ইয়ারফোন", "ইয়ারবাডস", "এয়ারপডস"],
     language: "bilingual"
   },
   {
     id: "syn-smartwatch",
     term: "smartwatch",
-    synonyms: ["smart watch", "fitness band", "smartband", "স্মার্টওয়াচ", "ঘড়ি"],
+    synonyms: ["smart watch", "fitness band", "smartband", "watch", "wrist watch", "স্মার্টওয়াচ", "স্মার্ট ওয়াচ", "ঘড়ি", "ঘড়ি", "হাত ঘড়ি"],
     language: "bilingual"
   },
   {
     id: "syn-powerbank",
     term: "power bank",
-    synonyms: ["powerbank", "portable charger", "battery pack", "পাওয়ার ব্যাংক"],
+    synonyms: ["powerbank", "portable charger", "battery pack", "পাওয়ার ব্যাংক", "পাওয়ার ব্যাংক"],
     language: "bilingual"
   },
   {
@@ -63,13 +87,37 @@ const DEFAULT_SYNONYMS: SynonymRule[] = [
   {
     id: "syn-mouse",
     term: "mouse",
-    synonyms: ["gaming mouse", "wireless mouse", "মাউস"],
+    synonyms: ["gaming mouse", "wireless mouse", "মাউস", "গেমিং মাউস"],
     language: "bilingual"
   },
   {
     id: "syn-shoes",
     term: "shoes",
-    synonyms: ["sneakers", "footwear", "boots", "sandals", "জুতা", "স্নিকার্স"],
+    synonyms: ["sneakers", "footwear", "boots", "sandals", "loafers", "জুতা", "জুতো", "স্নিকার্স", "স্যান্ডেল", "লোফার"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-beauty",
+    term: "beauty",
+    synonyms: ["cream", "serum", "lotion", "shampoo", "facewash", "face wash", "perfume", "attar", "lipstick", "makeup", "ক্রিম", "সিরাম", "লোশন", "শ্যাম্পু", "ফেসওয়াশ", "পারফিউম", "আতর"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-dispenser",
+    term: "water dispenser",
+    synonyms: ["dispenser", "water pump", "rechargeable water dispenser", "automatic water pump", "পাম্প", "ডিসপেন্সার", "পানির পাম্প"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-mobile",
+    term: "mobile phone",
+    synonyms: ["mobile", "phone", "smartphone", "cell phone", "button phone", "feature phone", "মোবাইল", "ফোন", "স্মার্টফোন", "বাটন মোবাইল"],
+    language: "bilingual"
+  },
+  {
+    id: "syn-bag",
+    term: "bag",
+    synonyms: ["backpack", "handbag", "school bag", "travel bag", "wallet", "ব্যাগ", "হ্যান্ডব্যাগ", "ব্যাকপ্যাক", "মানিব্যাগ"],
     language: "bilingual"
   }
 ];

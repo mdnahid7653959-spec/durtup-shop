@@ -12,6 +12,7 @@ import { synonymManager } from "../SynonymManager";
 import { fuzzyMatchToken, tokenizeText, normalizeText, getEditDistance } from "../FuzzySearchEngine";
 import { searchAnalytics } from "../SearchAnalyticsService";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { getSmartProductImage } from "@/utils/productImageHelper";
 
 const defaultImages = [
   "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop",
@@ -460,6 +461,7 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
 
     // 1. Expand query with bilingual synonym engine
     const { expandedTerms, matchedRules } = synonymManager.expandQuery(queryStr);
+    const queryTokens = queryStr ? queryStr.split(/[\s,+/_-]+/).filter(t => t.length > 0) : [];
 
     // 2. Score and rank products
     const scoredProducts: SearchProductResult[] = [];
@@ -473,6 +475,7 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
       const pCat = (p.category || "").toLowerCase();
       const pBrand = (p.brand || "").toLowerCase();
       const pSku = (p.sku || "").toLowerCase();
+      const pId = String(p.id || "");
       const pTags = Array.isArray(p.tags) ? p.tags.map((t: string) => t.toLowerCase()) : [];
 
       // If no search query, give all products a base score so they appear when browsing/filtering
@@ -480,61 +483,82 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
         score = 10;
         matchType = "partial";
       } else {
-        // Check Exact SKU
-        if (pSku === queryStr || pSku.includes(queryStr)) {
-          score += 150;
+        // A. Exact SKU / ID Match
+        if (pSku === queryStr || pId === queryStr || pSku.includes(queryStr)) {
+          score += 200;
           matchType = "sku";
         }
 
-        // Check Name Matches (exact, startsWith, or includes substring anywhere)
+        // B. Full Phrase Matches on Name
         if (pName === queryStr) {
-          score += 100;
+          score += 150;
           matchType = "exact";
         } else if (pName.startsWith(queryStr)) {
-          score += 85;
+          score += 110;
           matchType = "prefix";
         } else if (pName.includes(queryStr)) {
-          score += 65;
+          score += 85;
           matchType = "partial";
         }
 
-        // Check Category / Brand / Description Includes
-        if (pCat.includes(queryStr)) {
-          score += 55;
+        // C. Multi-token flexible matching (Matches words in any order)
+        if (queryTokens.length > 0) {
+          let matchedTokensCount = 0;
+          for (const token of queryTokens) {
+            if (pName.includes(token)) {
+              matchedTokensCount++;
+              score += 35;
+            } else if (pCat.includes(token) || pBrand.includes(token)) {
+              matchedTokensCount += 0.5;
+              score += 20;
+            } else if (pDesc.includes(token)) {
+              score += 10;
+            }
+          }
+
+          // Bonus if ALL query words appear in the product title
+          if (queryTokens.length > 1 && matchedTokensCount >= queryTokens.length) {
+            score += 80;
+            if (matchType !== "exact") matchType = "exact";
+          } else if (matchedTokensCount > 0) {
+            score += Math.floor(matchedTokensCount * 15);
+          }
+        }
+
+        // D. Category / Brand Includes
+        if (pCat.includes(queryStr) || (queryStr.length > 3 && queryStr.includes(pCat))) {
+          score += 50;
           if (matchType === "partial") matchType = "semantic";
         }
         if (pBrand.includes(queryStr)) {
-          score += 50;
+          score += 45;
         }
         if (pDesc.includes(queryStr)) {
-          score += 30;
+          score += 25;
         }
 
-        // Check Expanded Terms & Synonyms
+        // E. Check Expanded Terms & Synonyms
         for (const term of expandedTerms) {
-          if (!term) continue;
+          if (!term || term === queryStr) continue;
           if (pName.includes(term)) {
-            score += 60;
+            score += 55;
             if (matchType !== "exact" && matchType !== "sku") matchType = "synonym";
           }
           if (pCat.includes(term)) {
-            score += 45;
-          }
-          if (pBrand.includes(term)) {
             score += 40;
           }
           if (pTags.some((tag: string) => tag.includes(term))) {
-            score += 35;
+            score += 30;
           }
         }
 
-        // Fuzzy Typo Matching for queries >= 3 chars
+        // F. Fuzzy Typo Matching for queries >= 3 chars
         if (score === 0 && queryStr.length >= 3) {
-          const queryTokens = tokenizeText(queryStr);
-          const nameTokens = tokenizeText(pName);
+          const queryToks = tokenizeText(queryStr);
+          const nameToks = tokenizeText(pName);
 
-          for (const qTok of queryTokens) {
-            for (const nTok of nameTokens) {
+          for (const qTok of queryToks) {
+            for (const nTok of nameToks) {
               const fuzzy = fuzzyMatchToken(qTok, nTok);
               if (fuzzy.isMatch) {
                 score += fuzzy.score;
@@ -547,17 +571,17 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
 
       // Apply Boosters for popular/rated/featured items
       if (score > 0) {
-        if (p.rating_average) score += Number(p.rating_average) * 4;
-        if (p.sold_count) score += Math.min(30, Number(p.sold_count) * 0.2);
-        if (p.is_featured) score += 15;
+        if (p.rating_average) score += Number(p.rating_average) * 2;
+        if (p.sold_count) score += Math.min(25, Number(p.sold_count) * 0.15);
+        if (p.is_featured) score += 10;
         if (p.is_best_seller) score += 10;
         if (p.in_stock !== false) score += 10;
-        if (p.custom_boost) score += Number(p.custom_boost);
 
-        // Map primary image
+        // Map primary image with smart resolver
         const primaryImage = p.product_images?.find((i: any) => i.is_primary)?.image_url;
         const firstImage = p.product_images?.[0]?.image_url;
-        const image = p.image || primaryImage || firstImage || defaultImages[0];
+        const rawImage = p.image || primaryImage || firstImage || defaultImages[0];
+        const image = getSmartProductImage(p.name, rawImage);
 
         scoredProducts.push({
           id: p.id,
