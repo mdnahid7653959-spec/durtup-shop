@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
-import { Edit, MoreHorizontal, Eye, Ban, CheckCircle, Mail, Phone, Calendar, Search, UserX, UserCheck, RefreshCw, MapPin, Trash2, Shield, Store, User } from "lucide-react";
+import { Edit, MoreHorizontal, Eye, Ban, CheckCircle, Mail, Phone, Calendar, Search, UserX, UserCheck, RefreshCw, MapPin, Trash2, Shield, Store, User, Copy, Check } from "lucide-react";
 import { supabase } from "@/lib/firebaseAdapter";
 import { adminDb } from "@/lib/adminDb";
 import { db } from "@/integrations/firebase/client";
-import { collection, getDocs, doc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
+import { collection, getDocs, doc, getDoc, setDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { useAdminCacheInvalidation } from "@/hooks/useRealtimeSync";
 import { AdminLayout } from "@/components/admin/AdminLayout";
 import { Badge } from "@/components/ui/badge";
@@ -70,6 +70,9 @@ interface Order {
   status: string | null;
   total: number;
   created_at: string | null;
+  shipping_address?: any;
+  billing_address?: any;
+  payment_method?: string | null;
 }
 
 interface Address {
@@ -120,6 +123,7 @@ export default function AdminUsers() {
   const [userAddresses, setUserAddresses] = useState<Address[]>([]);
   const [loadingOrders, setLoadingOrders] = useState(false);
   const [loadingAddresses, setLoadingAddresses] = useState(false);
+  const [copiedAddressId, setCopiedAddressId] = useState<string | null>(null);
 
   const masterAdminUser: Profile = {
     id: "3d0aed73-3d4d-4f0a-ad90-fddbb05eab81",
@@ -445,27 +449,234 @@ export default function AdminUsers() {
     setLoadingOrders(true);
     setLoadingAddresses(true);
 
-    // Fetch user orders
-    const { data, error } = await adminDb.select<Order>("orders", {
-      columns: "id, order_number, status, total, created_at",
-      filters: [{ col: "user_id", value: user.user_id }],
-      orderBy: { col: "created_at", ascending: false },
-      limit: 10,
-    });
+    const targetUserIds = new Set<string>();
+    if (user.id) targetUserIds.add(user.id);
+    if (user.user_id) targetUserIds.add(user.user_id);
+    const userEmail = user.email?.toLowerCase().trim() || "";
+    const userPhone = user.phone?.trim() || "";
+    const userName = user.full_name?.toLowerCase().trim() || "";
 
-    if (!error) {
-      setUserOrders(data || []);
+    const fetchedOrders: any[] = [];
+    const fetchedAddresses: Address[] = [];
+    const seenAddressKeys = new Set<string>();
+
+    // 1. Fetch Orders from Firestore and Database
+    try {
+      const oSnap = await getDocs(collection(db, "orders"));
+      oSnap.forEach((d) => {
+        const o = d.data() as any;
+        const oId = d.id;
+        const oUserId = o.user_id || o.userId;
+        const oEmail = (o.customer_email || o.shipping_address?.email || "").toLowerCase().trim();
+        const oPhone = (o.customer_phone || o.shipping_address?.phone || "").trim();
+        const oName = (o.customer_name || o.shipping_address?.name || "").toLowerCase().trim();
+
+        const isMatch =
+          (oUserId && targetUserIds.has(oUserId)) ||
+          (userEmail && userEmail !== "no email" && oEmail === userEmail) ||
+          (userPhone && oPhone === userPhone) ||
+          (userName && userName !== "customer" && oName === userName);
+
+        if (isMatch) {
+          fetchedOrders.push({
+            id: oId,
+            order_number: o.order_number || o.orderNumber || oId,
+            status: o.status || "pending",
+            total: Number(o.total) || 0,
+            created_at: o.created_at || o.createdAt || new Date().toISOString(),
+            shipping_address: o.shipping_address || o.shippingAddress,
+            billing_address: o.billing_address || o.billingAddress,
+            payment_method: o.payment_method || o.paymentMethod,
+          });
+        }
+      });
+    } catch (e) {
+      console.warn("Firestore orders lookup error:", e);
     }
+
+    try {
+      const { data: dbOrders } = await supabase.from("orders").select("*");
+      (dbOrders || []).forEach((o: any) => {
+        const oId = o.id;
+        const oUserId = o.user_id;
+        const oEmail = (o.customer_email || o.shipping_address?.email || "").toLowerCase().trim();
+        const oPhone = (o.customer_phone || o.shipping_address?.phone || "").trim();
+        const oName = (o.customer_name || o.shipping_address?.name || "").toLowerCase().trim();
+
+        const isMatch =
+          (oUserId && targetUserIds.has(oUserId)) ||
+          (userEmail && userEmail !== "no email" && oEmail === userEmail) ||
+          (userPhone && oPhone === userPhone) ||
+          (userName && userName !== "customer" && oName === userName);
+
+        if (isMatch && !fetchedOrders.some((x) => x.id === oId || x.order_number === o.order_number)) {
+          fetchedOrders.push({
+            id: oId,
+            order_number: o.order_number || oId,
+            status: o.status || "pending",
+            total: Number(o.total) || 0,
+            created_at: o.created_at || new Date().toISOString(),
+            shipping_address: o.shipping_address,
+            billing_address: o.billing_address,
+            payment_method: o.payment_method,
+          });
+        }
+      });
+    } catch (e) {
+      console.warn("DB orders lookup error:", e);
+    }
+
+    fetchedOrders.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+    setUserOrders(fetchedOrders);
     setLoadingOrders(false);
 
-    // Fetch user addresses
-    const { data: addrData } = await adminDb.select<Address>("addresses", {
-      columns: "*",
-      filters: [{ col: "user_id", value: user.user_id }],
-      orderBy: { col: "is_default", ascending: false },
+    // 2. Fetch Direct Addresses from Firestore and Database
+    try {
+      const addrSnap = await getDocs(collection(db, "addresses"));
+      addrSnap.forEach((d) => {
+        const a = d.data() as any;
+        const aUserId = a.user_id || a.userId;
+        if (aUserId && targetUserIds.has(aUserId)) {
+          const line1 = a.address_line1 || a.address || "";
+          const city = a.city || "Bangladesh";
+          const phone = a.phone || user.phone || "N/A";
+          const name = a.full_name || a.name || user.full_name || "Customer";
+          const key = `${name}-${phone}-${line1}-${city}`.toLowerCase();
+          if (!seenAddressKeys.has(key)) {
+            seenAddressKeys.add(key);
+            fetchedAddresses.push({
+              id: d.id,
+              label: a.label || "Saved Address",
+              full_name: name,
+              phone: phone,
+              address_line1: line1,
+              address_line2: a.address_line2 || null,
+              city: city,
+              state: a.state || null,
+              postal_code: a.postal_code || a.zip || "",
+              country: a.country || "Bangladesh",
+              is_default: !!a.is_default,
+            });
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("Firestore addresses lookup error:", e);
+    }
+
+    try {
+      const { data: dbAddrs } = await supabase.from("addresses").select("*");
+      (dbAddrs || []).forEach((a: any) => {
+        const aUserId = a.user_id;
+        if (aUserId && targetUserIds.has(aUserId)) {
+          const line1 = a.address_line1 || a.address || "";
+          const city = a.city || "Bangladesh";
+          const phone = a.phone || user.phone || "N/A";
+          const name = a.full_name || a.name || user.full_name || "Customer";
+          const key = `${name}-${phone}-${line1}-${city}`.toLowerCase();
+          if (!seenAddressKeys.has(key)) {
+            seenAddressKeys.add(key);
+            fetchedAddresses.push({
+              id: a.id,
+              label: a.label || "Saved Address",
+              full_name: name,
+              phone: phone,
+              address_line1: line1,
+              address_line2: a.address_line2 || null,
+              city: city,
+              state: a.state || null,
+              postal_code: a.postal_code || a.zip || "",
+              country: a.country || "Bangladesh",
+              is_default: !!a.is_default,
+            });
+          }
+        }
+      });
+    } catch (e) {
+      console.warn("DB addresses lookup error:", e);
+    }
+
+    // 3. Extract Delivery Addresses from all Orders placed by user
+    fetchedOrders.forEach((o) => {
+      const ship = o.shipping_address;
+      if (ship && typeof ship === "object") {
+        const line1 = ship.address || ship.address_line1 || ship.street || "";
+        const city = ship.city || ship.district || "";
+        const phone = ship.phone || user.phone || "";
+        const name = ship.name || [ship.firstName, ship.lastName].filter(Boolean).join(" ") || user.full_name || "Customer";
+
+        if (line1 || city || phone) {
+          const key = `${name}-${phone}-${line1}-${city}`.toLowerCase();
+          if (!seenAddressKeys.has(key)) {
+            seenAddressKeys.add(key);
+            fetchedAddresses.push({
+              id: `order-ship-${o.id}`,
+              label: `Order Delivery (#${o.order_number})`,
+              full_name: name,
+              phone: phone || "N/A",
+              address_line1: line1 || "Address provided at checkout",
+              address_line2: ship.address_line2 || ship.area || ship.thana || null,
+              city: city || "Bangladesh",
+              state: ship.state || ship.division || null,
+              postal_code: ship.postal_code || ship.zip || "",
+              country: ship.country || "Bangladesh",
+              is_default: fetchedAddresses.length === 0,
+            });
+          }
+        }
+      } else if (typeof ship === "string" && ship.trim()) {
+        const key = ship.toLowerCase().trim();
+        if (!seenAddressKeys.has(key)) {
+          seenAddressKeys.add(key);
+          fetchedAddresses.push({
+            id: `order-ship-str-${o.id}`,
+            label: `Order Delivery (#${o.order_number})`,
+            full_name: user.full_name || "Customer",
+            phone: user.phone || "N/A",
+            address_line1: ship,
+            address_line2: null,
+            city: "Bangladesh",
+            state: null,
+            postal_code: "",
+            country: "Bangladesh",
+            is_default: fetchedAddresses.length === 0,
+          });
+        }
+      }
     });
 
-    setUserAddresses(addrData || []);
+    // 4. Check user profile for saved address field
+    try {
+      const pDoc = await getDoc(doc(db, "profiles", user.id));
+      if (pDoc.exists()) {
+        const p = pDoc.data() as any;
+        if (p.address || p.address_line1 || p.city) {
+          const line1 = p.address || p.address_line1 || "";
+          const city = p.city || "Bangladesh";
+          const phone = p.phone || user.phone || "";
+          const name = p.full_name || user.full_name || "Customer";
+          const key = `${name}-${phone}-${line1}-${city}`.toLowerCase();
+          if (!seenAddressKeys.has(key)) {
+            seenAddressKeys.add(key);
+            fetchedAddresses.unshift({
+              id: `profile-${user.id}`,
+              label: "Profile Address",
+              full_name: name,
+              phone: phone || "N/A",
+              address_line1: line1,
+              address_line2: p.address_line2 || null,
+              city: city,
+              state: p.state || null,
+              postal_code: p.postal_code || p.zip || "",
+              country: p.country || "Bangladesh",
+              is_default: true,
+            });
+          }
+        }
+      }
+    } catch (e) {}
+
+    setUserAddresses(fetchedAddresses);
     setLoadingAddresses(false);
   };
 
@@ -855,36 +1066,92 @@ export default function AdminUsers() {
                   </div>
                 </div>
               </TabsContent>
-              <TabsContent value="addresses" className="mt-4">
+              <TabsContent value="addresses" className="mt-4 space-y-3">
                 {loadingAddresses ? (
                   <div className="text-center py-8">
-                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+                    <div className="h-6 w-6 animate-spin rounded-full border-2 border-primary border-t-transparent mx-auto" />
+                    <p className="text-xs text-muted-foreground mt-2">Loading addresses...</p>
                   </div>
                 ) : userAddresses.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <MapPin className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                    No addresses saved by this user
+                  <div className="text-center py-8 text-muted-foreground border border-dashed rounded-lg">
+                    <MapPin className="h-8 w-8 mx-auto mb-2 text-muted-foreground/50" />
+                    <p className="font-medium text-sm">No addresses found</p>
+                    <p className="text-xs text-muted-foreground mt-1">This user has not saved an address or placed an order yet.</p>
                   </div>
                 ) : (
                   <div className="space-y-3">
-                    {userAddresses.map((addr) => (
-                      <div key={addr.id} className="p-3 border rounded-lg space-y-1">
-                        <div className="flex items-center gap-2">
-                          <p className="font-medium text-sm">{addr.full_name}</p>
-                          {addr.label && <Badge variant="outline" className="text-xs">{addr.label}</Badge>}
-                          {addr.is_default && <Badge className="text-xs bg-primary/10 text-primary">Default</Badge>}
-                        </div>
-                        <p className="text-sm text-muted-foreground">{addr.phone}</p>
-                        <p className="text-sm text-muted-foreground">
-                          {addr.address_line1}
-                          {addr.address_line2 && `, ${addr.address_line2}`}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {addr.city}{addr.state && `, ${addr.state}`} - {addr.postal_code}
-                        </p>
-                        {addr.country && <p className="text-xs text-muted-foreground">{addr.country}</p>}
-                      </div>
-                    ))}
+                    {userAddresses.map((addr) => {
+                      const fullAddressString = [
+                        addr.address_line1,
+                        addr.address_line2,
+                        addr.city,
+                        addr.state,
+                        addr.postal_code,
+                        addr.country
+                      ].filter(Boolean).join(", ");
+
+                      const isCopied = copiedAddressId === addr.id;
+
+                      return (
+                        <Card key={addr.id} className="border bg-card shadow-sm hover:border-primary/40 transition-colors">
+                          <CardContent className="p-4 space-y-2.5">
+                            <div className="flex items-center justify-between gap-2 flex-wrap">
+                              <div className="flex items-center gap-2">
+                                <span className="font-semibold text-sm text-foreground">{addr.full_name}</span>
+                                {addr.label && (
+                                  <Badge variant="outline" className="text-xs font-normal">
+                                    {addr.label}
+                                  </Badge>
+                                )}
+                                {addr.is_default && (
+                                  <Badge className="text-xs bg-primary/15 text-primary border-primary/20">
+                                    Default
+                                  </Badge>
+                                )}
+                              </div>
+
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => {
+                                  navigator.clipboard.writeText(`${addr.full_name}\n${addr.phone}\n${fullAddressString}`);
+                                  setCopiedAddressId(addr.id);
+                                  toast({ title: "Address copied", description: "Address copied to clipboard" });
+                                  setTimeout(() => setCopiedAddressId(null), 2000);
+                                }}
+                                className="h-7 px-2 text-xs gap-1 text-muted-foreground hover:text-foreground"
+                              >
+                                {isCopied ? <Check className="h-3.5 w-3.5 text-success" /> : <Copy className="h-3.5 w-3.5" />}
+                                {isCopied ? "Copied" : "Copy"}
+                              </Button>
+                            </div>
+
+                            {addr.phone && (
+                              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                                <Phone className="h-3.5 w-3.5 shrink-0" />
+                                <span className="font-medium text-foreground">{addr.phone}</span>
+                              </div>
+                            )}
+
+                            <div className="flex items-start gap-2 text-xs text-muted-foreground pt-1 border-t">
+                              <MapPin className="h-3.5 w-3.5 shrink-0 mt-0.5 text-primary" />
+                              <div className="space-y-0.5">
+                                <p className="text-foreground font-medium">
+                                  {addr.address_line1}
+                                  {addr.address_line2 && `, ${addr.address_line2}`}
+                                </p>
+                                <p className="text-muted-foreground">
+                                  {addr.city}{addr.state ? `, ${addr.state}` : ""} {addr.postal_code ? `- ${addr.postal_code}` : ""}
+                                </p>
+                                {addr.country && (
+                                  <p className="text-[11px] text-muted-foreground">{addr.country}</p>
+                                )}
+                              </div>
+                            </div>
+                          </CardContent>
+                        </Card>
+                      );
+                    })}
                   </div>
                 )}
               </TabsContent>
