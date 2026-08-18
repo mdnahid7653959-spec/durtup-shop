@@ -23,6 +23,7 @@ import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
+import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 
 interface ProductImage {
   id: string;
@@ -304,7 +305,7 @@ export default function ProductDetail() {
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(initialVariantState);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
-  const [zoomScale, setZoomScale] = useState(1);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const variantSelectorRef = useRef<HTMLDivElement>(null);
   const {
     addToCart,
@@ -438,7 +439,6 @@ export default function ProductDetail() {
     setShowVideo(false);
     setQuantity(1);
     setSelectedVariants({});
-    setZoomScale(1);
     setLightboxOpen(false);
 
     async function fetchProduct() {
@@ -943,6 +943,14 @@ export default function ProductDetail() {
                     ref={imageContainerRef}
                     className="relative aspect-square w-full rounded-2xl overflow-hidden bg-neutral-50/80 dark:bg-card border border-border/70 shadow-sm cursor-zoom-in group flex items-center justify-center"
                     onClick={() => !showVideo && setLightboxOpen(true)}
+                    onMouseMove={(e) => {
+                      if (showVideo) return;
+                      const rect = e.currentTarget.getBoundingClientRect();
+                      const x = ((e.clientX - rect.left) / rect.width) * 100;
+                      const y = ((e.clientY - rect.top) / rect.height) * 100;
+                      setHoverPos({ x, y });
+                    }}
+                    onMouseLeave={() => setHoverPos(null)}
                     onTouchStart={handleTouchStart}
                     onTouchMove={handleTouchMove}
                     onTouchEnd={handleTouchEnd}
@@ -963,7 +971,19 @@ export default function ProductDetail() {
                       <img
                         src={images[selectedImage]}
                         alt={product.name}
-                        className="w-full h-full object-contain object-center transition-transform duration-300 group-hover:scale-105 select-none"
+                        style={
+                          hoverPos
+                            ? {
+                                transformOrigin: `${hoverPos.x}% ${hoverPos.y}%`,
+                                transform: "scale(2)",
+                                transition: "transform 0.08s ease-out",
+                              }
+                            : {
+                                transform: "scale(1)",
+                                transition: "transform 0.25s ease-out",
+                              }
+                        }
+                        className="w-full h-full object-contain object-center select-none will-change-transform"
                         loading="eager"
                         fetchPriority="high"
                         decoding="async"
@@ -974,13 +994,16 @@ export default function ProductDetail() {
                       />
                     )}
 
-                    {/* Tap to Zoom Badge */}
+                    {/* Tap to Zoom Premium Badge */}
                     {!showVideo && (
                       <button 
                         onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
-                        className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/70 backdrop-blur-md text-white text-xs font-semibold shadow-lg hover:bg-primary transition-all hover:scale-105 z-10"
+                        className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-primary backdrop-blur-md text-white text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 z-10 border border-white/20"
+                        title="Click to open Fullscreen HD Zoom"
                       >
-                        <ZoomIn className="h-3.5 w-3.5" /> Tap to Zoom
+                        <ZoomIn className="h-3.5 w-3.5 text-primary-foreground" />
+                        <span className="hidden sm:inline">Click to Zoom (HD)</span>
+                        <span className="sm:hidden">Tap to Zoom</span>
                       </button>
                     )}
 
@@ -1515,86 +1538,14 @@ export default function ProductDetail() {
           </div>
         </div>
       </main>
-      {/* Interactive Fullscreen Image Lightbox Zoom Modal */}
-      {lightboxOpen && (
-        <div className="fixed inset-0 z-50 bg-black/95 backdrop-blur-md flex flex-col justify-between p-4 sm:p-6 animate-in fade-in duration-200">
-          {/* Header Bar */}
-          <div className="flex items-center justify-between text-white z-10 max-w-7xl mx-auto w-full">
-            <span className="text-sm font-semibold tracking-wide bg-white/10 px-3 py-1.5 rounded-full backdrop-blur-sm">
-              {selectedImage + 1} / {images.length} • {product.name}
-            </span>
-            <div className="flex items-center gap-3">
-              <button
-                onClick={() => setZoomScale((s) => (s >= 2.5 ? 1 : s + 0.75))}
-                className="p-2.5 rounded-full bg-white/10 hover:bg-primary transition-all text-white hover:scale-110"
-                title="Toggle Zoom"
-              >
-                {zoomScale > 1 ? <ZoomOut className="h-5 w-5" /> : <ZoomIn className="h-5 w-5" />}
-              </button>
-              <button
-                onClick={() => { setLightboxOpen(false); setZoomScale(1); }}
-                className="p-2.5 rounded-full bg-white/10 hover:bg-destructive transition-all text-white hover:scale-110"
-                title="Close"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-          </div>
-
-          {/* Main Zoomed Image Container */}
-          <div 
-            className="relative flex-1 flex items-center justify-center overflow-hidden my-4"
-            onClick={() => setZoomScale((s) => (s >= 2.5 ? 1 : s + 0.75))}
-          >
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedImage((prev) => Math.max(0, prev - 1));
-                setZoomScale(1);
-              }}
-              disabled={selectedImage === 0}
-              className="absolute left-2 sm:left-6 z-10 p-3.5 rounded-full bg-black/70 text-white hover:bg-primary disabled:opacity-20 transition-all hover:scale-110 shadow-2xl"
-            >
-              <ChevronLeft className="h-7 w-7" />
-            </button>
-
-            <img
-              src={images[selectedImage]}
-              alt={product.name}
-              style={{ transform: `scale(${zoomScale})` }}
-              className="max-h-[78vh] max-w-[92vw] object-contain transition-transform duration-300 cursor-zoom-in drop-shadow-2xl"
-              onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = defaultImages[0]; }}
-            />
-
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                setSelectedImage((prev) => Math.min(images.length - 1, prev + 1));
-                setZoomScale(1);
-              }}
-              disabled={selectedImage === images.length - 1}
-              className="absolute right-2 sm:right-6 z-10 p-3.5 rounded-full bg-black/70 text-white hover:bg-primary disabled:opacity-20 transition-all hover:scale-110 shadow-2xl"
-            >
-              <ChevronRight className="h-7 w-7" />
-            </button>
-          </div>
-
-          {/* Modal Thumbnail Strip */}
-          <div className="flex justify-center gap-3 overflow-x-auto py-2 z-10 max-w-7xl mx-auto w-full">
-            {images.map((img, i) => (
-              <button
-                key={i}
-                onClick={() => { setSelectedImage(i); setZoomScale(1); }}
-                className={`w-16 h-16 rounded-xl overflow-hidden border-2 transition-all shrink-0 ${
-                  selectedImage === i ? "border-primary ring-2 ring-primary/60 scale-105 shadow-xl" : "border-white/20 opacity-60 hover:opacity-100"
-                }`}
-              >
-                <img src={img} alt="" className="w-full h-full object-cover" />
-              </button>
-            ))}
-          </div>
-        </div>
-      )}
+      {/* Interactive Fullscreen HD Image Lightbox Zoom Modal */}
+      <ProductZoomViewer
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        images={images}
+        initialIndex={selectedImage}
+        productName={product.name}
+      />
       {/* Size Guide Modal */}
       {sizeGuideOpen && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setSizeGuideOpen(false)}>

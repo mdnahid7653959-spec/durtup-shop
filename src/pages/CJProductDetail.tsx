@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef, useMemo } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Heart, ShoppingCart, Star, Truck, Shield, RotateCcw, Minus, Plus, Loader2, ChevronLeft, ChevronRight, Share2, Zap } from "lucide-react";
+import { Heart, ShoppingCart, Star, Truck, Shield, RotateCcw, Minus, Plus, Loader2, ChevronLeft, ChevronRight, Share2, Zap, ZoomIn } from "lucide-react";
 import DOMPurify from "dompurify";
 import { supabase } from "@/lib/firebaseAdapter";
 import { Button } from "@/components/ui/button";
@@ -10,6 +10,7 @@ import { Footer } from "@/components/layout/Footer";
 import { useCJCart } from "@/hooks/useCJCart";
 import { useToast } from "@/hooks/use-toast";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
+import { ProductZoomViewer } from "@/components/products/ProductZoomViewer";
 // BDT conversion rate with profit margin
 const USD_TO_BDT = 120;
 const PROFIT_MARGIN = 1.3; // 30% margin
@@ -58,6 +59,8 @@ export default function CJProductDetail() {
   const [selectedVariant, setSelectedVariant] = useState<CJProductVariant | null>(null);
   const [addingToCart, setAddingToCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [hoverPos, setHoverPos] = useState<{ x: number; y: number } | null>(null);
   const { addToCart: addToCJCart } = useCJCart();
   const { toast } = useToast();
   const imageContainerRef = useRef<HTMLDivElement>(null);
@@ -255,7 +258,15 @@ export default function CJProductDetail() {
               {/* Main Image - Full Width on Mobile */}
               <div 
                 ref={imageContainerRef}
-                className="aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-50/80 dark:bg-card border border-border/70 shadow-sm relative touch-pan-y flex items-center justify-center"
+                className="aspect-square w-full rounded-xl sm:rounded-2xl overflow-hidden bg-neutral-50/80 dark:bg-card border border-border/70 shadow-sm relative touch-pan-y flex items-center justify-center cursor-zoom-in group"
+                onClick={() => setLightboxOpen(true)}
+                onMouseMove={(e) => {
+                  const rect = e.currentTarget.getBoundingClientRect();
+                  const x = ((e.clientX - rect.left) / rect.width) * 100;
+                  const y = ((e.clientY - rect.top) / rect.height) * 100;
+                  setHoverPos({ x, y });
+                }}
+                onMouseLeave={() => setHoverPos(null)}
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
@@ -263,26 +274,49 @@ export default function CJProductDetail() {
                 <img 
                   src={images[selectedImage]} 
                   alt={product.nameEn || product.name}
-                  className="w-full h-full object-contain object-center transition-opacity duration-300 select-none"
+                  style={
+                    hoverPos
+                      ? {
+                          transformOrigin: `${hoverPos.x}% ${hoverPos.y}%`,
+                          transform: "scale(2)",
+                          transition: "transform 0.08s ease-out",
+                        }
+                      : {
+                          transform: "scale(1)",
+                          transition: "transform 0.25s ease-out",
+                        }
+                  }
+                  className="w-full h-full object-contain object-center select-none will-change-transform"
                   loading="eager"
                   onError={(e) => {
                     e.currentTarget.src = "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=600&fit=crop";
                   }}
                 />
 
+                {/* Tap to Zoom Badge */}
+                <button 
+                  onClick={(e) => { e.stopPropagation(); setLightboxOpen(true); }}
+                  className="absolute bottom-3 left-3 flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-black/75 hover:bg-primary backdrop-blur-md text-white text-xs font-bold shadow-lg transition-all hover:scale-105 active:scale-95 z-10 border border-white/20"
+                  title="Click to open Fullscreen HD Zoom"
+                >
+                  <ZoomIn className="h-3.5 w-3.5 text-primary-foreground" />
+                  <span className="hidden sm:inline">Click to Zoom (HD)</span>
+                  <span className="sm:hidden">Tap to Zoom</span>
+                </button>
+
                 {/* Navigation arrows - Desktop only */}
                 {images.length > 1 && (
                   <>
                     <button
-                      onClick={() => setSelectedImage(Math.max(0, selectedImage - 1))}
-                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background/90 shadow-lg flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-background transition-all disabled:opacity-30"
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.max(0, selectedImage - 1)); }}
+                      className="absolute left-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background/90 shadow-lg flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-background transition-all disabled:opacity-30 z-10"
                       disabled={selectedImage === 0}
                     >
                       <ChevronLeft className="h-5 w-5" />
                     </button>
                     <button
-                      onClick={() => setSelectedImage(Math.min(images.length - 1, selectedImage + 1))}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background/90 shadow-lg flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-background transition-all disabled:opacity-30"
+                      onClick={(e) => { e.stopPropagation(); setSelectedImage(Math.min(images.length - 1, selectedImage + 1)); }}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background/90 shadow-lg flex items-center justify-center opacity-0 sm:opacity-100 hover:bg-background transition-all disabled:opacity-30 z-10"
                       disabled={selectedImage === images.length - 1}
                     >
                       <ChevronRight className="h-5 w-5" />
@@ -292,8 +326,8 @@ export default function CJProductDetail() {
 
                 {/* Share button */}
                 <button
-                  onClick={handleShare}
-                  className="absolute top-2.5 right-2.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background/90 shadow-md flex items-center justify-center hover:bg-background transition-all active:scale-95"
+                  onClick={(e) => { e.stopPropagation(); handleShare(); }}
+                  className="absolute top-2.5 right-2.5 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-background/90 shadow-md flex items-center justify-center hover:bg-background transition-all active:scale-95 z-10"
                 >
                   <Share2 className="h-4 w-4 sm:h-5 sm:w-5" />
                 </button>
@@ -615,6 +649,16 @@ export default function CJProductDetail() {
           </div>
         </div>
       </main>
+
+      {/* Interactive Fullscreen HD Image Lightbox Zoom Modal */}
+      <ProductZoomViewer
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
+        images={images}
+        initialIndex={selectedImage}
+        productName={product.nameEn || product.name}
+      />
+
       <Footer />
     </div>
   );
