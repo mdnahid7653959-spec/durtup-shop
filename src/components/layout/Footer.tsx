@@ -41,7 +41,6 @@ const defaultFooterConfig: FooterConfig = {
     { title: "Policies", links: [
       { name: "Privacy", href: "/privacy" }, { name: "Terms", href: "/terms" },
       { name: "Cookies", href: "/cookies" }, { name: "IP Rights", href: "/ip" },
-      { name: "Admin", href: "/admin/login" },
     ]},
   ],
   trust_badges: [
