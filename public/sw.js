@@ -135,27 +135,77 @@ self.addEventListener('fetch', (event) => {
   );
 });
 
-// Handle push notifications
+// Handle rich push notifications (with product images & sound/vibrate)
 self.addEventListener('push', (event) => {
   if (!event.data) return;
 
-  const data = event.data.json();
-  
-  event.waitUntil(
-    self.registration.showNotification(data.title || 'Darzo', {
-      body: data.body || 'You have a new notification',
-      icon: '/icons/icon-192x192.png',
-      badge: '/icons/icon-72x72.png',
-      data: data.url || '/',
-    })
-  );
+  try {
+    const data = event.data.json();
+    const title = data.title || '🛍️ New Order Received - Durtup.shop';
+    const prodImg = data.image || data.product_image;
+
+    event.waitUntil(
+      self.registration.showNotification(title, {
+        body: data.body || 'A new order has been placed on Durtup.shop!',
+        icon: prodImg || '/durtup-logo.png',
+        badge: '/durtup-logo.png',
+        image: prodImg || undefined,
+        vibrate: [400, 150, 400, 150, 400, 150, 800],
+        requireInteraction: true,
+        tag: data.tag || `durtup-${Date.now()}`,
+        data: {
+          url: data.url || '/admin/orders',
+          order_id: data.order_id
+        },
+        actions: [
+          { action: 'view_order', title: '🛍️ View Order' },
+          { action: 'open_admin', title: '⚡ Open Admin' }
+        ]
+      })
+    );
+  } catch (err) {
+    console.warn('[SW] Push notification parse error:', err);
+  }
+});
+
+// Handle custom messages from web app
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SHOW_NOTIFICATION') {
+    const payload = event.data.payload || {};
+    const prodImg = payload.image || payload.product_image;
+    self.registration.showNotification(payload.title || '🛍️ New Order Alert', {
+      body: payload.body || 'Order received',
+      icon: prodImg || '/durtup-logo.png',
+      badge: '/durtup-logo.png',
+      image: prodImg || undefined,
+      vibrate: [400, 150, 400, 150, 400, 150, 800],
+      tag: payload.tag || `durtup-msg-${Date.now()}`,
+      data: payload.data || { url: '/admin/orders' }
+    });
+  }
 });
 
 // Handle notification clicks
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
   
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/admin/orders';
+  
   event.waitUntil(
-    clients.openWindow(event.notification.data || '/')
+    clients.matchAll({ type: 'window', includeUncontrolled: true }).then((windowClients) => {
+      for (let i = 0; i < windowClients.length; i++) {
+        const client = windowClients[i];
+        if (client.url.includes('/admin') && 'focus' in client) {
+          if ('navigate' in client) {
+            client.navigate(targetUrl);
+          }
+          return client.focus();
+        }
+      }
+      if (clients.openWindow) {
+        return clients.openWindow(targetUrl);
+      }
+    })
   );
 });
+

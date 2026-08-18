@@ -9,71 +9,119 @@ export interface AdminNotification {
   type: string;
   title: string;
   message: string;
+  product_name?: string;
+  product_image?: string;
+  image_url?: string;
+  total_items?: number;
   order_id?: string;
   order_number?: string;
   customer_name?: string;
   customer_phone?: string;
+  customer_email?: string;
   total_amount?: number;
   payment_method?: string;
   read: boolean;
   created_at: string;
 }
 
-// Play pleasant web audio chime on new orders (works offline, mobile & desktop)
+// Play loud, pleasant cash register / chime sound on new orders (works on phone & PC)
 export function playNewOrderSound() {
   try {
+    // 1. Device vibration
+    if (typeof navigator !== "undefined" && "vibrate" in navigator) {
+      navigator.vibrate([400, 150, 400, 150, 400, 150, 800]);
+    }
+
+    // 2. High fidelity Web Audio synthesizer (Cash register "Ka-Ching" + 4-note chord)
     const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
     if (!AudioContextClass) return;
     const ctx = new AudioContextClass();
-    
-    // Notes: C5 (523.25), E5 (659.25), G5 (783.99), C6 (1046.50)
-    const notes = [523.25, 659.25, 783.99, 1046.50];
-    notes.forEach((freq, idx) => {
+    if (ctx.state === "suspended") {
+      ctx.resume().catch(() => {});
+    }
+
+    const now = ctx.currentTime;
+
+    // Part 1: Cash register metallic ring (987Hz & 1318Hz)
+    [987.77, 1318.51].forEach((freq) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "triangle";
+      osc.frequency.setValueAtTime(freq, now);
+      gain.gain.setValueAtTime(0.4, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.36);
+    });
+
+    // Part 2: Upbeat 4-note chime sequence: C5, E5, G5, C6
+    const melody = [523.25, 659.25, 783.99, 1046.50];
+    melody.forEach((freq, idx) => {
+      const startTime = now + 0.12 + idx * 0.11;
       const osc = ctx.createOscillator();
       const gain = ctx.createGain();
       
       osc.type = "sine";
-      osc.frequency.setValueAtTime(freq, ctx.currentTime + idx * 0.1);
+      osc.frequency.setValueAtTime(freq, startTime);
       
-      gain.gain.setValueAtTime(0, ctx.currentTime + idx * 0.1);
-      gain.gain.linearRampToValueAtTime(0.3, ctx.currentTime + idx * 0.1 + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + idx * 0.1 + 0.35);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.45, startTime + 0.02);
+      gain.gain.exponentialRampToValueAtTime(0.001, startTime + 0.45);
       
       osc.connect(gain);
       gain.connect(ctx.destination);
       
-      osc.start(ctx.currentTime + idx * 0.1);
-      osc.stop(ctx.currentTime + idx * 0.1 + 0.4);
+      osc.start(startTime);
+      osc.stop(startTime + 0.5);
     });
   } catch (e) {
     console.warn("Audio chime error:", e);
   }
 }
 
-// Trigger mobile/system push notification with vibration
-export async function sendBrowserNotification(title: string, options?: NotificationOptions & { data?: any }) {
+// Trigger real Mobile/OS native push notification with Product Image & Vibration
+export async function sendBrowserNotification(
+  title: string,
+  options?: NotificationOptions & { product_image?: string; order_id?: string; data?: any }
+) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
 
   if (Notification.permission === "granted") {
+    const img = options?.product_image || (options as any)?.image;
+    const notificationOpts: NotificationOptions = {
+      body: options?.body || "New order received on Durtup.shop",
+      icon: img || "/durtup-logo.png",
+      badge: "/durtup-logo.png",
+      image: img || undefined, // Displays large product preview in Android & mobile notification tray
+      vibrate: [400, 150, 400, 150, 400, 150, 800],
+      tag: (options as any)?.tag || `durtup-order-${Date.now()}`,
+      requireInteraction: true,
+      silent: false,
+      ...options,
+    };
+
     try {
       if ("serviceWorker" in navigator) {
         const reg = await navigator.serviceWorker.ready;
         if (reg && reg.showNotification) {
           await reg.showNotification(title, {
-            icon: "/durtup-logo.svg",
-            badge: "/durtup-logo.svg",
-            vibrate: [300, 100, 300, 100, 300],
-            ...options
+            ...notificationOpts,
+            actions: [
+              { action: "view_order", title: "🛍️ View Order" },
+              { action: "open_admin", title: "⚡ Open Admin" }
+            ]
           });
           return;
         }
       }
-      new Notification(title, {
-        icon: "/durtup-logo.svg",
-        ...options
-      });
+      new Notification(title, notificationOpts);
     } catch (err) {
       console.warn("System notification error:", err);
+      try {
+        new Notification(title, notificationOpts);
+      } catch (e) {}
     }
   }
 }
@@ -103,17 +151,24 @@ export function useAdminOrderNotifications() {
       setPermission(result);
       if (result === "granted") {
         toast({
-          title: "Notifications enabled! 🔔",
-          description: "You will receive instant alerts for new orders on this device."
+          title: "Phone Push Alerts Enabled! 🔔",
+          description: "You will receive instant push notifications with product photos for new orders."
         });
-        sendBrowserNotification("Notifications Active! 🔔", {
-          body: "You will receive real-time alerts whenever a new order is placed."
+        
+        // Play welcome chime
+        playNewOrderSound();
+
+        // Send confirmation push notification
+        sendBrowserNotification("🔔 Durtup Order Alerts Active!", {
+          body: "Direct push alerts enabled on your phone with live product photos & sound!",
+          product_image: "/hero-banner-durtu-perfect.png",
+          data: { url: "/admin/orders" }
         });
         return true;
       } else {
         toast({
           title: "Permission denied",
-          description: "Please allow notifications in browser settings to receive order alerts.",
+          description: "Please allow notifications in your phone's browser settings to receive order alerts.",
           variant: "destructive"
         });
         return false;
@@ -123,6 +178,27 @@ export function useAdminOrderNotifications() {
       return false;
     }
   }, [toast]);
+
+  // Send a test push notification with product photo and sound to verify phone integration
+  const testPushNotification = useCallback(async () => {
+    if (permission !== "granted") {
+      const granted = await requestPermission();
+      if (!granted) return;
+    }
+
+    playNewOrderSound();
+    
+    sendBrowserNotification("🛍️ New Order #ORD-TEST-992! (৳2,450)", {
+      body: "Customer: Md Nahid • Product: Premium Wireless Earbuds Pro • Cash on Delivery",
+      product_image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=600&h=300&fit=crop",
+      data: { url: "/admin/orders" }
+    });
+
+    toast({
+      title: "📱 Push Notification Sent to Phone!",
+      description: "Check your phone's notification bar for the test order alert with product photo.",
+    });
+  }, [permission, requestPermission, toast]);
 
   // Real-time listener for new order notifications
   useEffect(() => {
@@ -141,20 +217,22 @@ export function useAdminOrderNotifications() {
           snapshot.docChanges().forEach((change) => {
             if (change.type === "added") {
               const data = change.doc.data() as AdminNotification;
+              const prodImg = data.product_image || data.image_url;
               
-              // 1. Play audio chime
+              // 1. Play audio chime & phone vibration
               playNewOrderSound();
 
-              // 2. Trigger mobile system notification
-              sendBrowserNotification(`🛒 New Order #${data.order_number || change.doc.id.slice(0, 8)}!`, {
-                body: `Customer: ${data.customer_name || "Guest"} • ৳${(data.total_amount || 0).toLocaleString()} • ${data.payment_method?.toUpperCase() || "COD"}`,
-                data: { url: "/admin/orders" }
+              // 2. Trigger real mobile push notification with product image
+              sendBrowserNotification(data.title || `🛍️ New Order #${data.order_number || change.doc.id.slice(0, 8)}!`, {
+                body: data.message || `Customer: ${data.customer_name || "Customer"} • ৳${(data.total_amount || 0).toLocaleString()} • ${data.payment_method?.toUpperCase() || "COD"}`,
+                product_image: prodImg,
+                data: { url: "/admin/orders", order_id: data.order_id || change.doc.id }
               });
 
               // 3. Trigger in-app toast
               toast({
-                title: "🛒 New Order Received!",
-                description: `Order #${data.order_number || change.doc.id.slice(0, 8)} • ৳${(data.total_amount || 0).toLocaleString()} by ${data.customer_name || "Customer"}`,
+                title: data.title || "🛍️ New Order Received!",
+                description: `${data.customer_name || "Customer"} ordered ${data.product_name || "Item"} (৳${(data.total_amount || 0).toLocaleString()})`,
               });
             }
           });
@@ -198,8 +276,10 @@ export function useAdminOrderNotifications() {
     unreadCount,
     permission,
     requestPermission,
+    testPushNotification,
     markAsRead,
     markAllAsRead,
     playNewOrderSound
   };
 }
+

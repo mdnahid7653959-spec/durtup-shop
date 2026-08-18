@@ -382,6 +382,12 @@ export default function Checkout() {
 
       // Sync order to Firestore and Local Storage so Admin Panel instantly sees the order
       try {
+        const allCartItems = [...regularItems, ...cjItems];
+        const firstCartItem = allCartItems[0];
+        const primaryProductImage = (firstCartItem as any)?.image || (firstCartItem as any)?.product_image || (firstCartItem as any)?.productImage || (firstCartItem as any)?.product?.image_url || (firstCartItem as any)?.product?.images?.[0] || "/durtup-logo.png";
+        const primaryProductName = (firstCartItem as any)?.product?.name || (firstCartItem as any)?.product_name || (firstCartItem as any)?.title || "Product";
+        const totalItemsCount = allCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
+
         const firestoreOrderDoc = {
           id: order.id,
           order_number: orderNumber,
@@ -395,6 +401,17 @@ export default function Checkout() {
           status: "pending",
           payment_status: paymentMethod === "cod" ? "pending" : "pending",
           payment_method: paymentMethod,
+          product_image: primaryProductImage,
+          product_name: primaryProductName,
+          total_items: totalItemsCount,
+          items: allCartItems.map(item => ({
+            id: item.id,
+            title: (item as any)?.product?.name || (item as any)?.product_name || (item as any)?.title || "Item",
+            name: (item as any)?.product?.name || (item as any)?.product_name || (item as any)?.title || "Item",
+            price: (item as any)?.product?.discount_price || (item as any)?.product?.regular_price || (item as any)?.price || 0,
+            quantity: item.quantity || 1,
+            image: (item as any)?.image || (item as any)?.product_image || (item as any)?.product?.image_url || "/durtup-logo.png",
+          })),
           shipping_address: {
             firstName: shippingInfo.firstName,
             lastName: shippingInfo.lastName,
@@ -411,11 +428,15 @@ export default function Checkout() {
         };
         setDoc(doc(db, "orders", order.id), firestoreOrderDoc, { merge: true }).catch(() => {});
 
-        // Emit real-time Admin Notification for instant chime sound & mobile push alert
+        // Emit real-time Admin Notification with Product Photo for instant push alerts & sound
         const adminNotificationDoc = {
           type: "new_order",
-          title: `🛒 New Order #${orderNumber}!`,
-          message: `Order #${orderNumber} by ${shippingInfo.firstName} ${shippingInfo.lastName} (৳${total.toLocaleString()})`,
+          title: `🛍️ New Order #${orderNumber}!`,
+          message: `${shippingInfo.firstName} ordered "${primaryProductName}"${totalItemsCount > 1 ? ` (+${totalItemsCount - 1} more items)` : ""} (৳${total.toLocaleString()})`,
+          product_name: primaryProductName,
+          product_image: primaryProductImage,
+          image_url: primaryProductImage,
+          total_items: totalItemsCount,
           order_id: order.id,
           order_number: orderNumber,
           customer_name: `${shippingInfo.firstName} ${shippingInfo.lastName}`.trim(),
