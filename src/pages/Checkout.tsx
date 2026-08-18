@@ -385,7 +385,10 @@ export default function Checkout() {
         const allCartItems = [...regularItems, ...cjItems];
         const firstCartItem = allCartItems[0];
         const primaryProductImage = (firstCartItem as any)?.image || (firstCartItem as any)?.product_image || (firstCartItem as any)?.productImage || (firstCartItem as any)?.product?.image_url || (firstCartItem as any)?.product?.images?.[0] || "/durtup-logo.png";
-        const primaryProductName = (firstCartItem as any)?.product?.name || (firstCartItem as any)?.product_name || (firstCartItem as any)?.title || "Product";
+        const primaryProductName = (firstCartItem as any)?.product?.name || (firstCartItem as any)?.product_name || (firstCartItem as any)?.title || (firstCartItem as any)?.name || "Product";
+        const firstVariantStr = (firstCartItem as any)?.variant_name || 
+          ((firstCartItem as any)?.selected_variants ? Object.entries((firstCartItem as any).selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ") : "") || (firstCartItem as any)?.variant || "";
+        const variantSuffix = firstVariantStr ? ` [${firstVariantStr}]` : "";
         const totalItemsCount = allCartItems.reduce((sum, item) => sum + (item.quantity || 1), 0);
 
         const firestoreOrderDoc = {
@@ -402,16 +405,31 @@ export default function Checkout() {
           payment_status: paymentMethod === "cod" ? "pending" : "pending",
           payment_method: paymentMethod,
           product_image: primaryProductImage,
-          product_name: primaryProductName,
+          product_name: `${primaryProductName}${variantSuffix}`,
+          variant_name: firstVariantStr || null,
           total_items: totalItemsCount,
-          items: allCartItems.map(item => ({
-            id: item.id,
-            title: (item as any)?.product?.name || (item as any)?.product_name || (item as any)?.title || "Item",
-            name: (item as any)?.product?.name || (item as any)?.product_name || (item as any)?.title || "Item",
-            price: (item as any)?.product?.discount_price || (item as any)?.product?.regular_price || (item as any)?.price || 0,
-            quantity: item.quantity || 1,
-            image: (item as any)?.image || (item as any)?.product_image || (item as any)?.product?.image_url || "/durtup-logo.png",
-          })),
+          items: allCartItems.map(item => {
+            const vStr = (item as any)?.variant_name || 
+              ((item as any)?.selected_variants ? Object.entries((item as any).selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ") : null) || 
+              (item as any)?.variant || 
+              null;
+            const baseName = (item as any)?.product?.name || (item as any)?.product_name || (item as any)?.name || (item as any)?.title || "Item";
+            return {
+              id: item.id,
+              product_id: (item as any)?.product_id || item.id,
+              title: vStr ? `${baseName} (${vStr})` : baseName,
+              name: vStr ? `${baseName} (${vStr})` : baseName,
+              product_name: vStr ? `${baseName} (${vStr})` : baseName,
+              variant_name: vStr,
+              variant: vStr,
+              selected_variants: (item as any)?.selected_variants || null,
+              size: (item as any)?.size || (item as any)?.selected_variants?.Size || (item as any)?.selected_variants?.size || null,
+              color: (item as any)?.color || (item as any)?.selected_variants?.Color || (item as any)?.selected_variants?.color || null,
+              price: (item as any)?.product?.discount_price || (item as any)?.product?.regular_price || (item as any)?.price || 0,
+              quantity: item.quantity || 1,
+              image: (item as any)?.image || (item as any)?.product_image || (item as any)?.product?.image_url || "/durtup-logo.png",
+            };
+          }),
           shipping_address: {
             firstName: shippingInfo.firstName,
             lastName: shippingInfo.lastName,
@@ -432,8 +450,9 @@ export default function Checkout() {
         const adminNotificationDoc = {
           type: "new_order",
           title: `🛍️ New Order #${orderNumber}!`,
-          message: `${shippingInfo.firstName} ordered "${primaryProductName}"${totalItemsCount > 1 ? ` (+${totalItemsCount - 1} more items)` : ""} (৳${total.toLocaleString()})`,
-          product_name: primaryProductName,
+          message: `${shippingInfo.firstName} ordered "${primaryProductName}${variantSuffix}"${totalItemsCount > 1 ? ` (+${totalItemsCount - 1} more items)` : ""} (৳${total.toLocaleString()})`,
+          product_name: `${primaryProductName}${variantSuffix}`,
+          variant_name: firstVariantStr || null,
           product_image: primaryProductImage,
           image_url: primaryProductImage,
           total_items: totalItemsCount,
@@ -521,16 +540,32 @@ export default function Checkout() {
       }
 
       // Add regular order items
-      const regularOrderItems = regularItems.map(item => ({
-        order_id: order.id,
-        product_id: item.product_id,
-        product_name: item.product.name,
-        quantity: item.quantity,
-        price: item.product.discount_price || item.product.regular_price,
-        total: (item.product.discount_price || item.product.regular_price) * item.quantity,
-        variant_id: item.variant_id || null,
-        product_image: item.image || null
-      }));
+      const regularOrderItems = regularItems.map(item => {
+        let variantStr = item.variant_name || "";
+        if (!variantStr && item.selected_variants) {
+          variantStr = Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ");
+        } else if (!variantStr && item.variant_id) {
+          try {
+            const parsed = JSON.parse(item.variant_id);
+            if (typeof parsed === "object") {
+              variantStr = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
+            }
+          } catch {
+            variantStr = item.variant_id;
+          }
+        }
+
+        return {
+          order_id: order.id,
+          product_id: item.product_id,
+          product_name: variantStr ? `${item.product.name} (${variantStr})` : item.product.name,
+          quantity: item.quantity,
+          price: item.product.discount_price || item.product.regular_price,
+          total: (item.product.discount_price || item.product.regular_price) * item.quantity,
+          variant_id: variantStr || item.variant_id || null,
+          product_image: item.image || null
+        };
+      });
 
       // Add CJ order items
       const cjOrderItems = cjItems.map(item => ({

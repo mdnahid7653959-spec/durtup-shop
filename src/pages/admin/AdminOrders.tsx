@@ -1483,9 +1483,20 @@ export default function AdminOrders() {
                                 ID: {item.product_id}
                               </p>
                             )}
-                            {item.variant_name && (
-                              <p className="text-xs text-muted-foreground mt-1">Variant: {item.variant_name}</p>
-                            )}
+                            {(() => {
+                              const vText = item.variant_name || 
+                                item.variant || 
+                                (item.selected_variants ? Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ") : null) ||
+                                (item.size ? `Size: ${item.size}${item.color ? ` | Color: ${item.color}` : ""}` : (item.color ? `Color: ${item.color}` : null));
+                              if (!vText) return null;
+                              return (
+                                <div className="mt-1 flex items-center gap-1.5 flex-wrap">
+                                  <Badge variant="outline" className="text-xs font-bold bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/30">
+                                    {vText}
+                                  </Badge>
+                                </div>
+                              );
+                            })()}
                             <div className="flex items-center gap-2 mt-2 text-sm">
                               <span className="text-muted-foreground">৳{item.price.toFixed(0)}</span>
                               <span className="text-muted-foreground">×</span>

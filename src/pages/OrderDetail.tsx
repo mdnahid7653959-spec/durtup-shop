@@ -674,10 +674,21 @@ export default function OrderDetail() {
                     )}
                   </div>
                   <div className="flex-1 min-w-0">
-                    <p className="font-semibold text-sm line-clamp-2 text-foreground">{item.product_name}</p>
-                    {item.variant_name && (
-                      <p className="text-xs text-muted-foreground">{item.variant_name}</p>
-                    )}
+                    <p className="font-semibold text-sm line-clamp-2 text-foreground">{item.product_name || item.title || item.name}</p>
+                    {(() => {
+                      const vText = item.variant_name || 
+                        item.variant || 
+                        (item.selected_variants ? Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ") : null) ||
+                        (item.size ? `Size: ${item.size}${item.color ? ` | Color: ${item.color}` : ""}` : (item.color ? `Color: ${item.color}` : null));
+                      if (!vText) return null;
+                      return (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center text-[11px] font-semibold px-2 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                            {vText}
+                          </span>
+                        </div>
+                      );
+                    })()}
                     <p className="text-xs text-muted-foreground mt-0.5">Qty: {item.quantity}</p>
                   </div>
                   <div className="text-right">

@@ -114,6 +114,13 @@ export default function Cart() {
                       >
                         {item.product.name}
                       </Link>
+                      {item.variant_name && (
+                        <div className="mt-1">
+                          <span className="inline-flex items-center text-xs font-semibold px-2.5 py-0.5 rounded-md bg-primary/10 text-primary border border-primary/20">
+                            {item.variant_name}
+                          </span>
+                        </div>
+                      )}
                       <p className="text-lg sm:text-xl font-bold text-primary mt-1">
                         ৳{price.toLocaleString()}
                       </p>

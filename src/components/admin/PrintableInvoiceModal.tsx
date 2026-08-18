@@ -174,21 +174,36 @@ export function PrintableInvoiceModal({
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-200">
-                {orderItems.map((item, idx) => (
-                  <tr key={item.id || idx} className={idx % 2 === 1 ? "bg-slate-50/60" : "bg-white"}>
-                    <td className="p-3 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
-                    <td className="p-3">
-                      <p className="font-bold text-slate-900 leading-snug">{item.product_name}</p>
-                      {item.product_id && (
-                        <span className="text-[10px] text-slate-400 font-mono">ID: {item.product_id}</span>
-                      )}
-                    </td>
-                    <td className="p-3 text-slate-600 font-medium">{item.variant_name || item.sku || "Standard"}</td>
-                    <td className="p-3 text-center font-bold text-slate-800">{item.quantity}</td>
-                    <td className="p-3 text-right text-slate-700 font-medium">৳{(item.price || 0).toLocaleString()}</td>
-                    <td className="p-3 text-right font-extrabold text-slate-900">৳{(item.total || 0).toLocaleString()}</td>
-                  </tr>
-                ))}
+                {orderItems.map((item, idx) => {
+                  const variantDisplay = item.variant_name || 
+                    item.variant || 
+                    (item.selected_variants ? Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ") : null) || 
+                    (item.size ? `Size: ${item.size}${item.color ? ` | Color: ${item.color}` : ""}` : (item.color ? `Color: ${item.color}` : null)) ||
+                    item.sku || 
+                    "Standard";
+
+                  return (
+                    <tr key={item.id || idx} className={idx % 2 === 1 ? "bg-slate-50/60" : "bg-white"}>
+                      <td className="p-3 text-center text-slate-400 font-mono text-[11px]">{idx + 1}</td>
+                      <td className="p-3">
+                        <p className="font-bold text-slate-900 leading-snug">{item.product_name || item.title || item.name}</p>
+                        {item.product_id && (
+                          <span className="text-[10px] text-slate-400 font-mono">ID: {item.product_id}</span>
+                        )}
+                      </td>
+                      <td className="p-3">
+                        <span className={`inline-block px-2 py-0.5 rounded text-[11px] font-semibold ${
+                          variantDisplay !== "Standard" ? "bg-orange-100 text-orange-800 border border-orange-200" : "text-slate-600"
+                        }`}>
+                          {variantDisplay}
+                        </span>
+                      </td>
+                      <td className="p-3 text-center font-bold text-slate-800">{item.quantity}</td>
+                      <td className="p-3 text-right text-slate-700 font-medium">৳{(item.price || 0).toLocaleString()}</td>
+                      <td className="p-3 text-right font-extrabold text-slate-900">৳{(item.total || 0).toLocaleString()}</td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>

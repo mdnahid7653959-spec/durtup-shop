@@ -29,11 +29,41 @@ interface ProductImage {
   sort_order: number | null;
 }
 interface ProductVariant {
-  id: number;
-  product_id: number;
+  id: number | string;
+  product_id: number | string;
   attribute: string;
   variant: string;
 }
+
+const getColorHex = (name: string): string | null => {
+  if (!name) return null;
+  const n = name.toLowerCase().trim();
+  const map: Record<string, string> = {
+    black: "#111827",
+    white: "#FFFFFF",
+    red: "#EF4444",
+    blue: "#3B82F6",
+    navy: "#1E3A8A",
+    "navy blue": "#1E3A8A",
+    green: "#10B981",
+    olive: "#556B2F",
+    golden: "#D97706",
+    gold: "#D97706",
+    yellow: "#FBBF24",
+    pink: "#EC4899",
+    purple: "#8B5CF6",
+    gray: "#6B7280",
+    grey: "#6B7280",
+    maroon: "#800000",
+    orange: "#F97316",
+    beige: "#F5F5DC",
+    brown: "#78350F",
+    cyan: "#06B6D4",
+    teal: "#14B8A6",
+    silver: "#9CA3AF"
+  };
+  return map[n] || null;
+};
 interface Product {
   id: string;
   name: string;
@@ -340,12 +370,22 @@ export default function ProductDetail() {
       regularPrice = calc.regularPrice;
     }
 
-    const variants = (raw.product_variants || []).map((v: any) => ({
-      id: parseInt(v.id) || Math.floor(Math.random() * 100000),
-      product_id: parseInt(raw.id) || 0,
-      attribute: v.attribute || "Option",
-      variant: v.variant || v.name || v.color || v.size,
-    }));
+    let variants: ProductVariant[] = [];
+    if (Array.isArray(raw.product_variants) && raw.product_variants.length > 0) {
+      variants = raw.product_variants.map((v: any, idx: number) => ({
+        id: parseInt(v.id) || idx + 1,
+        product_id: parseInt(raw.id) || 0,
+        attribute: v.attribute || (v.size ? "Size" : v.color ? "Color" : "Option"),
+        variant: String(v.variant || v.name || v.color || v.size || "Standard").trim(),
+      }));
+    } else if (Array.isArray(raw.variants) && raw.variants.length > 0) {
+      variants = raw.variants.map((v: any, idx: number) => ({
+        id: parseInt(v.id) || idx + 1,
+        product_id: parseInt(raw.id) || 0,
+        attribute: v.attribute || (v.size ? "Size" : v.color ? "Color" : "Option"),
+        variant: String(v.variant || v.name || v.color || v.size || "Standard").trim(),
+      }));
+    }
 
     return {
       id: raw.id.toString(),
@@ -372,6 +412,20 @@ export default function ProductDetail() {
     };
   };
 
+  const applyLoadedProduct = (loaded: Product) => {
+    setProduct(loaded);
+    setSelectedImage(0);
+    if (loaded.product_variants && loaded.product_variants.length > 0) {
+      const initial: Record<string, string> = {};
+      const attrs = Array.from(new Set(loaded.product_variants.map(v => v.attribute)));
+      attrs.forEach(attr => {
+        const firstOpt = loaded.product_variants?.find(v => v.attribute === attr);
+        if (firstOpt) initial[attr] = firstOpt.variant;
+      });
+      setSelectedVariants(initial);
+    }
+  };
+
   useEffect(() => {
     async function fetchProduct() {
       if (!slug) return;
@@ -394,8 +448,7 @@ export default function ProductDetail() {
           if (foundSp) {
             const mappedImages = mapSupplierImages(foundSp);
             const mappedProduct = mapSupplierProduct(foundSp, foundSp.slug || targetSlug, mappedImages);
-            setProduct(mappedProduct);
-            setSelectedImage(0);
+            applyLoadedProduct(mappedProduct);
             trackView(mappedProduct.id);
             recordUserProductView(mappedProduct);
             setLoading(false);
@@ -468,7 +521,7 @@ export default function ProductDetail() {
                   if ((!mappedProduct.product_variants || mappedProduct.product_variants.length === 0) && dbVariants.length > 0) {
                     mappedProduct.product_variants = dbVariants;
                   }
-                  setProduct(mappedProduct);
+                  applyLoadedProduct(mappedProduct);
                   trackView(data.id);
                   setLoading(false);
                   return;
@@ -478,8 +531,7 @@ export default function ProductDetail() {
               }
             }
 
-            setProduct(data as unknown as Product);
-            setSelectedImage(0);
+            applyLoadedProduct(data as unknown as Product);
             if (data.id) trackView(data.id);
             recordUserProductView(data);
             setLoading(false);
@@ -532,12 +584,11 @@ export default function ProductDetail() {
                 color: data.color || null,
                 video_url: data.video_url || null,
                 product_images: imgList,
-                product_variants: [],
+                product_variants: Array.isArray(data.product_variants) ? data.product_variants : [],
                 category_id: data.category_id || data.category || null,
                 seller_id: data.seller_id || "Admin"
               };
-              setProduct(formatted);
-              setSelectedImage(0);
+              applyLoadedProduct(formatted);
               trackView(formatted.id);
               recordUserProductView(formatted);
               setLoading(false);
@@ -599,8 +650,7 @@ export default function ProductDetail() {
                   seller_id: found.seller_id || "Admin"
                 };
 
-                setProduct(formattedProduct);
-                setSelectedImage(0);
+                applyLoadedProduct(formattedProduct);
                 trackView(formattedProduct.id);
                 recordUserProductView(formattedProduct);
                 setLoading(false);
@@ -653,8 +703,7 @@ export default function ProductDetail() {
               seller_id: "CJ Dropshipping"
             };
 
-            setProduct(formattedCJ);
-            setSelectedImage(0);
+            applyLoadedProduct(formattedCJ);
             trackView(formattedCJ.id);
             recordUserProductView(formattedCJ);
             setLoading(false);
@@ -674,8 +723,7 @@ export default function ProductDetail() {
         if (fallback) {
           const mappedImages = mapSupplierImages(fallback);
           const mapped = mapSupplierProduct(fallback, fallback.slug || targetSlug, mappedImages);
-          setProduct(mapped);
-          setSelectedImage(0);
+          applyLoadedProduct(mapped);
           setLoading(false);
           return;
         }
@@ -1112,28 +1160,50 @@ export default function ProductDetail() {
                 <div className="space-y-4 pt-4 border-t">
                   {Array.from(new Set(product.product_variants.map(v => v.attribute))).map(attribute => {
                     const variantsForAttr = product.product_variants!.filter(v => v.attribute === attribute);
+                    const isColorAttr = attribute.toLowerCase().includes("color") || attribute.toLowerCase().includes("colour");
+                    const isSizeAttr = attribute.toLowerCase().includes("size");
+
                     return (
-                      <div key={attribute}>
-                        <h4 className="text-sm font-medium mb-2">{attribute}: <span className="text-muted-foreground">{selectedVariants[attribute] || 'Select one'}</span></h4>
-                        <div className="flex flex-wrap gap-2">
-                          {variantsForAttr.map((variant, idx) => (
-                            <button
-                              key={variant.id}
-                              onClick={() => {
-                                setSelectedVariants(prev => ({ ...prev, [attribute]: variant.variant }));
-                                if (idx < images.length) {
-                                  setSelectedImage(idx);
-                                  setShowVideo(false);
-                                }
-                              }}
-                              className={`px-4 py-2 border rounded-xl text-sm font-medium transition-all shadow-sm
-                                ${selectedVariants[attribute] === variant.variant 
-                                  ? 'border-primary bg-primary/10 text-primary ring-2 ring-primary/40 scale-105 font-bold shadow-md' 
-                                  : 'border-muted hover:border-primary/50 text-muted-foreground hover:text-foreground'}`}
-                            >
-                              {variant.variant}
-                            </button>
-                          ))}
+                      <div key={attribute} className="space-y-2">
+                        <div className="flex items-center justify-between">
+                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                            <span>{attribute}:</span>
+                            <span className="text-primary font-bold">{selectedVariants[attribute] || 'Select one'}</span>
+                          </h4>
+                          {isSizeAttr && (
+                            <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-md font-medium">Standard Fit</span>
+                          )}
+                        </div>
+                        <div className="flex flex-wrap gap-2.5">
+                          {variantsForAttr.map((variant, idx) => {
+                            const isSelected = selectedVariants[attribute] === variant.variant;
+                            const hex = isColorAttr ? getColorHex(variant.variant) : null;
+
+                            return (
+                              <button
+                                key={variant.id || idx}
+                                onClick={() => {
+                                  setSelectedVariants(prev => ({ ...prev, [attribute]: variant.variant }));
+                                  if (idx < images.length) {
+                                    setSelectedImage(idx);
+                                    setShowVideo(false);
+                                  }
+                                }}
+                                className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border shadow-xs active:scale-95
+                                  ${isSelected 
+                                    ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30 ring-2 ring-primary/30 scale-105' 
+                                    : 'border-border/80 bg-muted/40 hover:bg-muted text-foreground hover:border-primary/50'}`}
+                              >
+                                {hex && (
+                                  <span 
+                                    className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs shrink-0" 
+                                    style={{ backgroundColor: hex }} 
+                                  />
+                                )}
+                                <span>{variant.variant}</span>
+                              </button>
+                            );
+                          })}
                         </div>
                       </div>
                     );

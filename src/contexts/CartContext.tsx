@@ -10,6 +10,10 @@ export interface CartItem {
   product_id: string;
   quantity: number;
   variant_id?: string | null;
+  selected_variants?: Record<string, string>;
+  color?: string | null;
+  size?: string | null;
+  variant_name?: string | null;
   product: {
     id: string;
     name: string;
@@ -92,11 +96,28 @@ export function CartProvider({ children }: { children: ReactNode }) {
           stock_quantity: 50
         });
 
+        // Resolve variant text
+        let variantName = item.variant_name || null;
+        if (!variantName && item.selected_variants) {
+          variantName = Object.entries(item.selected_variants).map(([k, v]) => `${k}: ${v}`).join(", ");
+        } else if (!variantName && item.variant_id) {
+          try {
+            const parsed = JSON.parse(item.variant_id);
+            if (typeof parsed === "object") {
+              variantName = Object.entries(parsed).map(([k, v]) => `${k}: ${v}`).join(", ");
+            }
+          } catch {}
+        }
+
         return {
           id: item.id || `cart-${item.product_id}`,
           product_id: item.product_id || item.id,
           quantity: item.quantity || 1,
           variant_id: item.variant_id || null,
+          selected_variants: item.selected_variants || null,
+          color: item.color || item.selected_variants?.Color || item.selected_variants?.color || null,
+          size: item.size || item.selected_variants?.Size || item.selected_variants?.size || null,
+          variant_name: variantName,
           product: prodData,
           image: item.image || matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
         };
@@ -132,8 +153,18 @@ export function CartProvider({ children }: { children: ReactNode }) {
     const catalog = await getCachedMohasagorProducts();
     const targetProd = catalog.find(p => p.id === productId);
 
+    const variantKey = variants && Object.keys(variants).length > 0 ? JSON.stringify(variants) : "";
+    const variantName = variants && Object.keys(variants).length > 0 
+      ? Object.entries(variants).map(([k, v]) => `${k}: ${v}`).join(", ")
+      : null;
+    const color = variants?.Color || variants?.color || null;
+    const size = variants?.Size || variants?.size || null;
+
     setItems((prev) => {
-      const existingIdx = prev.findIndex(item => item.product_id === productId);
+      const existingIdx = prev.findIndex(item => 
+        item.product_id === productId && 
+        (JSON.stringify(item.selected_variants || {}) === JSON.stringify(variants || {}) || item.variant_name === variantName)
+      );
       let updated: CartItem[];
 
       if (existingIdx > -1) {
@@ -142,10 +173,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         );
       } else {
         const newItem: CartItem = {
-          id: `cart-${productId}-${Date.now()}`,
+          id: `cart-${productId}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
           product_id: productId,
           quantity,
-          variant_id: variants ? JSON.stringify(variants) : null,
+          variant_id: variantKey || null,
+          selected_variants: variants || undefined,
+          color,
+          size,
+          variant_name: variantName,
           product: targetProd ? {
             id: targetProd.id,
             name: targetProd.name,
@@ -172,7 +207,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     toast({
       title: "Added to cart!",
-      description: "Item has been added to your shopping cart."
+      description: variantName ? `Selected: ${variantName}` : "Item has been added to your shopping cart."
     });
   }, [user, toast]);
 
