@@ -169,17 +169,18 @@ export default function CJProductDetail() {
   };
 
   const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/product/cj/${encodeURIComponent(product?.id || id || "")}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: product?.nameEn || product?.name,
-          url: window.location.href,
+          title: product?.nameEn || product?.name || "Product",
+          url: shareUrl,
         });
       } catch (err) {
         console.log("Share cancelled");
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(shareUrl);
       toast({ title: "Link copied!", description: "Product link copied to clipboard" });
     }
   };

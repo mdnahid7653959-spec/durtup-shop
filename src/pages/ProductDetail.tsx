@@ -416,6 +416,25 @@ export default function ProductDetail() {
       loaded.product_variants = variants;
     }
     setProduct(loaded);
+
+    // Dynamic Title & OpenGraph meta tags for social share previews
+    if (typeof document !== "undefined") {
+      document.title = `${loaded.name} | Durtup.shop`;
+      const desc = loaded.short_description || loaded.description?.slice(0, 160) || loaded.name;
+      const metaDesc = document.querySelector('meta[name="description"]');
+      if (metaDesc) metaDesc.setAttribute("content", desc);
+
+      const ogTitle = document.querySelector('meta[property="og:title"]');
+      if (ogTitle) ogTitle.setAttribute("content", `${loaded.name} | Durtup.shop`);
+
+      const ogDesc = document.querySelector('meta[property="og:description"]');
+      if (ogDesc) ogDesc.setAttribute("content", desc);
+
+      const ogImg = document.querySelector('meta[property="og:image"]');
+      const firstImg = loaded.product_images?.[0]?.image_url || (loaded as any)?.image;
+      if (ogImg && firstImg) ogImg.setAttribute("content", firstImg);
+    }
+
     if (variants && variants.length > 0) {
       const initial: Record<string, string> = {};
       const attrs = Array.from(new Set(variants.map(v => v.attribute)));
@@ -443,7 +462,7 @@ export default function ProductDetail() {
 
     async function fetchProduct() {
       if (!slug) return;
-      const targetSlug = decodeURIComponent(slug).trim();
+      const targetSlug = decodeURIComponent(slug).split("?")[0].split("&")[0].trim();
       const targetLower = targetSlug.toLowerCase();
       
       // Extract numeric ID suffix if present (e.g. "stylishcomfortable-sports-t-shirt-4-four-pis-combo-offer-9749" -> "9749")
@@ -801,17 +820,18 @@ export default function ProductDetail() {
     toggleWishlist(product.id);
   };
   const handleShare = async () => {
+    const shareUrl = `${window.location.origin}/product/${encodeURIComponent(product?.slug || product?.id || "")}`;
     if (navigator.share) {
       try {
         await navigator.share({
-          title: product?.name,
-          url: window.location.href
+          title: product?.name || "Durtup Product",
+          url: shareUrl
         });
       } catch (err) {
         console.log("Share cancelled");
       }
     } else {
-      navigator.clipboard.writeText(window.location.href);
+      navigator.clipboard.writeText(shareUrl);
       toast({
         title: "Link copied!",
         description: "Product link copied to clipboard"
