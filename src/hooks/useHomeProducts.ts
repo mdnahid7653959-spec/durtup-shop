@@ -118,7 +118,7 @@ interface ProductWithImages {
   product_images?: { image_url: string; is_primary: boolean | null }[];
 }
 
-import { getSmartProductImage } from "@/utils/productImageHelper";
+import { getSmartProductImage, prefetchProductImages } from "@/utils/productImageHelper";
 
 function mapDbProduct(p: ProductWithImages, index: number): Product {
   const primaryImage = p.product_images?.find((img) => img.is_primary)?.image_url;
@@ -270,13 +270,8 @@ const CACHE_KEY = "mohasagor_cached_home_products_v6";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes 
 
 function preloadImages(products: Product[]) {
-  if (typeof window === "undefined") return;
-  products.slice(0, 12).forEach(p => {
-    if (p.image) {
-      const img = new Image();
-      img.src = p.image;
-    }
-  });
+  if (typeof window === "undefined" || !products) return;
+  prefetchProductImages(products, 80);
 }
 
 function getInitialCachedProducts() {

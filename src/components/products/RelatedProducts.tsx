@@ -3,6 +3,7 @@ import { Sparkles, RefreshCw, Layers } from "lucide-react";
 import { ProductCard, type Product } from "./ProductCard";
 import { useRelatedProducts } from "@/hooks/useRelatedProducts";
 import { Skeleton } from "@/components/ui/skeleton";
+import { prefetchProductImages } from "@/utils/productImageHelper";
 
 interface ProductContext {
   id: string;
@@ -28,7 +29,7 @@ function RelatedProductsComponent({
   limit = 24
 }: RelatedProductsProps) {
   const { products, loading } = useRelatedProducts(product, limit);
-  const [displayCount, setDisplayCount] = useState(12);
+  const [displayCount, setDisplayCount] = useState(18);
   const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   // Convert to ProductCard format
@@ -49,20 +50,27 @@ function RelatedProductsComponent({
     }));
   }, [products]);
 
+  // Proactively warm all related product images in advance
+  useEffect(() => {
+    if (mappedProducts.length > 0) {
+      prefetchProductImages(mappedProducts, 60);
+    }
+  }, [mappedProducts]);
+
   const visibleProducts = useMemo(() => {
     return mappedProducts.slice(0, displayCount);
   }, [mappedProducts, displayCount]);
 
-  // Infinite Scroll Auto-Load on Scroll
+  // Infinite Scroll Auto-Load on Scroll (1000px ahead)
   useEffect(() => {
     if (!sentinelRef.current) return;
     const observer = new IntersectionObserver(
       (entries) => {
         if (entries[0].isIntersecting) {
-          setDisplayCount((prev) => (prev < mappedProducts.length ? prev + 12 : prev));
+          setDisplayCount((prev) => (prev < mappedProducts.length ? prev + 18 : prev));
         }
       },
-      { rootMargin: "250px" }
+      { rootMargin: "1000px" }
     );
     observer.observe(sentinelRef.current);
     return () => observer.disconnect();
@@ -100,8 +108,8 @@ function RelatedProductsComponent({
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-3 sm:gap-4 lg:gap-5">
-                {visibleProducts.map((prod) => (
-                  <ProductCard key={prod.id} product={prod} />
+                {visibleProducts.map((prod, idx) => (
+                  <ProductCard key={prod.id} product={prod} priority={idx < 12} />
                 ))}
               </div>
 

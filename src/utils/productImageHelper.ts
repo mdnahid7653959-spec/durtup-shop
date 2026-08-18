@@ -142,3 +142,43 @@ export function getSmartProductImage(
   const defaultPool = CATEGORY_IMAGES.watch;
   return defaultPool[index % defaultPool.length];
 }
+
+// Proactive High-Speed Image Preloader & Cache Warmer
+const preloadedUrls = new Set<string>();
+
+export function prefetchProductImages(
+  products: Array<{ image?: string; image_url?: string; images?: any[]; name?: string }>,
+  maxCount: number = 50
+) {
+  if (typeof window === "undefined" || !Array.isArray(products)) return;
+  const targetSlice = products.slice(0, maxCount);
+
+  const warmImage = (rawUrl?: string, name?: string) => {
+    if (!rawUrl) return;
+    const finalUrl = getSmartProductImage(name || "", rawUrl);
+    if (!finalUrl || preloadedUrls.has(finalUrl)) return;
+    preloadedUrls.add(finalUrl);
+
+    const img = new Image();
+    img.decoding = "async";
+    img.src = finalUrl;
+  };
+
+  if ("requestIdleCallback" in window) {
+    (window as any).requestIdleCallback(() => {
+      targetSlice.forEach((p) => {
+        warmImage(p.image || p.image_url, p.name);
+        if (Array.isArray(p.images) && p.images[0]) {
+          const first = typeof p.images[0] === "string" ? p.images[0] : p.images[0]?.image_url;
+          warmImage(first, p.name);
+        }
+      });
+    });
+  } else {
+    targetSlice.forEach((p, idx) => {
+      setTimeout(() => {
+        warmImage(p.image || p.image_url, p.name);
+      }, idx * 10);
+    });
+  }
+}
