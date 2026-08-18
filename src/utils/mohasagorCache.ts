@@ -417,49 +417,295 @@ if (typeof window !== "undefined") {
   startAutoProductSync();
 }
 
+function normalizeCategorySlug(raw: string): string {
+  const str = (raw || "").toLowerCase().trim();
+  if (str.includes("watch") || str.includes("jewelry") || str.includes("jewellery") || str.includes("accessory")) return "watches";
+  if (str.includes("toy") || str.includes("kid") || str.includes("baby") || str.includes("child")) return "kids";
+  if (str.includes("beauty") || str.includes("health") || str.includes("skin") || str.includes("care") || str.includes("cosmetic")) return "beauty";
+  if (str.includes("fashion") || str.includes("cloth") || str.includes("wear") || str.includes("apparel") || str.includes("garment") || str.includes("winter") || str.includes("shoe")) return "fashion";
+  if (str.includes("home") || str.includes("kitchen") || str.includes("lifestyle") || str.includes("living") || str.includes("appliance") || str.includes("household") || str.includes("garden")) return "home";
+  if (str.includes("electronic") || str.includes("gadget") || str.includes("mobile") || str.includes("phone") || str.includes("tech") || str.includes("audio") || str.includes("computer")) return "electronics";
+  return str;
+}
+
+function inferCategory(name: string, currentCategory?: string): string {
+  const n = (name || "").toLowerCase();
+  const c = (currentCategory || "").toLowerCase();
+
+  // 1. Watches & Accessories
+  if (
+    n.includes("smartwatch") ||
+    n.includes("smart watch") ||
+    n.includes("wrist watch") ||
+    n.includes("curren") ||
+    n.includes("naviforce") ||
+    n.includes("skmei") ||
+    n.includes("strap") ||
+    n.includes("bracelet") ||
+    n.includes("jewelry") ||
+    n.includes("jewellery") ||
+    n.includes("sunglass") ||
+    n.includes("sunglasses") ||
+    n.includes("ring") ||
+    n.includes("necklace") ||
+    n.includes("chain") ||
+    n.includes("earring") ||
+    n.includes("pendant") ||
+    n.includes("bangle") ||
+    n.includes("eyewear") ||
+    (n.includes("watch") && !n.includes("face wash") && !n.includes("stopwatch")) ||
+    c.includes("watch") ||
+    c.includes("jewelry") ||
+    c.includes("accessory")
+  ) {
+    return "watches";
+  }
+
+  // 2. Toys & Baby Care
+  if (
+    n.includes("toy") ||
+    n.includes("toys") ||
+    n.includes("baby") ||
+    n.includes("kid") ||
+    n.includes("kids") ||
+    n.includes("child") ||
+    n.includes("children") ||
+    n.includes("doll") ||
+    n.includes("puzzle") ||
+    n.includes("diaper") ||
+    n.includes("stroller") ||
+    n.includes("walker") ||
+    n.includes("rc car") ||
+    n.includes("lego") ||
+    n.includes("rattle") ||
+    n.includes("teether") ||
+    n.includes("feeding bottle") ||
+    c.includes("kid") ||
+    c.includes("toy") ||
+    c.includes("baby")
+  ) {
+    return "kids";
+  }
+
+  // 3. Health & Beauty
+  if (
+    n.includes("hair dryer") ||
+    n.includes("dryer") ||
+    n.includes("shaver") ||
+    n.includes("trimmer") ||
+    n.includes("clipper") ||
+    n.includes("hair straightener") ||
+    n.includes("curler") ||
+    n.includes("serum") ||
+    n.includes("cream") ||
+    n.includes("lotion") ||
+    n.includes("oil") ||
+    n.includes("shampoo") ||
+    n.includes("conditioner") ||
+    n.includes("soap") ||
+    n.includes("face wash") ||
+    n.includes("facewash") ||
+    n.includes("lipstick") ||
+    n.includes("makeup") ||
+    n.includes("perfume") ||
+    n.includes("fragrance") ||
+    n.includes("attar") ||
+    n.includes("body spray") ||
+    n.includes("sunscreen") ||
+    n.includes("scrub") ||
+    n.includes("mask") ||
+    n.includes("facial") ||
+    n.includes("massager") ||
+    n.includes("massage") ||
+    n.includes("gripper") ||
+    n.includes("fitness") ||
+    n.includes("slimming") ||
+    n.includes("toothbrush") ||
+    c.includes("beauty") ||
+    c.includes("health") ||
+    c.includes("cosmetic") ||
+    c.includes("skincare")
+  ) {
+    return "beauty";
+  }
+
+  // 4. Fashion & Clothing
+  if (
+    n.includes("shirt") ||
+    n.includes("t-shirt") ||
+    n.includes("tshirt") ||
+    n.includes("pant") ||
+    n.includes("trouser") ||
+    n.includes("jeans") ||
+    n.includes("jacket") ||
+    n.includes("hoodie") ||
+    n.includes("sweater") ||
+    n.includes("sweatshirt") ||
+    n.includes("coat") ||
+    n.includes("blazer") ||
+    n.includes("polo") ||
+    n.includes("panjabi") ||
+    n.includes("punjabi") ||
+    n.includes("kurti") ||
+    n.includes("saree") ||
+    n.includes("sari") ||
+    n.includes("sharee") ||
+    n.includes("dress") ||
+    n.includes("shoe") ||
+    n.includes("shoes") ||
+    n.includes("sneaker") ||
+    n.includes("sneakers") ||
+    n.includes("boot") ||
+    n.includes("sandal") ||
+    n.includes("slippers") ||
+    n.includes("loafers") ||
+    n.includes("socks") ||
+    n.includes("underwear") ||
+    n.includes("boxer") ||
+    n.includes("innerwear") ||
+    n.includes("scarf") ||
+    n.includes("hijab") ||
+    n.includes("abaya") ||
+    n.includes("borkha") ||
+    n.includes("khimar") ||
+    n.includes("palazzo") ||
+    n.includes("lehenga") ||
+    n.includes("combo offer") ||
+    n.includes("jersey") ||
+    n.includes("tracksuit") ||
+    n.includes("shorts") ||
+    n.includes("cap") ||
+    n.includes("hat") ||
+    n.includes("belt") ||
+    n.includes("wallet") ||
+    n.includes("handbag") ||
+    n.includes("backpack") ||
+    n.includes("bag") ||
+    n.includes("tote") ||
+    c.includes("fashion") ||
+    c.includes("clothing") ||
+    c.includes("wear") ||
+    c.includes("winter") ||
+    c.includes("apparel")
+  ) {
+    return "fashion";
+  }
+
+  // 5. Home & Kitchen
+  if (
+    n.includes("water dispenser") ||
+    n.includes("dispenser") ||
+    n.includes("water pump") ||
+    n.includes("electric pump") ||
+    n.includes("fan") ||
+    n.includes("cooler") ||
+    n.includes("cup") ||
+    n.includes("mug") ||
+    n.includes("flask") ||
+    n.includes("bottle") ||
+    n.includes("thermos") ||
+    n.includes("pillow") ||
+    n.includes("cushion") ||
+    n.includes("bedding") ||
+    n.includes("bed sheet") ||
+    n.includes("blanket") ||
+    n.includes("curtain") ||
+    n.includes("towel") ||
+    n.includes("kitchen") ||
+    n.includes("cooker") ||
+    n.includes("stove") ||
+    n.includes("kettle") ||
+    n.includes("blender") ||
+    n.includes("grinder") ||
+    n.includes("juicer") ||
+    n.includes("chopper") ||
+    n.includes("air fryer") ||
+    n.includes("pan") ||
+    n.includes("pot") ||
+    n.includes("knife") ||
+    n.includes("sealer") ||
+    n.includes("scale") ||
+    n.includes("mop") ||
+    n.includes("cleaner") ||
+    n.includes("vacuum") ||
+    n.includes("shelf") ||
+    n.includes("rack") ||
+    n.includes("organizer") ||
+    n.includes("storage") ||
+    n.includes("hanger") ||
+    n.includes("lamp") ||
+    n.includes("light") ||
+    n.includes("night lamp") ||
+    n.includes("torch") ||
+    n.includes("iron") ||
+    n.includes("steamer") ||
+    n.includes("mosquito") ||
+    n.includes("repeller") ||
+    n.includes("humidifier") ||
+    n.includes("diffuser") ||
+    n.includes("lunch box") ||
+    n.includes("container") ||
+    n.includes("tableware") ||
+    n.includes("projector") ||
+    c.includes("home") ||
+    c.includes("kitchen") ||
+    c.includes("lifestyle") ||
+    c.includes("living") ||
+    c.includes("appliance") ||
+    c.includes("household") ||
+    c.includes("garden")
+  ) {
+    return "home";
+  }
+
+  // 6. Electronics & Gadgets
+  if (
+    n.includes("mouse") ||
+    n.includes("keyboard") ||
+    n.includes("earbuds") ||
+    n.includes("headphone") ||
+    n.includes("earphone") ||
+    n.includes("headset") ||
+    n.includes("tws") ||
+    n.includes("charger") ||
+    n.includes("charging") ||
+    n.includes("cable") ||
+    n.includes("speaker") ||
+    n.includes("power bank") ||
+    n.includes("router") ||
+    n.includes("bluetooth") ||
+    n.includes("camera") ||
+    n.includes("display") ||
+    n.includes("monitor") ||
+    n.includes("receiver") ||
+    n.includes("mp3") ||
+    n.includes("usb") ||
+    n.includes("mic") ||
+    n.includes("microphone") ||
+    n.includes("tripod") ||
+    n.includes("gimbal") ||
+    n.includes("adapter") ||
+    c.includes("electronic") ||
+    c.includes("gadget") ||
+    c.includes("mobile") ||
+    c.includes("phone") ||
+    c.includes("tech")
+  ) {
+    return "electronics";
+  }
+
+  return normalizeCategorySlug(c) || "home";
+}
+
 export function filterProductsByCategory(products: (Product & { category?: string })[], categorySlug: string, categoryName?: string): Product[] {
-  const targetSlug = (categorySlug || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-  const targetName = (categoryName || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const targetSlug = normalizeCategorySlug(categorySlug || categoryName || "");
 
   if (!targetSlug || targetSlug === "all") return products;
 
-  return products.filter(p => {
-    const prodName = (p.name || "").toLowerCase();
-    const prodCat = ((p as any).category || "").toLowerCase();
-
-    // 1. Watches & Accessories
-    if (targetSlug.includes("watch") || targetSlug.includes("time") || targetSlug.includes("accessory")) {
-      return prodName.includes("watch") || prodName.includes("smartwatch") || prodName.includes("strap") || prodName.includes("bracelet") || prodName.includes("sunglass") || prodName.includes("wallet") || prodName.includes("belt") || prodName.includes("ring") || prodName.includes("necklace") || prodCat.includes("watch");
-    }
-
-    // 2. Toys & Baby Care
-    if (targetSlug.includes("toy") || targetSlug.includes("kid") || targetSlug.includes("baby")) {
-      return prodName.includes("toy") || prodName.includes("robot") || prodName.includes("baby") || prodName.includes("kid") || prodName.includes("puzzle") || prodName.includes("doll") || prodName.includes("drone") || prodName.includes("game") || prodCat.includes("toy") || prodCat.includes("kid") || prodCat.includes("baby");
-    }
-
-    // 3. Fashion & Clothing
-    if (targetSlug.includes("fashion") || targetSlug.includes("cloth") || targetSlug.includes("wear") || targetSlug.includes("lifestyle")) {
-      return prodName.includes("shirt") || prodName.includes("panjabi") || prodName.includes("polo") || prodName.includes("jersey") || prodName.includes("pant") || prodName.includes("trouser") || prodName.includes("shoe") || prodName.includes("t-shirt") || prodName.includes("jacket") || prodName.includes("sweater") || prodName.includes("hoodie") || prodName.includes("dress") || prodName.includes("kurti") || prodName.includes("sharee") || prodName.includes("sari") || prodName.includes("khimar") || prodName.includes("palazzo") || prodCat.includes("fashion") || prodCat.includes("clothing");
-    }
-
-    // 4. Health & Beauty
-    if (targetSlug.includes("beauty") || targetSlug.includes("health") || targetSlug.includes("skin") || targetSlug.includes("care")) {
-      return prodName.includes("dryer") || prodName.includes("shaver") || prodName.includes("trimmer") || prodName.includes("oil") || prodName.includes("cream") || prodName.includes("serum") || prodName.includes("lotion") || prodName.includes("soap") || prodName.includes("shampoo") || prodName.includes("lipstick") || prodName.includes("perfume") || prodName.includes("facial") || prodName.includes("massage") || prodName.includes("skincare") || prodName.includes("face wash") || prodCat.includes("beauty") || prodCat.includes("health");
-    }
-
-    // 5. Home & Kitchen
-    if (targetSlug.includes("home") || targetSlug.includes("kitchen") || targetSlug.includes("living") || targetSlug.includes("garden")) {
-      return prodName.includes("water dispenser") || prodName.includes("lamp") || prodName.includes("fan") || prodName.includes("pillow") || prodName.includes("cushion") || prodName.includes("mug") || prodName.includes("bottle") || prodName.includes("flask") || prodName.includes("kitchen") || prodName.includes("blender") || prodName.includes("mop") || prodName.includes("shelf") || prodName.includes("rack") || prodName.includes("cleaner") || prodName.includes("pan") || prodName.includes("pot") || prodName.includes("knife") || prodCat.includes("home") || prodCat.includes("kitchen");
-    }
-
-    // 6. Electronics & Gadgets (Tech specific)
-    if (targetSlug.includes("electronic") || targetSlug.includes("gadget") || targetSlug.includes("tech")) {
-      // Exclude fashion/beauty
-      if (prodName.includes("shirt") || prodName.includes("pant") || prodName.includes("dress") || prodName.includes("cream") || prodName.includes("lotion") || prodName.includes("shampoo")) return false;
-      return prodName.includes("cable") || prodName.includes("charger") || prodName.includes("earbud") || prodName.includes("headphone") || prodName.includes("earphone") || prodName.includes("speaker") || prodName.includes("camera") || prodName.includes("mouse") || prodName.includes("keyboard") || prodName.includes("router") || prodName.includes("power bank") || prodName.includes("bluetooth") || prodName.includes("adapter") || prodName.includes("sensor") || prodName.includes("projector") || prodName.includes("tripod") || prodName.includes("separator") || prodName.includes("battery") || prodName.includes("led") || prodCat.includes("electronic") || prodCat.includes("gadget");
-    }
-
-    return prodCat.includes(targetSlug) || prodName.includes(targetSlug);
+  const filtered = products.filter(p => {
+    const detected = inferCategory(p.name, p.category);
+    const pCatNorm = normalizeCategorySlug(p.category || "");
+    return detected === targetSlug || pCatNorm === targetSlug || (p.category || "").toLowerCase().includes(targetSlug);
   });
 
   return filtered.length > 0 ? filtered : products.slice(0, 20);

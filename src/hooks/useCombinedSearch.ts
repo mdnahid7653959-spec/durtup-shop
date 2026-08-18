@@ -3,6 +3,7 @@ import { useEffect } from "react";
 import type { Product } from "@/components/products/ProductCard";
 import { useCJSettings, calculateCJPrice } from "./useCJSettings";
 import { smartSearchService } from "@/services/search/SmartSearchService";
+import { getCachedMohasagorProducts, filterProductsByCategory } from "@/utils/mohasagorCache";
 
 interface SearchParams {
   search?: string;
@@ -72,6 +73,33 @@ async function searchLocalProducts(params: SearchParams): Promise<CombinedProduc
       source: "local" as const,
       matchType: p.matchType
     }));
+
+    // Fallback: If search adapter returned empty, directly fetch and filter from master supplier catalog
+    if (mapped.length === 0) {
+      const allMohasagor = await getCachedMohasagorProducts();
+      let fallbackList = allMohasagor;
+      if (params.category && params.category !== "all") {
+        fallbackList = filterProductsByCategory(allMohasagor, params.category);
+      }
+      if (fallbackList && fallbackList.length > 0) {
+        mapped = fallbackList.map((p) => ({
+          id: p.id,
+          name: p.name,
+          slug: p.slug,
+          image: p.image,
+          price: p.price,
+          originalPrice: p.originalPrice,
+          rating: p.rating || 4.8,
+          reviews: p.reviews || 15,
+          sold: p.sold || 45,
+          freeShipping: true,
+          isNew: p.isNew || false,
+          isBestSeller: p.isBestSeller || false,
+          source: "local" as const,
+          matchType: "fallback"
+        }));
+      }
+    }
 
     // Post-filter by Special Filter Type
     if (params.filter && params.filter !== "all") {

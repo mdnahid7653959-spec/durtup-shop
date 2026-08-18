@@ -11,7 +11,7 @@ import {
 import { synonymManager } from "../SynonymManager";
 import { fuzzyMatchToken, tokenizeText, normalizeText, getEditDistance } from "../FuzzySearchEngine";
 import { searchAnalytics } from "../SearchAnalyticsService";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 
 const defaultImages = [
@@ -22,34 +22,258 @@ const defaultImages = [
   "https://images.unsplash.com/photo-1585386959984-a4155224a1ad?w=600&h=600&fit=crop"
 ];
 
+export function normalizeCategorySlug(raw: string): string {
+  const str = (raw || "").toLowerCase().trim();
+  if (str.includes("watch") || str.includes("jewelry") || str.includes("jewellery") || str.includes("accessory")) return "watches";
+  if (str.includes("toy") || str.includes("kid") || str.includes("baby") || str.includes("child")) return "kids";
+  if (str.includes("beauty") || str.includes("health") || str.includes("skin") || str.includes("care") || str.includes("cosmetic")) return "beauty";
+  if (str.includes("fashion") || str.includes("cloth") || str.includes("wear") || str.includes("apparel") || str.includes("garment") || str.includes("winter") || str.includes("shoe")) return "fashion";
+  if (str.includes("home") || str.includes("kitchen") || str.includes("lifestyle") || str.includes("living") || str.includes("appliance") || str.includes("household") || str.includes("garden")) return "home";
+  if (str.includes("electronic") || str.includes("gadget") || str.includes("mobile") || str.includes("phone") || str.includes("tech") || str.includes("audio") || str.includes("computer")) return "electronics";
+  return str;
+}
+
 export function inferProductCategory(name: string, currentCategory?: string): string {
   const n = (name || "").toLowerCase();
   const c = (currentCategory || "").toLowerCase();
 
   // 1. Watches & Accessories
   if (
-    n.includes("watch") ||
     n.includes("smartwatch") ||
-    n.includes("luminous") ||
+    n.includes("smart watch") ||
+    n.includes("wrist watch") ||
+    n.includes("curren") ||
+    n.includes("naviforce") ||
+    n.includes("skmei") ||
     n.includes("strap") ||
     n.includes("bracelet") ||
     n.includes("jewelry") ||
+    n.includes("jewellery") ||
+    n.includes("sunglass") ||
     n.includes("sunglasses") ||
-    n.includes("belt") ||
-    n.includes("wallet") ||
-    c.includes("watch")
+    n.includes("ring") ||
+    n.includes("necklace") ||
+    n.includes("chain") ||
+    n.includes("earring") ||
+    n.includes("pendant") ||
+    n.includes("bangle") ||
+    n.includes("eyewear") ||
+    (n.includes("watch") && !n.includes("face wash") && !n.includes("stopwatch")) ||
+    c.includes("watch") ||
+    c.includes("jewelry") ||
+    c.includes("accessory")
   ) {
     return "watches";
   }
 
-  // 2. Electronics & Gadgets
+  // 2. Toys & Baby Care
+  if (
+    n.includes("toy") ||
+    n.includes("toys") ||
+    n.includes("baby") ||
+    n.includes("kid") ||
+    n.includes("kids") ||
+    n.includes("child") ||
+    n.includes("children") ||
+    n.includes("doll") ||
+    n.includes("puzzle") ||
+    n.includes("diaper") ||
+    n.includes("stroller") ||
+    n.includes("walker") ||
+    n.includes("rc car") ||
+    n.includes("lego") ||
+    n.includes("rattle") ||
+    n.includes("teether") ||
+    n.includes("feeding bottle") ||
+    c.includes("kid") ||
+    c.includes("toy") ||
+    c.includes("baby")
+  ) {
+    return "kids";
+  }
+
+  // 3. Health & Beauty
+  if (
+    n.includes("hair dryer") ||
+    n.includes("dryer") ||
+    n.includes("shaver") ||
+    n.includes("trimmer") ||
+    n.includes("clipper") ||
+    n.includes("hair straightener") ||
+    n.includes("curler") ||
+    n.includes("serum") ||
+    n.includes("cream") ||
+    n.includes("lotion") ||
+    n.includes("oil") ||
+    n.includes("shampoo") ||
+    n.includes("conditioner") ||
+    n.includes("soap") ||
+    n.includes("face wash") ||
+    n.includes("facewash") ||
+    n.includes("lipstick") ||
+    n.includes("makeup") ||
+    n.includes("perfume") ||
+    n.includes("fragrance") ||
+    n.includes("attar") ||
+    n.includes("body spray") ||
+    n.includes("sunscreen") ||
+    n.includes("scrub") ||
+    n.includes("mask") ||
+    n.includes("facial") ||
+    n.includes("massager") ||
+    n.includes("massage") ||
+    n.includes("gripper") ||
+    n.includes("fitness") ||
+    n.includes("slimming") ||
+    n.includes("toothbrush") ||
+    c.includes("beauty") ||
+    c.includes("health") ||
+    c.includes("cosmetic") ||
+    c.includes("skincare")
+  ) {
+    return "beauty";
+  }
+
+  // 4. Fashion & Clothing
+  if (
+    n.includes("shirt") ||
+    n.includes("t-shirt") ||
+    n.includes("tshirt") ||
+    n.includes("pant") ||
+    n.includes("trouser") ||
+    n.includes("jeans") ||
+    n.includes("jacket") ||
+    n.includes("hoodie") ||
+    n.includes("sweater") ||
+    n.includes("sweatshirt") ||
+    n.includes("coat") ||
+    n.includes("blazer") ||
+    n.includes("polo") ||
+    n.includes("panjabi") ||
+    n.includes("punjabi") ||
+    n.includes("kurti") ||
+    n.includes("saree") ||
+    n.includes("sari") ||
+    n.includes("sharee") ||
+    n.includes("dress") ||
+    n.includes("shoe") ||
+    n.includes("shoes") ||
+    n.includes("sneaker") ||
+    n.includes("sneakers") ||
+    n.includes("boot") ||
+    n.includes("sandal") ||
+    n.includes("slippers") ||
+    n.includes("loafers") ||
+    n.includes("socks") ||
+    n.includes("underwear") ||
+    n.includes("boxer") ||
+    n.includes("innerwear") ||
+    n.includes("scarf") ||
+    n.includes("hijab") ||
+    n.includes("abaya") ||
+    n.includes("borkha") ||
+    n.includes("khimar") ||
+    n.includes("palazzo") ||
+    n.includes("lehenga") ||
+    n.includes("combo offer") ||
+    n.includes("jersey") ||
+    n.includes("tracksuit") ||
+    n.includes("shorts") ||
+    n.includes("cap") ||
+    n.includes("hat") ||
+    n.includes("belt") ||
+    n.includes("wallet") ||
+    n.includes("handbag") ||
+    n.includes("backpack") ||
+    n.includes("bag") ||
+    n.includes("tote") ||
+    c.includes("fashion") ||
+    c.includes("clothing") ||
+    c.includes("wear") ||
+    c.includes("winter") ||
+    c.includes("apparel")
+  ) {
+    return "fashion";
+  }
+
+  // 5. Home & Kitchen
+  if (
+    n.includes("water dispenser") ||
+    n.includes("dispenser") ||
+    n.includes("water pump") ||
+    n.includes("electric pump") ||
+    n.includes("fan") ||
+    n.includes("cooler") ||
+    n.includes("cup") ||
+    n.includes("mug") ||
+    n.includes("flask") ||
+    n.includes("bottle") ||
+    n.includes("thermos") ||
+    n.includes("pillow") ||
+    n.includes("cushion") ||
+    n.includes("bedding") ||
+    n.includes("bed sheet") ||
+    n.includes("blanket") ||
+    n.includes("curtain") ||
+    n.includes("towel") ||
+    n.includes("kitchen") ||
+    n.includes("cooker") ||
+    n.includes("stove") ||
+    n.includes("kettle") ||
+    n.includes("blender") ||
+    n.includes("grinder") ||
+    n.includes("juicer") ||
+    n.includes("chopper") ||
+    n.includes("air fryer") ||
+    n.includes("pan") ||
+    n.includes("pot") ||
+    n.includes("knife") ||
+    n.includes("sealer") ||
+    n.includes("scale") ||
+    n.includes("mop") ||
+    n.includes("cleaner") ||
+    n.includes("vacuum") ||
+    n.includes("shelf") ||
+    n.includes("rack") ||
+    n.includes("organizer") ||
+    n.includes("storage") ||
+    n.includes("hanger") ||
+    n.includes("lamp") ||
+    n.includes("light") ||
+    n.includes("night lamp") ||
+    n.includes("torch") ||
+    n.includes("iron") ||
+    n.includes("steamer") ||
+    n.includes("mosquito") ||
+    n.includes("repeller") ||
+    n.includes("humidifier") ||
+    n.includes("diffuser") ||
+    n.includes("lunch box") ||
+    n.includes("container") ||
+    n.includes("tableware") ||
+    n.includes("projector") ||
+    c.includes("home") ||
+    c.includes("kitchen") ||
+    c.includes("lifestyle") ||
+    c.includes("living") ||
+    c.includes("appliance") ||
+    c.includes("household") ||
+    c.includes("garden")
+  ) {
+    return "home";
+  }
+
+  // 6. Electronics & Gadgets
   if (
     n.includes("mouse") ||
     n.includes("keyboard") ||
     n.includes("earbuds") ||
     n.includes("headphone") ||
     n.includes("earphone") ||
+    n.includes("headset") ||
+    n.includes("tws") ||
     n.includes("charger") ||
+    n.includes("charging") ||
     n.includes("cable") ||
     n.includes("speaker") ||
     n.includes("power bank") ||
@@ -60,95 +284,22 @@ export function inferProductCategory(name: string, currentCategory?: string): st
     n.includes("monitor") ||
     n.includes("receiver") ||
     n.includes("mp3") ||
+    n.includes("usb") ||
+    n.includes("mic") ||
+    n.includes("microphone") ||
+    n.includes("tripod") ||
+    n.includes("gimbal") ||
+    n.includes("adapter") ||
     c.includes("electronic") ||
-    c.includes("gadget")
+    c.includes("gadget") ||
+    c.includes("mobile") ||
+    c.includes("phone") ||
+    c.includes("tech")
   ) {
     return "electronics";
   }
 
-  // 3. Home & Kitchen
-  if (
-    n.includes("water dispenser") ||
-    n.includes("dispenser") ||
-    n.includes("fan") ||
-    n.includes("cup") ||
-    n.includes("mug") ||
-    n.includes("pillow") ||
-    n.includes("cushion") ||
-    n.includes("kitchen") ||
-    n.includes("cooker") ||
-    n.includes("lamp") ||
-    n.includes("bottle") ||
-    n.includes("organizer") ||
-    n.includes("rack") ||
-    n.includes("towel") ||
-    n.includes("bedding") ||
-    n.includes("curtain") ||
-    n.includes("mop") ||
-    n.includes("shelf") ||
-    c.includes("home") ||
-    c.includes("kitchen")
-  ) {
-    return "home";
-  }
-
-  // 4. Fashion & Clothing
-  if (
-    n.includes("shirt") ||
-    n.includes("pant") ||
-    n.includes("t-shirt") ||
-    n.includes("jacket") ||
-    n.includes("jeans") ||
-    n.includes("dress") ||
-    n.includes("shoe") ||
-    n.includes("sneaker") ||
-    n.includes("saree") ||
-    n.includes("kurti") ||
-    n.includes("cloth") ||
-    c.includes("fashion") ||
-    c.includes("clothing")
-  ) {
-    return "fashion";
-  }
-
-  // 5. Health & Beauty
-  if (
-    n.includes("hair dryer") ||
-    n.includes("dryer") ||
-    n.includes("shaver") ||
-    n.includes("trimmer") ||
-    n.includes("serum") ||
-    n.includes("cream") ||
-    n.includes("lotion") ||
-    n.includes("lipstick") ||
-    n.includes("makeup") ||
-    n.includes("soap") ||
-    n.includes("shampoo") ||
-    n.includes("perfume") ||
-    n.includes("gripper") ||
-    n.includes("exercise") ||
-    c.includes("beauty") ||
-    c.includes("health")
-  ) {
-    return "beauty";
-  }
-
-  // 6. Toys & Baby Care
-  if (
-    n.includes("toy") ||
-    n.includes("baby") ||
-    n.includes("kid") ||
-    n.includes("doll") ||
-    n.includes("puzzle") ||
-    n.includes("diaper") ||
-    n.includes("stroller") ||
-    c.includes("kid") ||
-    c.includes("toy")
-  ) {
-    return "kids";
-  }
-
-  return c || "general";
+  return normalizeCategorySlug(c) || "home";
 }
 
 function getSessionSeed(): number {
@@ -217,7 +368,7 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
 
   public async buildIndex(products?: any[]): Promise<void> {
     const now = Date.now();
-    if (this.isLoaded && now - this.lastFetchTime < this.CACHE_TTL && !products) {
+    if (this.isLoaded && this.indexedProducts.length > 0 && now - this.lastFetchTime < this.CACHE_TTL && !products) {
       return;
     }
 
@@ -359,6 +510,32 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
           console.warn("[FirestoreSearchAdapter] Mohasagor master cache fetch error:", e);
         }
 
+        if (productMap.size === 0) {
+          FALLBACK_SUPPLIER_PRODUCTS.forEach((p, idx) => {
+            const pid = String(p.id);
+            productMap.set(pid, {
+              id: pid,
+              name: p.name,
+              slug: p.slug || `product-${pid}`,
+              regular_price: p.originalPrice || p.price || 0,
+              discount_price: p.originalPrice ? p.price : null,
+              price: p.price || 0,
+              category: p.category || "General",
+              brand: "Generic",
+              seller_name: "Durtup Marketplace",
+              sku: `SKU-${pid}`,
+              image: p.image || defaultImages[idx % defaultImages.length],
+              product_images: [{ image_url: p.image || defaultImages[idx % defaultImages.length] }],
+              rating_average: p.rating || 4.8,
+              rating_count: p.reviews || 15,
+              sold_count: p.sold || 45,
+              in_stock: true,
+              status: "active",
+              description: ""
+            });
+          });
+        }
+
         this.indexedProducts = Array.from(productMap.values());
       }
 
@@ -458,6 +635,7 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
   public async search(rawQuery: string, options: SearchOptions = {}): Promise<SearchResult> {
     await this.buildIndex();
     const queryRaw = (rawQuery || "").trim();
+    const queryStr = queryRaw.toLowerCase();
     const queryNorm = normalizeText(queryRaw);
 
     // 1. Expand query with bilingual synonym engine
@@ -617,26 +795,12 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
     let filtered = scoredProducts;
 
     if (options.category && options.category !== "all") {
-      const c = options.category.toLowerCase().trim();
-      const targetCategoryMap: Record<string, string> = {
-        "electronics": "electronics",
-        "fashion": "fashion",
-        "home": "home",
-        "beauty": "beauty",
-        "watches": "watches",
-        "kids": "kids"
-      };
-      const targetSlug = targetCategoryMap[c] || c;
+      const targetSlug = normalizeCategorySlug(options.category);
 
       filtered = filtered.filter((p) => {
         const detected = inferProductCategory(p.name, p.category);
-        if (targetSlug === "watches") return detected === "watches";
-        if (targetSlug === "home") return detected === "home";
-        if (targetSlug === "electronics") return detected === "electronics";
-        if (targetSlug === "fashion") return detected === "fashion";
-        if (targetSlug === "beauty") return detected === "beauty";
-        if (targetSlug === "kids") return detected === "kids";
-        return detected === targetSlug || (p.category || "").toLowerCase().includes(targetSlug);
+        const pCatNorm = normalizeCategorySlug(p.category || "");
+        return detected === targetSlug || pCatNorm === targetSlug || (p.category || "").toLowerCase().includes(targetSlug);
       });
     }
     if (options.brand && options.brand !== "all") {

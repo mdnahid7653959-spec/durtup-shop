@@ -91,11 +91,35 @@ export default function Products() {
   const cjProducts = searchResults?.cj || [];
   const totalCount = localProducts.length + cjProducts.length;
 
-  const activeCategoryObj = categories?.find(c => c.slug === currentCategory || c.id === currentCategory);
+  const activeCategoryObj = categories?.find(c => 
+    c.slug === currentCategory || 
+    c.id === currentCategory || 
+    c.name.toLowerCase() === (currentCategory || "").toLowerCase() ||
+    c.slug === (currentCategory || "").toLowerCase()
+  );
+
+  const fallbackCategoryName = currentCategory
+    ? currentCategory.toLowerCase() === "home"
+      ? "Home & Kitchen"
+      : currentCategory.toLowerCase() === "electronics"
+      ? "Electronics & Gadgets"
+      : currentCategory.toLowerCase() === "fashion"
+      ? "Fashion & Clothing"
+      : currentCategory.toLowerCase() === "beauty"
+      ? "Health & Beauty"
+      : currentCategory.toLowerCase() === "watches"
+      ? "Watches & Accessories"
+      : currentCategory.toLowerCase() === "kids"
+      ? "Toys & Baby Care"
+      : currentCategory.split("-").map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(" ")
+    : null;
+
   const pageHeading = params.search 
     ? `Results for "${params.search}"`
     : activeCategoryObj 
     ? activeCategoryObj.name 
+    : fallbackCategoryName
+    ? fallbackCategoryName
     : currentFilter === "flash-sale"
     ? "Flash Sale & Deals"
     : currentFilter === "new"
