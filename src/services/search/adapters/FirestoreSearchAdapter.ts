@@ -498,9 +498,16 @@ export class FirestoreSearchAdapter implements ISearchEngineAdapter {
         } else if (pNameNorm.startsWith(queryNorm)) {
           score += 180;
           matchType = "prefix";
-        } else if (pNameNorm.includes(queryNorm)) {
+        } else if (queryNorm.length > 1 && pNameNorm.includes(queryNorm)) {
           score += 120;
           matchType = "partial";
+        }
+
+        // Check if any individual word in product title starts with queryNorm (handles single-letter searches like 'g', 's', 'm')
+        const pWords = pNameNorm.split(" ");
+        if (pWords.some(w => w.startsWith(queryNorm))) {
+          score += 90;
+          if (matchType === "partial") matchType = "prefix";
         }
 
         // C. Multi-token flexible matching (Matches words in any order without stop-word noise)
