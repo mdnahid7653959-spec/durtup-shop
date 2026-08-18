@@ -1,292 +1,221 @@
-import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
-import { Heart, ShoppingCart, Trash2, Search } from "lucide-react";
+import { useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
+import { Heart, ShoppingCart, Trash2, Search, ArrowRight, Package } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { useAuth } from "@/contexts/AuthContext";
-import { useToast } from "@/hooks/use-toast";
 import { Header } from "@/components/layout/Header";
 import { Footer } from "@/components/layout/Footer";
-import { supabase } from "@/lib/firebaseAdapter";
-
-interface WishlistItem {
-  id: string;
-  product_id: string;
-  created_at: string;
-  product: {
-    id: string;
-    name: string;
-    slug: string;
-    regular_price: number;
-    discount_price: number | null;
-    stock_quantity: number | null;
-  } | null;
-  product_image: string | null;
-}
+import { useWishlist } from "@/contexts/WishlistContext";
+import { useCart } from "@/contexts/CartContext";
+import { toast } from "sonner";
 
 export default function Wishlist() {
-  const { user, loading } = useAuth();
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [wishlistItems, setWishlistItems] = useState<WishlistItem[]>([]);
-  const [loadingItems, setLoadingItems] = useState(true);
+  const { items, loading, removeFromWishlist } = useWishlist();
+  const { addToCart } = useCart();
   const [searchQuery, setSearchQuery] = useState("");
+  const [addingId, setAddingId] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/login");
-    }
-  }, [user, loading, navigate]);
-
-  useEffect(() => {
-    if (user) {
-      fetchWishlist();
-    }
-  }, [user]);
-
-  const fetchWishlist = async () => {
-    try {
-      const { data, error } = await supabase
-        .from("wishlist")
-        .select(`
-          id,
-          product_id,
-          created_at,
-          product:products (
-            id,
-            name,
-            slug,
-            regular_price,
-            discount_price,
-            stock_quantity
-          )
-        `)
-        .eq("user_id", user?.id)
-        .order("created_at", { ascending: false });
-
-      if (error) throw error;
-
-      // Fetch product images separately
-      const itemsWithImages = await Promise.all(
-        (data || []).map(async (item: any) => {
-          if (item.product) {
-            const { data: imageData } = await supabase
-              .from("product_images")
-              .select("image_url")
-              .eq("product_id", item.product_id)
-              .eq("is_primary", true)
-              .single();
-            
-            return {
-              ...item,
-              product_image: imageData?.image_url || null
-            };
-          }
-          return { ...item, product_image: null };
-        })
-      );
-
-      setWishlistItems(itemsWithImages);
-    } catch (error) {
-      console.error("Error fetching wishlist:", error);
-    } finally {
-      setLoadingItems(false);
-    }
-  };
-
-  const removeFromWishlist = async (itemId: string) => {
-    try {
-      const { error } = await supabase
-        .from("wishlist")
-        .delete()
-        .eq("id", itemId);
-
-      if (error) throw error;
-
-      setWishlistItems(prev => prev.filter(item => item.id !== itemId));
-      toast({
-        title: "Removed from wishlist",
-        description: "Item has been removed from your wishlist."
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message
-      });
-    }
-  };
-
-  const addToCart = async (productId: string) => {
-    try {
-      // Check if item already in cart
-      const { data: existingItem } = await supabase
-        .from("cart_items")
-        .select("id, quantity")
-        .eq("user_id", user?.id)
-        .eq("product_id", productId)
-        .single();
-
-      if (existingItem) {
-        // Update quantity
-        await supabase
-          .from("cart_items")
-          .update({ quantity: existingItem.quantity + 1 })
-          .eq("id", existingItem.id);
-      } else {
-        // Add new item
-        await supabase
-          .from("cart_items")
-          .insert({
-            user_id: user?.id,
-            product_id: productId,
-            quantity: 1
-          });
-      }
-
-      toast({
-        title: "Added to cart!",
-        description: "Item has been added to your cart."
-      });
-    } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Error",
-        description: error.message
-      });
-    }
-  };
-
-  const filteredItems = wishlistItems.filter(item =>
-    item.product?.name.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredItems = items.filter((item) =>
+    (item.product?.name || "").toLowerCase().includes(searchQuery.toLowerCase())
   );
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col bg-background">
-        <Header />
-        <main className="flex-1 flex items-center justify-center">
-          <div className="animate-pulse text-muted-foreground">Loading...</div>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
+  const handleAddToCart = async (item: any) => {
+    setAddingId(item.product_id);
+    try {
+      const price = item.product?.discount_price || item.product?.regular_price || 0;
+      await addToCart(
+        {
+          id: item.product?.id || item.product_id,
+          name: item.product?.name || "Product",
+          slug: item.product?.slug || `product-${item.product_id}`,
+          price: price,
+          originalPrice: item.product?.regular_price,
+          image: item.image,
+          stock: item.product?.stock_quantity ?? 50,
+        },
+        1
+      );
+      toast.success("Added to cart!");
+    } catch (err: any) {
+      toast.error(err.message || "Could not add to cart");
+    } finally {
+      setAddingId(null);
+    }
+  };
 
-  if (!user) {
-    return null;
-  }
+  const handleOrderNow = async (item: any) => {
+    await handleAddToCart(item);
+    navigate("/checkout");
+  };
 
   return (
     <div className="min-h-screen flex flex-col bg-background">
       <Header />
-      <main className="flex-1 py-8">
-        <div className="container">
-          <div className="flex items-center justify-between mb-8">
+
+      <main className="flex-1 py-6 sm:py-10">
+        <div className="container max-w-7xl px-4 sm:px-6">
+          {/* Header Section */}
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6 sm:mb-8">
             <div>
-              <h1 className="text-3xl font-bold">My Wishlist</h1>
-              <p className="text-muted-foreground mt-1">
-                {wishlistItems.length} {wishlistItems.length === 1 ? 'item' : 'items'} saved
+              <div className="flex items-center gap-2">
+                <Heart className="h-6 w-6 text-primary fill-primary/20" />
+                <h1 className="text-2xl sm:text-3xl font-bold tracking-tight">My Wishlist</h1>
+              </div>
+              <p className="text-sm text-muted-foreground mt-1">
+                {items.length} {items.length === 1 ? "item" : "items"} saved in your wishlist
               </p>
             </div>
-            <div className="relative w-64">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-              <Input
-                placeholder="Search wishlist..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10"
-              />
-            </div>
+
+            {items.length > 0 && (
+              <div className="relative w-full sm:w-72">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Search wishlist..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-9 h-10 text-sm bg-card"
+                />
+              </div>
+            )}
           </div>
 
-          {loadingItems ? (
-            <div className="text-center py-12 text-muted-foreground">
-              Loading wishlist...
+          {/* Body */}
+          {loading ? (
+            <div className="flex flex-col items-center justify-center py-20 text-muted-foreground">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent mb-3" />
+              <p className="text-sm">Loading your saved items...</p>
             </div>
-          ) : filteredItems.length === 0 ? (
-            <Card>
-              <CardContent className="py-16 text-center">
-                <Heart className="w-20 h-20 mx-auto text-muted-foreground mb-6" />
-                <h3 className="text-xl font-semibold mb-2">Your wishlist is empty</h3>
-                <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                  Save items you love by clicking the heart icon on any product. They'll appear here for easy access later.
+          ) : items.length === 0 ? (
+            <Card className="border-dashed bg-card/50">
+              <CardContent className="py-16 sm:py-20 text-center flex flex-col items-center justify-center max-w-md mx-auto">
+                <div className="w-16 h-16 sm:w-20 sm:h-20 rounded-full bg-primary/10 flex items-center justify-center mb-5 text-primary">
+                  <Heart className="w-8 h-8 sm:w-10 sm:h-10 text-primary stroke-[1.5]" />
+                </div>
+                <h2 className="text-xl sm:text-2xl font-bold mb-2">Your wishlist is empty</h2>
+                <p className="text-sm text-muted-foreground mb-6 leading-relaxed">
+                  Save items you love by clicking the heart icon on any product. They'll appear here for easy access anytime.
                 </p>
-                <Button asChild size="lg">
-                  <Link to="/products">Explore Products</Link>
+                <Button asChild size="lg" className="rounded-xl shadow-md font-semibold gap-2">
+                  <Link to="/products">
+                    Explore Products <ArrowRight className="h-4 w-4" />
+                  </Link>
                 </Button>
               </CardContent>
             </Card>
+          ) : filteredItems.length === 0 ? (
+            <div className="text-center py-12 text-muted-foreground">
+              <Package className="h-10 w-10 mx-auto mb-2 opacity-40" />
+              <p className="text-sm font-medium">No products match "{searchQuery}"</p>
+              <Button variant="link" size="sm" onClick={() => setSearchQuery("")} className="mt-1">
+                Clear search
+              </Button>
+            </div>
           ) : (
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {filteredItems.map((item) => (
-                <Card key={item.id} className="group overflow-hidden">
-                  <div className="relative aspect-square bg-muted">
-                    {item.product_image ? (
-                      <img
-                        src={item.product_image}
-                        alt={item.product?.name}
-                        className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                      />
-                    ) : (
-                      <div className="w-full h-full flex items-center justify-center">
-                        <Heart className="w-12 h-12 text-muted-foreground" />
-                      </div>
-                    )}
-                    <button
-                      onClick={() => removeFromWishlist(item.id)}
-                      className="absolute top-3 right-3 p-2 bg-white/90 hover:bg-white rounded-full shadow-md transition-colors"
-                    >
-                      <Trash2 className="w-4 h-4 text-destructive" />
-                    </button>
-                    {item.product?.discount_price && (
-                      <Badge className="absolute top-3 left-3 bg-sale text-sale-foreground">
-                        {Math.round((1 - item.product.discount_price / item.product.regular_price) * 100)}% OFF
-                      </Badge>
-                    )}
-                  </div>
-                  <CardContent className="p-4">
-                    <Link to={`/product/${item.product?.slug}`}>
-                      <h3 className="font-medium line-clamp-2 hover:text-primary transition-colors">
-                        {item.product?.name}
-                      </h3>
-                    </Link>
-                    <div className="flex items-center gap-2 mt-2">
-                      {item.product?.discount_price ? (
-                        <>
-                          <span className="font-bold text-lg text-primary">
-                            ৳{item.product.discount_price.toFixed(2)}
-                          </span>
-                          <span className="text-sm text-muted-foreground line-through">
-                            ৳{item.product.regular_price.toFixed(2)}
-                          </span>
-                        </>
-                      ) : (
-                        <span className="font-bold text-lg">
-                          ৳{item.product?.regular_price.toFixed(2)}
-                        </span>
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-4 xl:grid-cols-5 gap-3 sm:gap-5">
+              {filteredItems.map((item) => {
+                const regularPrice = item.product?.regular_price || 0;
+                const discountPrice = item.product?.discount_price;
+                const currentPrice = discountPrice || regularPrice;
+                const hasDiscount = !!discountPrice && discountPrice < regularPrice;
+                const discountPercent = hasDiscount
+                  ? Math.round(((regularPrice - discountPrice) / regularPrice) * 100)
+                  : 0;
+
+                return (
+                  <Card
+                    key={item.id}
+                    className="group overflow-hidden rounded-xl border hover:shadow-lg transition-all duration-200 bg-card flex flex-col"
+                  >
+                    {/* Image Area */}
+                    <div className="relative aspect-square bg-muted/40 overflow-hidden">
+                      <Link to={`/product/${item.product?.slug || item.product_id}`} className="block w-full h-full">
+                        {item.image ? (
+                          <img
+                            src={item.image}
+                            alt={item.product?.name}
+                            className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-300"
+                            loading="lazy"
+                          />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center text-muted-foreground">
+                            <Package className="w-10 h-10 stroke-[1.5]" />
+                          </div>
+                        )}
+                      </Link>
+
+                      {/* Remove Button */}
+                      <button
+                        onClick={() => removeFromWishlist(item.product_id)}
+                        className="absolute top-2 right-2 p-1.5 bg-background/90 hover:bg-destructive hover:text-destructive-foreground rounded-full shadow-sm transition-colors z-10"
+                        title="Remove from wishlist"
+                        aria-label="Remove from wishlist"
+                      >
+                        <Trash2 className="w-4 h-4 text-muted-foreground hover:text-inherit" />
+                      </button>
+
+                      {/* Discount Badge */}
+                      {hasDiscount && discountPercent > 0 && (
+                        <Badge className="absolute top-2 left-2 bg-gradient-to-r from-red-500 to-rose-600 text-white font-bold text-[10px] sm:text-xs px-1.5 py-0.5 shadow-sm border-0">
+                          {discountPercent}% OFF
+                        </Badge>
                       )}
                     </div>
-                    <div className="mt-3 flex gap-2">
-                      <Button
-                        onClick={() => item.product && addToCart(item.product.id)}
-                        className="flex-1"
-                        size="sm"
-                        disabled={!item.product?.stock_quantity}
-                      >
-                        <ShoppingCart className="w-4 h-4 mr-2" />
-                        {item.product?.stock_quantity ? 'Add to Cart' : 'Out of Stock'}
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+
+                    {/* Content */}
+                    <CardContent className="p-3 sm:p-4 flex-1 flex flex-col justify-between">
+                      <div>
+                        <Link
+                          to={`/product/${item.product?.slug || item.product_id}`}
+                          className="font-medium text-xs sm:text-sm line-clamp-2 hover:text-primary transition-colors leading-snug"
+                        >
+                          {item.product?.name || "Product"}
+                        </Link>
+
+                        <div className="flex items-baseline gap-1.5 mt-2 flex-wrap">
+                          <span className="font-bold text-sm sm:text-base text-primary">
+                            ৳{Number(currentPrice).toLocaleString()}
+                          </span>
+                          {hasDiscount && (
+                            <span className="text-[11px] sm:text-xs text-muted-foreground line-through">
+                              ৳{Number(regularPrice).toLocaleString()}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Action Buttons */}
+                      <div className="mt-3 pt-2 border-t flex flex-col gap-1.5">
+                        <Button
+                          size="sm"
+                          className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white text-xs font-bold shadow-sm h-8"
+                          onClick={() => handleOrderNow(item)}
+                          disabled={addingId === item.product_id}
+                        >
+                          Order Now
+                        </Button>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="w-full text-xs h-7 gap-1 font-medium"
+                          onClick={() => handleAddToCart(item)}
+                          disabled={addingId === item.product_id}
+                        >
+                          <ShoppingCart className="w-3.5 h-3.5" />
+                          Add to Cart
+                        </Button>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
             </div>
           )}
         </div>
       </main>
+
       <Footer />
     </div>
   );

@@ -4,6 +4,8 @@ import { db } from "@/integrations/firebase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { supabase } from "@/lib/firebaseAdapter";
+import { getSmartProductImage } from "@/utils/productImageHelper";
 
 export interface WishlistItem {
   id: string;
@@ -14,6 +16,7 @@ export interface WishlistItem {
     slug: string;
     regular_price: number;
     discount_price: number | null;
+    stock_quantity?: number | null;
   };
   image?: string;
 }
@@ -31,6 +34,97 @@ interface WishlistContextType {
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 const WISHLIST_STORAGE_KEY = "megamart_wishlist";
+
+async function resolveProductInfo(productId: string): Promise<{
+  id: string;
+  name: string;
+  slug: string;
+  regular_price: number;
+  discount_price: number | null;
+  image: string;
+  stock_quantity?: number;
+}> {
+  const pid = String(productId);
+  const cleanId = pid.replace("product-", "").replace("supplier-", "");
+
+  // 1. Check Mohasagor catalog
+  try {
+    const catalog = await getCachedMohasagorProducts();
+    const matched = catalog.find(
+      (p: any) =>
+        String(p.id) === pid ||
+        String(p.id) === cleanId ||
+        p.slug === pid ||
+        p.slug === `product-${cleanId}`
+    );
+    if (matched) {
+      return {
+        id: String(matched.id),
+        name: matched.name,
+        slug: matched.slug || `product-${matched.id}`,
+        regular_price: matched.originalPrice || matched.price || 0,
+        discount_price: matched.originalPrice ? matched.price : null,
+        image: getSmartProductImage(matched.name, matched.image, matched.category || ""),
+        stock_quantity: 50,
+      };
+    }
+  } catch {}
+
+  // 2. Check Local Storage admin products
+  try {
+    const rawLocal = localStorage.getItem("enterprise_admin_products") || localStorage.getItem("local_products");
+    if (rawLocal) {
+      const list = JSON.parse(rawLocal);
+      if (Array.isArray(list)) {
+        const found = list.find((p: any) => String(p.id) === pid || p.slug === pid);
+        if (found) {
+          const img = found.images?.[0] || found.product_images?.[0]?.image_url || found.image_url || found.image;
+          return {
+            id: String(found.id),
+            name: found.name || found.title || "Product",
+            slug: found.slug || pid,
+            regular_price: Number(found.regular_price || found.price || 0),
+            discount_price: found.discount_price ? Number(found.discount_price) : null,
+            image: getSmartProductImage(found.name || "", img, found.category || ""),
+            stock_quantity: Number(found.stock_quantity || found.stock || 50),
+          };
+        }
+      }
+    }
+  } catch {}
+
+  // 3. Query Supabase
+  try {
+    const { data: dbProd } = await supabase
+      .from("products")
+      .select("id, name, slug, regular_price, discount_price, stock_quantity, image, product_images(image_url)")
+      .or(`id.eq.${pid},slug.eq.${pid}`)
+      .maybeSingle();
+
+    if (dbProd) {
+      const img = dbProd.image || dbProd.product_images?.[0]?.image_url;
+      return {
+        id: String(dbProd.id),
+        name: dbProd.name,
+        slug: dbProd.slug || pid,
+        regular_price: Number(dbProd.regular_price || 0),
+        discount_price: dbProd.discount_price ? Number(dbProd.discount_price) : null,
+        image: getSmartProductImage(dbProd.name, img, ""),
+        stock_quantity: dbProd.stock_quantity ?? 50,
+      };
+    }
+  } catch {}
+
+  return {
+    id: pid,
+    name: "Product",
+    slug: `product-${cleanId}`,
+    regular_price: 1000,
+    discount_price: null,
+    image: getSmartProductImage("Product", "", ""),
+    stock_quantity: 50,
+  };
+}
 
 export function WishlistProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<WishlistItem[]>([]);
@@ -54,43 +148,43 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   const fetchWishlist = useCallback(async () => {
     setLoading(true);
     try {
-      const catalog = await getCachedMohasagorProducts();
       let rawItems: any[] = [];
 
       if (user) {
-        const ref = doc(db, "wishlists", user.uid);
-        const snap = await getDoc(ref);
-        if (snap.exists()) {
-          rawItems = snap.data().items || [];
-        } else {
+        try {
+          const ref = doc(db, "wishlists", user.uid);
+          const snap = await getDoc(ref);
+          if (snap.exists()) {
+            rawItems = snap.data().items || [];
+          } else {
+            rawItems = getLocalWishlist();
+          }
+        } catch {
           rawItems = getLocalWishlist();
         }
       } else {
         rawItems = getLocalWishlist();
       }
 
-      const formatted: WishlistItem[] = rawItems.map((item: any) => {
-        const pid = typeof item === 'string' ? item : (item.product_id || item.id);
-        const matched = catalog.find(p => p.id === pid);
-        return {
-          id: `wish-${pid}`,
-          product_id: pid,
-          product: matched ? {
-            id: matched.id,
-            name: matched.name,
-            slug: matched.slug,
-            regular_price: matched.originalPrice || matched.price,
-            discount_price: matched.price
-          } : {
-            id: pid,
-            name: "Product",
-            slug: `product-${pid}`,
-            regular_price: 100,
-            discount_price: null
-          },
-          image: matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
-        };
-      });
+      const formatted: WishlistItem[] = await Promise.all(
+        rawItems.map(async (item: any) => {
+          const pid = typeof item === 'string' ? item : (item.product_id || item.id);
+          const info = await resolveProductInfo(pid);
+          return {
+            id: `wish-${pid}`,
+            product_id: pid,
+            product: {
+              id: info.id,
+              name: info.name,
+              slug: info.slug,
+              regular_price: info.regular_price,
+              discount_price: info.discount_price,
+              stock_quantity: info.stock_quantity ?? 50,
+            },
+            image: info.image,
+          };
+        })
+      );
 
       setItems(formatted);
     } catch (err) {
@@ -120,31 +214,25 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
   };
 
   const isInWishlist = useCallback((productId: string) => {
-    return items.some(item => item.product_id === productId);
+    return items.some(item => String(item.product_id) === String(productId));
   }, [items]);
 
   const addToWishlist = useCallback(async (productId: string) => {
     if (isInWishlist(productId)) return;
-    const catalog = await getCachedMohasagorProducts();
-    const matched = catalog.find(p => p.id === productId);
+    const info = await resolveProductInfo(productId);
 
     const newItem: WishlistItem = {
       id: `wish-${productId}`,
-      product_id: productId,
-      product: matched ? {
-        id: matched.id,
-        name: matched.name,
-        slug: matched.slug,
-        regular_price: matched.originalPrice || matched.price,
-        discount_price: matched.price
-      } : {
-        id: productId,
-        name: "Product",
-        slug: `product-${productId}`,
-        regular_price: 100,
-        discount_price: null
+      product_id: String(productId),
+      product: {
+        id: info.id,
+        name: info.name,
+        slug: info.slug,
+        regular_price: info.regular_price,
+        discount_price: info.discount_price,
+        stock_quantity: info.stock_quantity ?? 50,
       },
-      image: matched?.image || "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400"
+      image: info.image,
     };
 
     setItems(prev => {
@@ -161,7 +249,7 @@ export function WishlistProvider({ children }: { children: ReactNode }) {
 
   const removeFromWishlist = useCallback(async (productId: string) => {
     setItems(prev => {
-      const updated = prev.filter(item => item.product_id !== productId);
+      const updated = prev.filter(item => String(item.product_id) !== String(productId));
       syncWishlistToFirebase(updated);
       return updated;
     });
