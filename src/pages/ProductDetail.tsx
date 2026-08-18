@@ -1,6 +1,6 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, Link, useNavigate } from "react-router-dom";
-import { Heart, ShoppingCart, Star, Shield, RotateCcw, Minus, Plus, Loader2, Play, ChevronLeft, ChevronRight, Share2, Zap, MessageSquare, ShieldCheck, Store, Truck, Award, Sparkles, TrendingUp, Package, ZoomIn, ZoomOut, X, Maximize2 } from "lucide-react";
+import { Heart, ShoppingCart, Star, Shield, RotateCcw, Minus, Plus, Loader2, Play, ChevronLeft, ChevronRight, Share2, Zap, MessageSquare, ShieldCheck, Store, Truck, Award, Sparkles, TrendingUp, Package, ZoomIn, ZoomOut, X, Maximize2, Ruler, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/lib/firebaseAdapter";
@@ -19,6 +19,7 @@ import { StoreDetails } from "@/components/products/StoreDetails";
 import { getCachedMohasagorProducts, findMohasagorProduct, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
+import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
 import { db } from "@/integrations/firebase/client";
 import { collection, getDocs } from "firebase/firestore";
 
@@ -28,42 +29,6 @@ interface ProductImage {
   is_primary: boolean | null;
   sort_order: number | null;
 }
-interface ProductVariant {
-  id: number | string;
-  product_id: number | string;
-  attribute: string;
-  variant: string;
-}
-
-const getColorHex = (name: string): string | null => {
-  if (!name) return null;
-  const n = name.toLowerCase().trim();
-  const map: Record<string, string> = {
-    black: "#111827",
-    white: "#FFFFFF",
-    red: "#EF4444",
-    blue: "#3B82F6",
-    navy: "#1E3A8A",
-    "navy blue": "#1E3A8A",
-    green: "#10B981",
-    olive: "#556B2F",
-    golden: "#D97706",
-    gold: "#D97706",
-    yellow: "#FBBF24",
-    pink: "#EC4899",
-    purple: "#8B5CF6",
-    gray: "#6B7280",
-    grey: "#6B7280",
-    maroon: "#800000",
-    orange: "#F97316",
-    beige: "#F5F5DC",
-    brown: "#78350F",
-    cyan: "#06B6D4",
-    teal: "#14B8A6",
-    silver: "#9CA3AF"
-  };
-  return map[n] || null;
-};
 interface Product {
   id: string;
   name: string;
@@ -200,8 +165,10 @@ export default function ProductDetail() {
   const [addingToCart, setAddingToCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
+  const variantSelectorRef = useRef<HTMLDivElement>(null);
   const {
     addToCart
   } = useCart();
@@ -370,22 +337,7 @@ export default function ProductDetail() {
       regularPrice = calc.regularPrice;
     }
 
-    let variants: ProductVariant[] = [];
-    if (Array.isArray(raw.product_variants) && raw.product_variants.length > 0) {
-      variants = raw.product_variants.map((v: any, idx: number) => ({
-        id: parseInt(v.id) || idx + 1,
-        product_id: parseInt(raw.id) || 0,
-        attribute: v.attribute || (v.size ? "Size" : v.color ? "Color" : "Option"),
-        variant: String(v.variant || v.name || v.color || v.size || "Standard").trim(),
-      }));
-    } else if (Array.isArray(raw.variants) && raw.variants.length > 0) {
-      variants = raw.variants.map((v: any, idx: number) => ({
-        id: parseInt(v.id) || idx + 1,
-        product_id: parseInt(raw.id) || 0,
-        attribute: v.attribute || (v.size ? "Size" : v.color ? "Color" : "Option"),
-        variant: String(v.variant || v.name || v.color || v.size || "Standard").trim(),
-      }));
-    }
+    const variants = extractProductVariants(raw);
 
     return {
       id: raw.id.toString(),
@@ -413,14 +365,22 @@ export default function ProductDetail() {
   };
 
   const applyLoadedProduct = (loaded: Product) => {
+    let variants = loaded.product_variants || [];
+    if (!variants || variants.length === 0) {
+      variants = extractProductVariants(loaded);
+      loaded.product_variants = variants;
+    }
     setProduct(loaded);
     setSelectedImage(0);
-    if (loaded.product_variants && loaded.product_variants.length > 0) {
+    if (variants && variants.length > 0) {
       const initial: Record<string, string> = {};
-      const attrs = Array.from(new Set(loaded.product_variants.map(v => v.attribute)));
+      const attrs = Array.from(new Set(variants.map(v => v.attribute)));
       attrs.forEach(attr => {
-        const firstOpt = loaded.product_variants?.find(v => v.attribute === attr);
-        if (firstOpt) initial[attr] = firstOpt.variant;
+        const attrValues = variants.filter(v => v.attribute === attr).map(v => v.variant);
+        const sorted = sortVariantValues(attr, attrValues);
+        if (sorted.length > 0) {
+          initial[attr] = sorted[0];
+        }
       });
       setSelectedVariants(initial);
     }
@@ -485,15 +445,7 @@ export default function ProductDetail() {
             `).or(`slug.eq.${targetSlug},id.eq.${targetSlug},slug.eq.${targetLower},id.eq.${cleanId}`).maybeSingle();
 
           if (data) {
-            const dbVariants: ProductVariant[] = [];
-            if (data.product_variants && Array.isArray(data.product_variants)) {
-              data.product_variants.forEach((v: any, idx: number) => {
-                if (v.size) dbVariants.push({ id: v.id || idx, product_id: data.id, attribute: "Size", variant: v.size });
-                if (v.color) dbVariants.push({ id: v.id || idx + 1000, product_id: data.id, attribute: "Color", variant: v.color });
-                if (v.storage) dbVariants.push({ id: v.id || idx + 2000, product_id: data.id, attribute: "Storage", variant: v.storage });
-                if (!v.size && !v.color && !v.storage && v.name) dbVariants.push({ id: v.id || idx, product_id: data.id, attribute: "Option", variant: v.name });
-              });
-            }
+            const dbVariants = extractProductVariants(data);
             data.product_variants = dbVariants;
 
             const mapping = data.supplier_product_mappings && data.supplier_product_mappings[0];
@@ -584,7 +536,7 @@ export default function ProductDetail() {
                 color: data.color || null,
                 video_url: data.video_url || null,
                 product_images: imgList,
-                product_variants: Array.isArray(data.product_variants) ? data.product_variants : [],
+                product_variants: extractProductVariants({ ...data, id: foundDoc.id }),
                 category_id: data.category_id || data.category || null,
                 seller_id: data.seller_id || "Admin"
               };
@@ -645,7 +597,7 @@ export default function ProductDetail() {
                   color: found.color || null,
                   video_url: found.video_url || null,
                   product_images: imgList,
-                  product_variants: Array.isArray(found.product_variants) ? found.product_variants : [],
+                  product_variants: extractProductVariants(found),
                   category_id: found.category_id || found.category || null,
                   seller_id: found.seller_id || "Admin"
                 };
@@ -693,12 +645,7 @@ export default function ProductDetail() {
               color: null,
               video_url: null,
               product_images: cjImgs,
-              product_variants: Array.isArray(cj.variants) ? cj.variants.map((v: any, i: number) => ({
-                id: i,
-                product_id: Number(cj.id) || i,
-                attribute: "Option",
-                variant: v.name || v.variantKey || "Standard"
-              })) : [],
+              product_variants: extractProductVariants(cj),
               category_id: cj.category || null,
               seller_id: "CJ Dropshipping"
             };
@@ -745,6 +692,7 @@ export default function ProductDetail() {
        const attributes = Array.from(new Set(product.product_variants.map(v => v.attribute)));
        const unselected = attributes.filter(attr => !selectedVariants[attr]);
        if (unselected.length > 0) {
+         variantSelectorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
          toast({
            title: "Selection Required",
            description: `Please select: ${unselected.join(", ")}`,
@@ -765,6 +713,7 @@ export default function ProductDetail() {
        const attributes = Array.from(new Set(product.product_variants.map(v => v.attribute)));
        const unselected = attributes.filter(attr => !selectedVariants[attr]);
        if (unselected.length > 0) {
+         variantSelectorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
          toast({
            title: "Selection Required",
            description: `Please select: ${unselected.join(", ")}`,
@@ -1157,50 +1106,63 @@ export default function ProductDetail() {
 
               {/* Product Variants (Color, Size, etc.) */}
               {product.product_variants && product.product_variants.length > 0 && (
-                <div className="space-y-4 pt-4 border-t">
+                <div ref={variantSelectorRef} className="space-y-4 pt-4 border-t scroll-mt-20">
                   {Array.from(new Set(product.product_variants.map(v => v.attribute))).map(attribute => {
                     const variantsForAttr = product.product_variants!.filter(v => v.attribute === attribute);
-                    const isColorAttr = attribute.toLowerCase().includes("color") || attribute.toLowerCase().includes("colour");
-                    const isSizeAttr = attribute.toLowerCase().includes("size");
+                    const isColorAttr = attribute.toLowerCase().includes("color") || attribute.toLowerCase().includes("colour") || attribute.toLowerCase().includes("কালার");
+                    const isSizeAttr = attribute.toLowerCase().includes("size") || attribute.toLowerCase().includes("সাইজ");
+                    const rawValues = Array.from(new Set(variantsForAttr.map(v => v.variant)));
+                    const sortedValues = sortVariantValues(attribute, rawValues);
 
                     return (
-                      <div key={attribute} className="space-y-2">
+                      <div key={attribute} className="space-y-2.5">
                         <div className="flex items-center justify-between">
-                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-1.5">
+                          <h4 className="text-sm font-semibold text-foreground flex items-center gap-2">
                             <span>{attribute}:</span>
-                            <span className="text-primary font-bold">{selectedVariants[attribute] || 'Select one'}</span>
+                            <span className="text-primary font-bold bg-primary/10 px-2.5 py-0.5 rounded-full text-xs">
+                              {selectedVariants[attribute] || 'Select one'}
+                            </span>
                           </h4>
                           {isSizeAttr && (
-                            <span className="text-[11px] text-muted-foreground bg-muted px-2 py-0.5 rounded-md font-medium">Standard Fit</span>
+                            <button
+                              type="button"
+                              onClick={() => setSizeGuideOpen(true)}
+                              className="text-xs text-primary hover:underline bg-primary/10 hover:bg-primary/20 px-2.5 py-1 rounded-md font-semibold flex items-center gap-1 transition-colors cursor-pointer"
+                            >
+                              <Ruler className="h-3.5 w-3.5" /> Size Guide
+                            </button>
                           )}
                         </div>
                         <div className="flex flex-wrap gap-2.5">
-                          {variantsForAttr.map((variant, idx) => {
-                            const isSelected = selectedVariants[attribute] === variant.variant;
-                            const hex = isColorAttr ? getColorHex(variant.variant) : null;
+                          {sortedValues.map((val, idx) => {
+                            const isSelected = selectedVariants[attribute] === val;
+                            const hex = isColorAttr ? getColorHex(val) : null;
 
                             return (
                               <button
-                                key={variant.id || idx}
+                                key={val || idx}
+                                type="button"
                                 onClick={() => {
-                                  setSelectedVariants(prev => ({ ...prev, [attribute]: variant.variant }));
-                                  if (idx < images.length) {
-                                    setSelectedImage(idx);
+                                  setSelectedVariants(prev => ({ ...prev, [attribute]: val }));
+                                  const matchingVariantIndex = variantsForAttr.findIndex(v => v.variant === val);
+                                  if (matchingVariantIndex >= 0 && matchingVariantIndex < images.length) {
+                                    setSelectedImage(matchingVariantIndex);
                                     setShowVideo(false);
                                   }
                                 }}
-                                className={`flex items-center gap-2 px-3.5 py-2 sm:px-4 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border shadow-xs active:scale-95
+                                className={`flex items-center gap-2 px-4 py-2.5 sm:px-4.5 sm:py-2.5 rounded-xl text-sm font-semibold transition-all duration-200 border cursor-pointer select-none active:scale-95
                                   ${isSelected 
                                     ? 'border-primary bg-primary text-primary-foreground shadow-md shadow-primary/30 ring-2 ring-primary/30 scale-105' 
                                     : 'border-border/80 bg-muted/40 hover:bg-muted text-foreground hover:border-primary/50'}`}
                               >
                                 {hex && (
                                   <span 
-                                    className="w-3.5 h-3.5 rounded-full border border-white/40 shadow-xs shrink-0" 
+                                    className="w-4 h-4 rounded-full border-2 border-white/60 shadow-xs shrink-0" 
                                     style={{ backgroundColor: hex }} 
                                   />
                                 )}
-                                <span>{variant.variant}</span>
+                                <span>{val}</span>
+                                {isSelected && <Check className="h-3.5 w-3.5 stroke-[3] ml-0.5 shrink-0" />}
                               </button>
                             );
                           })}
@@ -1435,33 +1397,49 @@ export default function ProductDetail() {
         </div>
 
         {/* Mobile sticky bottom bar */}
-        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-2.5 max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
-          <div className="flex items-center gap-2 max-w-lg mx-auto w-full">
-            <Button
-              variant={inWishlist ? "default" : "outline"}
-              className="h-11 w-11 shrink-0 p-0 rounded-xl"
-              onClick={handleWishlistToggle}
-              aria-label="Wishlist"
-            >
-              <Heart className={`h-5 w-5 ${inWishlist ? "fill-current" : ""}`} />
-            </Button>
-            <Button
-              variant="outline"
-              className="flex-1 h-11 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl min-w-0"
-              onClick={handleAddToCart}
-              disabled={addingToCart}
-            >
-              {addingToCart ? <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" /> : <ShoppingCart className="h-4 w-4 mr-1 shrink-0" />}
-              <span className="truncate">Cart</span>
-            </Button>
-            <Button
-              className="flex-1 h-11 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 min-w-0"
-              onClick={handleBuyNow}
-              disabled={buyingNow}
-            >
-              {buyingNow ? <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" /> : <Zap className="h-4 w-4 mr-1 shrink-0" />}
-              <span className="truncate">Buy Now</span>
-            </Button>
+        <div className="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-md border-t border-border shadow-[0_-4px_20px_rgba(0,0,0,0.08)] px-3 pt-2 max-w-[100vw] overflow-hidden" style={{ paddingBottom: 'max(env(safe-area-inset-bottom), 12px)' }}>
+          <div className="max-w-lg mx-auto w-full space-y-1.5">
+            {product.product_variants && product.product_variants.length > 0 && (
+              <div 
+                onClick={() => variantSelectorRef.current?.scrollIntoView({ behavior: "smooth", block: "center" })}
+                className="flex items-center justify-between px-3 py-1 rounded-lg bg-muted/70 text-[11px] cursor-pointer hover:bg-muted active:scale-98 transition-all"
+              >
+                <div className="flex items-center gap-1.5 truncate">
+                  <span className="text-muted-foreground font-medium">Selected:</span>
+                  <span className="text-primary font-bold truncate">
+                    {Object.entries(selectedVariants).map(([k, v]) => `${k}: ${v}`).join(" • ") || "Select Size / Color"}
+                  </span>
+                </div>
+                <span className="text-[10px] text-muted-foreground font-medium shrink-0 ml-1 underline">Change</span>
+              </div>
+            )}
+            <div className="flex items-center gap-2 w-full">
+              <Button
+                variant={inWishlist ? "default" : "outline"}
+                className="h-11 w-11 shrink-0 p-0 rounded-xl"
+                onClick={handleWishlistToggle}
+                aria-label="Wishlist"
+              >
+                <Heart className={`h-5 w-5 ${inWishlist ? "fill-current" : ""}`} />
+              </Button>
+              <Button
+                variant="outline"
+                className="flex-1 h-11 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl min-w-0"
+                onClick={handleAddToCart}
+                disabled={addingToCart}
+              >
+                {addingToCart ? <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" /> : <ShoppingCart className="h-4 w-4 mr-1 shrink-0" />}
+                <span className="truncate">Cart</span>
+              </Button>
+              <Button
+                className="flex-1 h-11 px-2 sm:px-4 text-xs sm:text-sm font-semibold rounded-xl bg-primary hover:bg-primary/90 text-primary-foreground shadow-md shadow-primary/20 min-w-0"
+                onClick={handleBuyNow}
+                disabled={buyingNow}
+              >
+                {buyingNow ? <Loader2 className="h-4 w-4 mr-1 animate-spin shrink-0" /> : <Zap className="h-4 w-4 mr-1 shrink-0" />}
+                <span className="truncate">Buy Now</span>
+              </Button>
+            </div>
           </div>
         </div>
       </main>
@@ -1542,6 +1520,110 @@ export default function ProductDetail() {
                 <img src={img} alt="" className="w-full h-full object-cover" />
               </button>
             ))}
+          </div>
+        </div>
+      )}
+      {/* Size Guide Modal */}
+      {sizeGuideOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-in fade-in duration-200" onClick={() => setSizeGuideOpen(false)}>
+          <div className="bg-card border border-border rounded-2xl p-5 max-w-md w-full shadow-2xl space-y-4 max-h-[85vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between pb-3 border-b">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                  <Ruler className="h-4 w-4" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-foreground">Size Guide (সাইজ চার্ট)</h3>
+                  <p className="text-xs text-muted-foreground">Standard Measurements (Inches / ইঞ্চি)</p>
+                </div>
+              </div>
+              <button onClick={() => setSizeGuideOpen(false)} className="p-1 rounded-full hover:bg-muted text-muted-foreground hover:text-foreground">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4 text-xs">
+              {/* Shirts / T-Shirts Table */}
+              <div>
+                <h4 className="font-bold text-foreground mb-2 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Shirts / T-Shirts / Polos / Hoodies
+                </h4>
+                <div className="overflow-x-auto rounded-xl border">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-muted/60 text-muted-foreground font-semibold">
+                        <th className="p-2 border-b">Size</th>
+                        <th className="p-2 border-b">Chest (বডি)</th>
+                        <th className="p-2 border-b">Length (লম্বা)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      <tr><td className="p-2 font-bold text-foreground">M</td><td className="p-2">38"</td><td className="p-2">28"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">L</td><td className="p-2">40"</td><td className="p-2">29"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">XL</td><td className="p-2">42"</td><td className="p-2">30"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">XXL (2XL)</td><td className="p-2">44"</td><td className="p-2">31"</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Pants / Trousers Table */}
+              <div>
+                <h4 className="font-bold text-foreground mb-2 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Pants / Jeans / Gabardine (প্যান্ট ও ট্রাউজার)
+                </h4>
+                <div className="overflow-x-auto rounded-xl border">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-muted/60 text-muted-foreground font-semibold">
+                        <th className="p-2 border-b">Waist (কোমর)</th>
+                        <th className="p-2 border-b">Length (দৈর্ঘ্য)</th>
+                        <th className="p-2 border-b">Thigh (রান)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      <tr><td className="p-2 font-bold text-foreground">28</td><td className="p-2">38"</td><td className="p-2">22"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">30</td><td className="p-2">39"</td><td className="p-2">23"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">32</td><td className="p-2">40"</td><td className="p-2">24"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">34</td><td className="p-2">41"</td><td className="p-2">25"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">36</td><td className="p-2">42"</td><td className="p-2">26"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">38</td><td className="p-2">42"</td><td className="p-2">27"</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {/* Panjabi Table */}
+              <div>
+                <h4 className="font-bold text-foreground mb-2 flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-primary" />
+                  Panjabi (পাঞ্জাবি)
+                </h4>
+                <div className="overflow-x-auto rounded-xl border">
+                  <table className="w-full text-left border-collapse">
+                    <thead>
+                      <tr className="bg-muted/60 text-muted-foreground font-semibold">
+                        <th className="p-2 border-b">Size</th>
+                        <th className="p-2 border-b">Chest (বডি)</th>
+                        <th className="p-2 border-b">Length (লম্বা)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-border">
+                      <tr><td className="p-2 font-bold text-foreground">40</td><td className="p-2">40"</td><td className="p-2">40"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">42</td><td className="p-2">42"</td><td className="p-2">42"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">44</td><td className="p-2">44"</td><td className="p-2">44"</td></tr>
+                      <tr><td className="p-2 font-bold text-foreground">46</td><td className="p-2">46"</td><td className="p-2">46"</td></tr>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </div>
+
+            <Button className="w-full" onClick={() => setSizeGuideOpen(false)}>
+              Got It (বুঝেছি)
+            </Button>
           </div>
         </div>
       )}

@@ -1,8 +1,9 @@
 import type { Product } from "@/components/products/ProductCard";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
+import { extractProductVariants } from "@/utils/productVariantHelper";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v7";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v8";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes (300,000ms)
 
 let inMemoryProductsCache: Product[] | null = null;
@@ -142,70 +143,8 @@ function mapRawProducts(rawProducts: any[], base: string): Product[] {
 
     const rawStock = p.stock_quantity ?? p.stock ?? (p.stock_status === "available" ? 50 : 0);
 
-    // Map Product Variants (Size, Color, Options) from API
-    let variants: any[] = [];
-    if (Array.isArray(p.product_variants) && p.product_variants.length > 0) {
-      variants = p.product_variants.map((v: any, idx: number) => ({
-        id: v.id || idx + 1,
-        product_id: p.id,
-        attribute: v.attribute || (v.size ? "Size" : v.color ? "Color" : "Option"),
-        variant: String(v.variant || v.name || v.value || v.color || v.size || "Standard").trim()
-      }));
-    } else if (Array.isArray(p.variants) && p.variants.length > 0) {
-      variants = p.variants.map((v: any, idx: number) => ({
-        id: v.id || idx + 1,
-        product_id: p.id,
-        attribute: v.attribute || (v.size ? "Size" : v.color ? "Color" : "Option"),
-        variant: String(v.variant || v.name || v.color || v.size || "Standard").trim()
-      }));
-    }
-
-    // Smart Fallback for fashion / clothing items when product_variants is omitted by supplier
-    if (variants.length === 0) {
-      const textToScan = `${p.name || ''} ${p.details || ''} ${p.description || ''}`;
-      // Scan for sizes (e.g. "Size: M, L, XL, XXL", "Size- 28 30 32 34", "Sizes: S/M/L/XL")
-      const sizeMatch = textToScan.match(/Size\s*[:\-–]\s*([M|L|X|S|2|3|4|5|6|7|8|9|0|\s|,|\/|\+]+)/i);
-      if (sizeMatch && sizeMatch[1]) {
-        const candidateSizes = sizeMatch[1].split(/[,/|\s]+/).map(s => s.trim().toUpperCase()).filter(s => 
-          /^(S|M|L|XL|XXL|XXXL|2XL|3XL|4XL|28|30|32|34|36|38|40|42|44)$/i.test(s)
-        );
-        const uniqueSizes = Array.from(new Set(candidateSizes));
-        if (uniqueSizes.length > 0) {
-          uniqueSizes.forEach((sz, idx) => {
-            variants.push({
-              id: `sz-${p.id}-${idx}`,
-              product_id: p.id,
-              attribute: "Size",
-              variant: sz
-            });
-          });
-        }
-      } else if (
-        (p.category || '').toLowerCase().includes('fashion') || 
-        (p.category || '').toLowerCase().includes('cloth') || 
-        /t-shirt|shirt|panjabi|hoodie|polo|jersey|jacket|sweater|tshirt|kurti/i.test(p.name || '')
-      ) {
-        // Default standard apparel sizes for clothing
-        ['M', 'L', 'XL', 'XXL'].forEach((sz, idx) => {
-          variants.push({
-            id: `def-sz-${p.id}-${idx}`,
-            product_id: p.id,
-            attribute: "Size",
-            variant: sz
-          });
-        });
-      } else if (/pant|trouser|jeans|gabardine|chino/i.test(p.name || '')) {
-        // Default standard waist sizes for pants
-        ['28', '30', '32', '34', '36'].forEach((sz, idx) => {
-          variants.push({
-            id: `def-pnt-${p.id}-${idx}`,
-            product_id: p.id,
-            attribute: "Size",
-            variant: sz
-          });
-        });
-      }
-    }
+    // Map Product Variants (Size, Color, Options) using robust multi-source extractor
+    const variants = extractProductVariants(p);
 
     return {
       id: p.id.toString(),
