@@ -75,7 +75,13 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
   };
 
   return (
-    <Link to={productLink} className="group block">
+    <Link 
+      to={productLink} 
+      state={{ preloadedProduct: product }}
+      onMouseEnter={() => { if (displayImage) { const i = new Image(); i.src = displayImage; } }}
+      onTouchStart={() => { if (displayImage) { const i = new Image(); i.src = displayImage; } }}
+      className="group block"
+    >
       <div className="bg-card border rounded-xl overflow-hidden transition-all duration-200 hover:shadow-lg hover:border-primary/20">
         {/* Image Container */}
         <div className="relative aspect-square overflow-hidden bg-muted">
@@ -84,6 +90,7 @@ const CombinedProductCardComponent: React.FC<CombinedProductCardProps> = ({ prod
             alt={product.name}
             className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
             loading="lazy"
+            decoding="async"
             onError={(e) => {
               (e.target as HTMLImageElement).src = getSmartProductImage(product.name, "", "");
             }}

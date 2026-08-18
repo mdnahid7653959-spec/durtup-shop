@@ -493,6 +493,9 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
                 <Link
                   key={p.id}
                   to={`/product/${p.slug || p.id}`}
+                  state={{ preloadedProduct: p }}
+                  onMouseEnter={() => { if (p.image) { const i = new Image(); i.src = p.image; } }}
+                  onTouchStart={() => { if (p.image) { const i = new Image(); i.src = p.image; } }}
                   className="group flex flex-col md:flex-row items-center gap-2 md:gap-3 p-1.5 sm:p-2 md:p-1.5 rounded-xl sm:rounded-2xl hover:bg-muted/60 transition-all border border-border/60 md:border-transparent bg-muted/20 md:bg-transparent active:scale-[0.98]"
                 >
                   <div className="w-full aspect-square md:w-14 md:h-14 rounded-lg sm:rounded-xl overflow-hidden shrink-0 border border-border/80 bg-white shadow-sm flex items-center justify-center">
@@ -523,6 +526,9 @@ function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: Hero
         {isVisible("trending") && (
           <Link
             to={trendingCfg.link || (trend ? `/product/${trend.slug}` : "/products")}
+            state={trend ? { preloadedProduct: trend } : undefined}
+            onMouseEnter={() => { if (trend?.image) { const i = new Image(); i.src = trend.image; } }}
+            onTouchStart={() => { if (trend?.image) { const i = new Image(); i.src = trend.image; } }}
             className="col-span-2 md:col-span-1 row-span-2 rounded-[1.5rem] md:rounded-[2.5rem] bg-[#0f0f14] overflow-hidden relative group shadow-lg active:scale-[0.99] transition-all flex flex-col justify-between border border-white/10"
           >
             {/* Background product photo */}

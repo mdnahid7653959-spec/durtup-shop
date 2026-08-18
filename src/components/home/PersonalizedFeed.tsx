@@ -174,7 +174,14 @@ export function PersonalizedFeed() {
       <div className="px-3 pb-4">
         <div className="grid grid-cols-3 gap-2">
           {tiles.map((t) => (
-            <Link key={t.id} to={`/product/${t.slug}`} className="flex flex-col gap-1 group active:scale-95 transition-transform">
+            <Link 
+              key={t.id} 
+              to={`/product/${t.slug}`} 
+              state={{ preloadedProduct: t }}
+              onMouseEnter={() => { if (t.image) { const i = new Image(); i.src = t.image; } }}
+              onTouchStart={() => { if (t.image) { const i = new Image(); i.src = t.image; } }}
+              className="flex flex-col gap-1 group active:scale-95 transition-transform"
+            >
               <div
                 className={cn(
                   "relative rounded-xl overflow-hidden bg-muted",

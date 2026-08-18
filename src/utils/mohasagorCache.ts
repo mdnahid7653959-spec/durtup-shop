@@ -11,6 +11,63 @@ let isFetchingAllPages = false;
 let autoSyncTimer: number | null = null;
 let lastSyncTimestamp: number | null = null;
 
+// Ultra-fast O(1) Hash Map Index for Instant 0ms Lookups
+const productIndexMap = new Map<string, Product & { [key: string]: any }>();
+
+export function updateIndexMap(products: (Product & { [key: string]: any })[]) {
+  if (!Array.isArray(products)) return;
+  products.forEach((p) => {
+    if (!p) return;
+    if (p.slug) {
+      const s = String(p.slug).toLowerCase();
+      productIndexMap.set(s, p);
+      productIndexMap.set(encodeURIComponent(s), p);
+    }
+    if (p.id) {
+      const idStr = String(p.id).toLowerCase();
+      productIndexMap.set(idStr, p);
+      productIndexMap.set(`product-${idStr}`, p);
+      productIndexMap.set(`supplier-${idStr}`, p);
+    }
+    const slugStr = String(p.slug || "").toLowerCase();
+    const suffixMatch = slugStr.match(/-(\d+)$/);
+    if (suffixMatch) {
+      productIndexMap.set(suffixMatch[1], p);
+      productIndexMap.set(`product-${suffixMatch[1]}`, p);
+    }
+    if (p.sku) productIndexMap.set(String(p.sku).toLowerCase(), p);
+    if (p.product_code) productIndexMap.set(String(p.product_code).toLowerCase(), p);
+  });
+}
+
+export function findMohasagorProductSync(slugOrId: string): (Product & { [key: string]: any }) | null {
+  if (!slugOrId) return null;
+  const targetRaw = decodeURIComponent(slugOrId).trim().toLowerCase();
+  
+  if (productIndexMap.has(targetRaw)) return productIndexMap.get(targetRaw)!;
+
+  const cleanId = targetRaw.replace(/^product-/, "").replace(/^supplier-/, "").replace(/^cj_/, "").replace(/^cj-/, "");
+  if (productIndexMap.has(cleanId)) return productIndexMap.get(cleanId)!;
+
+  const suffixMatch = targetRaw.match(/-(\d+)$/);
+  if (suffixMatch && productIndexMap.has(suffixMatch[1])) return productIndexMap.get(suffixMatch[1])!;
+
+  // Fallback scan
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
+    const found = inMemoryProductsCache.find((p: any) => {
+      const pSlug = String(p.slug || "").toLowerCase();
+      const pId = String(p.id || "").toLowerCase();
+      return pSlug === targetRaw || pId === targetRaw || pId === cleanId || pSlug.endsWith(`-${cleanId}`);
+    });
+    if (found) {
+      updateIndexMap([found as any]);
+      return found as any;
+    }
+  }
+
+  return null;
+}
+
 export function getLastSyncTime(): string | null {
   if (!lastSyncTimestamp) return null;
   return new Date(lastSyncTimestamp).toLocaleTimeString();
@@ -31,6 +88,23 @@ export const FALLBACK_SUPPLIER_PRODUCTS: Product[] = [
   { id: "supplier-112", name: "Wireless Ergonomic Vertical Optical Mouse 2.4G", slug: "product-112", image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=400&h=400&fit=crop", price: 850, originalPrice: 1150, rating: 4.6, reviews: 43, sold: 160, freeShipping: true, category: "electronics" }
 ];
 
+// Initialize index map with fallback items immediately
+updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
+
+// Also try loading cached products into memory immediately on startup
+if (typeof window !== "undefined") {
+  try {
+    const stored = localStorage.getItem(MOHASAGOR_CACHE_KEY);
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        inMemoryProductsCache = parsed;
+        updateIndexMap(parsed);
+      }
+    }
+  } catch {}
+}
+
 let ongoingFetchPromise: Promise<Product[]> | null = null;
 
 export async function getCachedMohasagorProducts(): Promise<Product[]> {
@@ -47,6 +121,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
         const parsed = JSON.parse(stored);
         if (Array.isArray(parsed) && parsed.length > 50) {
           inMemoryProductsCache = parsed;
+          updateIndexMap(parsed);
           return parsed;
         }
       }
@@ -63,6 +138,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
 
   // 4. Guaranteed Fallback
   inMemoryProductsCache = FALLBACK_SUPPLIER_PRODUCTS;
+  updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
   return FALLBACK_SUPPLIER_PRODUCTS;
 }
 
@@ -205,6 +281,7 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
       const base = "https://mohasagor.com.bd";
 
       let allMappedProducts = mapRawProducts(rawProductsPage1, base);
+      updateIndexMap(allMappedProducts);
 
       // If lastPage > 1, fetch all remaining pages in parallel
       if (lastPage > 1) {
@@ -223,6 +300,7 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
         const remainingMapped = mapRawProducts(remainingRawProducts, base);
 
         allMappedProducts = [...allMappedProducts, ...remainingMapped];
+        updateIndexMap(allMappedProducts);
       }
 
       inMemoryProductsCache = allMappedProducts;
@@ -250,6 +328,9 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
 
 export async function findMohasagorProduct(slugOrId: string): Promise<(Product & { [key: string]: any }) | null> {
   if (!slugOrId) return null;
+  const syncMatch = findMohasagorProductSync(slugOrId);
+  if (syncMatch) return syncMatch;
+
   const targetRaw = decodeURIComponent(slugOrId).trim();
   const targetLower = targetRaw.toLowerCase();
   

@@ -34,6 +34,9 @@ const RecentlyViewedSection = () => {
               <Link
                 key={product.id}
                 to={`/product/${product.slug}`}
+                state={{ preloadedProduct: product }}
+                onMouseEnter={() => { if (product.image_url) { const i = new Image(); i.src = product.image_url; } }}
+                onTouchStart={() => { if (product.image_url) { const i = new Image(); i.src = product.image_url; } }}
                 className="w-10 h-10 flex-shrink-0 rounded overflow-hidden border bg-muted hover:border-primary transition-colors"
                 title={product.name}
               >

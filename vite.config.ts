@@ -25,9 +25,20 @@ export default defineConfig(({ mode }) => ({
     },
   },
   build: {
+    target: "esnext",
+    cssCodeSplit: true,
+    chunkSizeWarningLimit: 1000,
     rollupOptions: {
       input: {
         main: path.resolve(__dirname, "index.html"),
+      },
+      output: {
+        manualChunks: {
+          "vendor-react": ["react", "react-dom", "react-router-dom"],
+          "vendor-query": ["@tanstack/react-query"],
+          "vendor-lucide": ["lucide-react"],
+          "vendor-firebase": ["firebase/app", "firebase/auth", "firebase/firestore", "firebase/storage"],
+        },
       },
     },
   },

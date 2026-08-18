@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams, Link, useNavigate } from "react-router-dom";
+import { useParams, Link, useNavigate, useLocation } from "react-router-dom";
 import { Heart, ShoppingCart, Star, Shield, RotateCcw, Minus, Plus, Loader2, Play, ChevronLeft, ChevronRight, Share2, Zap, MessageSquare, ShieldCheck, Store, Truck, Award, Sparkles, TrendingUp, Package, ZoomIn, ZoomOut, X, Maximize2, Ruler, Check } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +16,7 @@ import { useRecentlyViewed } from "@/hooks/useRecentlyViewed";
 import { RelatedProducts } from "@/components/products/RelatedProducts";
 import { ProductReviews } from "@/components/products/ProductReviews";
 import { StoreDetails } from "@/components/products/StoreDetails";
-import { getCachedMohasagorProducts, findMohasagorProduct, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, findMohasagorProduct, findMohasagorProductSync, FALLBACK_SUPPLIER_PRODUCTS } from "@/utils/mohasagorCache";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants, getColorHex, sortVariantValues, type ProductVariant } from "@/utils/productVariantHelper";
@@ -152,19 +152,155 @@ function InlineStoreBar({ sellerId, onContactSeller, contactingSeller }: {
   );
 }
 
+// Helper to map images from Mohasagor API
+const mapSupplierImages = (raw: any): ProductImage[] => {
+  const product_images: ProductImage[] = [];
+  const base = "https://mohasagor.com.bd";
+  
+  const resolveUrl = (url: any): string => {
+    if (!url || typeof url !== "string") return "";
+    const trimmed = url.trim();
+    if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
+      return trimmed;
+    }
+    if (trimmed.startsWith("//")) return `https:${trimmed}`;
+    return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
+  };
+
+  const addedUrls = new Set<string>();
+  const addImg = (url: any) => {
+    const u = resolveUrl(url);
+    if (u && !addedUrls.has(u)) {
+      addedUrls.add(u);
+      product_images.push({
+        id: `img-${product_images.length}`,
+        image_url: u,
+        is_primary: product_images.length === 0,
+        sort_order: product_images.length
+      });
+    }
+  };
+
+  // 1. Check raw.product_images array (objects or strings)
+  if (Array.isArray(raw.product_images) && raw.product_images.length > 0) {
+    raw.product_images.forEach((img: any) => {
+      if (typeof img === "string") {
+        addImg(img);
+      } else if (img && typeof img === "object") {
+        addImg(img.product_image || img.image_url || img.image || img.url);
+      }
+    });
+  }
+
+  // 2. Check raw.images array (objects or strings)
+  if (Array.isArray(raw.images) && raw.images.length > 0) {
+    raw.images.forEach((img: any) => {
+      if (typeof img === "string") {
+        addImg(img);
+      } else if (img && typeof img === "object") {
+        addImg(img.image_url || img.url || img.image);
+      }
+    });
+  }
+
+  // 3. Single image properties
+  if (raw.thumbnail_img) addImg(raw.thumbnail_img);
+  if (raw.image_url) addImg(raw.image_url);
+  if (raw.image) addImg(raw.image);
+  if (raw.thumbnail) addImg(raw.thumbnail);
+
+  return product_images;
+};
+
+// Helper to map supplier product to Product interface (Price MUST match card price exactly)
+const mapSupplierProduct = (raw: any, productSlug: string, imagesArr: ProductImage[]): Product => {
+  let sellingPrice = 0;
+  let regularPrice: number | null = null;
+
+  // Check if product is already processed with final price (e.g. from mohasagorCache or home products)
+  if (raw.discount_price !== undefined || raw.originalPrice !== undefined) {
+    sellingPrice = Number(raw.discount_price || raw.price || 0);
+    regularPrice = raw.originalPrice || raw.regular_price ? Number(raw.originalPrice || raw.regular_price) : null;
+  } else {
+    // Direct raw API object - calculate with dynamic margin
+    const exactRetailPrice = parseFloat(raw.price) || parseFloat(raw.sale_price) || 0;
+    const rawRegularPrice = parseFloat(raw.regular_price) || 0;
+
+    const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
+    sellingPrice = calc.price;
+    regularPrice = calc.regularPrice;
+  }
+
+  const variants = extractProductVariants(raw);
+
+  return {
+    id: String(raw.id || `prod_${Date.now()}`),
+    name: raw.name || raw.title || "Product",
+    slug: productSlug,
+    short_description: raw.short_description || null,
+    description: raw.details || raw.description || "High quality product.",
+    regular_price: (regularPrice && regularPrice > sellingPrice) ? regularPrice : sellingPrice,
+    discount_price: (regularPrice && regularPrice > sellingPrice) ? sellingPrice : null,
+    stock_quantity: parseInt(raw.stock_quantity) || parseInt(raw.stock) || 50,
+    free_shipping: true,
+    rating_average: Number(raw.rating_average || 4.8),
+    rating_count: Number(raw.rating_count || 15),
+    sold_count: parseInt(raw.sold) || parseInt(raw.sold_count) || 45,
+    is_featured: Boolean(raw.is_featured || raw.isFeatured),
+    warranty_info: raw.warranty_info || null,
+    return_policy: raw.return_policy || null,
+    color: raw.color || null,
+    video_url: raw.video_link || raw.video_url || null,
+    product_images: imagesArr,
+    product_variants: variants,
+    category_id: raw.category_id || raw.category || null,
+    seller_id: raw.seller_id || "mohasagor.com.bd"
+  };
+};
+
 export default function ProductDetail() {
-  const {
-    slug
-  } = useParams();
+  const { slug } = useParams();
   const navigate = useNavigate();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [loading, setLoading] = useState(true);
+  const location = useLocation();
+  const preloaded = (location.state as any)?.preloadedProduct;
+
+  const initialProd = (() => {
+    if (preloaded) {
+      const mappedImages = mapSupplierImages(preloaded);
+      return mapSupplierProduct(preloaded, preloaded.slug || slug || "", mappedImages);
+    }
+    if (slug) {
+      const cached = findMohasagorProductSync(slug);
+      if (cached) {
+        const mappedImages = mapSupplierImages(cached);
+        return mapSupplierProduct(cached, cached.slug || slug, mappedImages);
+      }
+    }
+    return null;
+  })();
+
+  const initialVariantState = (() => {
+    if (initialProd?.product_variants && initialProd.product_variants.length > 0) {
+      const initial: Record<string, string> = {};
+      const attrs = Array.from(new Set(initialProd.product_variants.map(v => v.attribute)));
+      attrs.forEach(attr => {
+        const attrValues = initialProd.product_variants!.filter(v => v.attribute === attr).map(v => v.variant);
+        const sorted = sortVariantValues(attr, attrValues);
+        if (sorted.length > 0) initial[attr] = sorted[0];
+      });
+      return initial;
+    }
+    return {};
+  })();
+
+  const [product, setProduct] = useState<Product | null>(initialProd);
+  const [loading, setLoading] = useState<boolean>(!initialProd);
   const [quantity, setQuantity] = useState(1);
   const [selectedImage, setSelectedImage] = useState(0);
   const [showVideo, setShowVideo] = useState(false);
   const [addingToCart, setAddingToCart] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
-  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>(initialVariantState);
   const [sizeGuideOpen, setSizeGuideOpen] = useState(false);
   const [lightboxOpen, setLightboxOpen] = useState(false);
   const [zoomScale, setZoomScale] = useState(1);
@@ -235,6 +371,17 @@ export default function ProductDetail() {
   const images = (rawImgList || []).map(resolveImage).filter(Boolean);
   if (images.length === 0) images.push(getSmartProductImage(product?.name || "", "", product?.category_id || ""));
 
+  // Eagerly prefetch all product images into memory for instant transitions
+  useEffect(() => {
+    if (images && images.length > 0) {
+      images.forEach((imgUrl) => {
+        if (imgUrl) {
+          const img = new Image();
+          img.src = imgUrl;
+        }
+      });
+    }
+  }, [images]);
 
   // Touch swipe handling for images
   const [touchStart, setTouchStart] = useState(0);
@@ -258,111 +405,6 @@ export default function ProductDetail() {
       setShowVideo(false);
     }
   };
-  // Helper to map images from Mohasagor API
-  const mapSupplierImages = (raw: any): ProductImage[] => {
-    const product_images: ProductImage[] = [];
-    const base = "https://mohasagor.com.bd";
-    
-    const resolveUrl = (url: any): string => {
-      if (!url || typeof url !== "string") return "";
-      const trimmed = url.trim();
-      if (trimmed.startsWith("http://") || trimmed.startsWith("https://") || trimmed.startsWith("data:") || trimmed.startsWith("blob:")) {
-        return trimmed;
-      }
-      if (trimmed.startsWith("//")) return `https:${trimmed}`;
-      return trimmed.startsWith("/") ? `${base}${trimmed}` : `${base}/${trimmed}`;
-    };
-
-    const addedUrls = new Set<string>();
-    const addImg = (url: any) => {
-      const u = resolveUrl(url);
-      if (u && !addedUrls.has(u)) {
-        addedUrls.add(u);
-        product_images.push({
-          id: `img-${product_images.length}`,
-          image_url: u,
-          is_primary: product_images.length === 0,
-          sort_order: product_images.length
-        });
-      }
-    };
-
-    // 1. Check raw.product_images array (objects or strings)
-    if (Array.isArray(raw.product_images) && raw.product_images.length > 0) {
-      raw.product_images.forEach((img: any) => {
-        if (typeof img === "string") {
-          addImg(img);
-        } else if (img && typeof img === "object") {
-          addImg(img.product_image || img.image_url || img.image || img.url);
-        }
-      });
-    }
-
-    // 2. Check raw.images array (objects or strings)
-    if (Array.isArray(raw.images) && raw.images.length > 0) {
-      raw.images.forEach((img: any) => {
-        if (typeof img === "string") {
-          addImg(img);
-        } else if (img && typeof img === "object") {
-          addImg(img.image_url || img.url || img.image);
-        }
-      });
-    }
-
-    // 3. Single image properties
-    if (raw.thumbnail_img) addImg(raw.thumbnail_img);
-    if (raw.image_url) addImg(raw.image_url);
-    if (raw.image) addImg(raw.image);
-    if (raw.thumbnail) addImg(raw.thumbnail);
-
-    return product_images;
-  };
-
-  // Helper to map supplier product to Product interface (Price MUST match card price exactly)
-  const mapSupplierProduct = (raw: any, productSlug: string, imagesArr: ProductImage[]): Product => {
-    let sellingPrice = 0;
-    let regularPrice: number | null = null;
-
-    // Check if product is already processed with final price (e.g. from mohasagorCache or home products)
-    if (raw.discount_price !== undefined || raw.originalPrice !== undefined) {
-      sellingPrice = Number(raw.discount_price || raw.price || 0);
-      regularPrice = raw.originalPrice || raw.regular_price ? Number(raw.originalPrice || raw.regular_price) : null;
-    } else {
-      // Direct raw API object - calculate with dynamic margin
-      const exactRetailPrice = parseFloat(raw.price) || parseFloat(raw.sale_price) || 0;
-      const rawRegularPrice = parseFloat(raw.regular_price) || 0;
-
-      const calc = calculateProductPrice(exactRetailPrice, undefined, rawRegularPrice);
-      sellingPrice = calc.price;
-      regularPrice = calc.regularPrice;
-    }
-
-    const variants = extractProductVariants(raw);
-
-    return {
-      id: raw.id.toString(),
-      name: raw.name || raw.title || "Product",
-      slug: productSlug,
-      short_description: raw.short_description || null,
-      description: raw.details || raw.description || "High quality product.",
-      regular_price: (regularPrice && regularPrice > sellingPrice) ? regularPrice : sellingPrice,
-      discount_price: (regularPrice && regularPrice > sellingPrice) ? sellingPrice : null,
-      stock_quantity: parseInt(raw.stock_quantity) || parseInt(raw.stock) || 50,
-      free_shipping: true,
-      rating_average: Number(raw.rating_average || 4.8),
-      rating_count: Number(raw.rating_count || 15),
-      sold_count: parseInt(raw.sold) || parseInt(raw.sold_count) || 45,
-      is_featured: Boolean(raw.is_featured || raw.isFeatured),
-      warranty_info: raw.warranty_info || null,
-      return_policy: raw.return_policy || null,
-      color: raw.color || null,
-      video_url: raw.video_link || raw.video_url || null,
-      product_images: imagesArr,
-      product_variants: variants,
-      category_id: raw.category_id || raw.category || null,
-      seller_id: raw.seller_id || "mohasagor.com.bd"
-    };
-  };
 
   const applyLoadedProduct = (loaded: Product) => {
     let variants = loaded.product_variants || [];
@@ -371,7 +413,6 @@ export default function ProductDetail() {
       loaded.product_variants = variants;
     }
     setProduct(loaded);
-    setSelectedImage(0);
     if (variants && variants.length > 0) {
       const initial: Record<string, string> = {};
       const attrs = Array.from(new Set(variants.map(v => v.attribute)));
@@ -382,14 +423,16 @@ export default function ProductDetail() {
           initial[attr] = sorted[0];
         }
       });
-      setSelectedVariants(initial);
+      setSelectedVariants(prev => Object.keys(prev).length === 0 ? initial : prev);
     }
   };
 
   useEffect(() => {
     async function fetchProduct() {
       if (!slug) return;
-      setLoading(true);
+      if (!product && !initialProd) {
+        setLoading(true);
+      }
       const targetSlug = decodeURIComponent(slug).trim();
       const targetLower = targetSlug.toLowerCase();
       
@@ -897,6 +940,8 @@ export default function ProductDetail() {
                         alt={product.name}
                         className="w-full h-full object-contain object-center transition-transform duration-300 group-hover:scale-105 select-none"
                         loading="eager"
+                        fetchPriority="high"
+                        decoding="async"
                         onError={(e) => {
                           e.currentTarget.onerror = null;
                           e.currentTarget.src = defaultImages[0];

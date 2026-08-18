@@ -356,9 +356,16 @@ export function SmartSearchBar({
                         <Link
                           key={p.id}
                           to={`/product/${p.slug}`}
+                          state={{ preloadedProduct: p }}
                           role="option"
                           aria-selected={active}
-                          onMouseEnter={() => setActiveIdx(rowIdx)}
+                          onMouseEnter={() => {
+                            setActiveIdx(rowIdx);
+                            if (p.image) {
+                              const img = new Image();
+                              img.src = p.image;
+                            }
+                          }}
                           onClick={() => {
                             setOpen(false);
                             onNavigate?.();

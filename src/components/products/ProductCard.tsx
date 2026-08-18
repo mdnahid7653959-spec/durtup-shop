@@ -53,6 +53,13 @@ function ProductCardComponent({ product }: ProductCardProps) {
     toggleWishlist(product.id);
   };
 
+  const handlePreload = () => {
+    if (displayImage) {
+      const img = new Image();
+      img.src = displayImage;
+    }
+  };
+
   return (
     <div className="group relative bg-card rounded-xl overflow-hidden hover:shadow-lg hover:-translate-y-0.5 transition-all duration-200 w-full border border-border flex flex-col justify-between">
       <div>
@@ -88,7 +95,13 @@ function ProductCardComponent({ product }: ProductCardProps) {
         </button>
 
         {/* Product Image */}
-        <Link to={`/product/${product.slug}`} className="block">
+        <Link 
+          to={`/product/${product.slug || product.id}`} 
+          state={{ preloadedProduct: product }}
+          onMouseEnter={handlePreload}
+          onTouchStart={handlePreload}
+          className="block"
+        >
           <div className="aspect-square overflow-hidden bg-muted/30">
             <img
               src={displayImage}
@@ -105,7 +118,12 @@ function ProductCardComponent({ product }: ProductCardProps) {
 
         {/* Product Info */}
         <div className="p-2.5 pb-0">
-          <Link to={`/product/${product.slug}`}>
+          <Link 
+            to={`/product/${product.slug || product.id}`}
+            state={{ preloadedProduct: product }}
+            onMouseEnter={handlePreload}
+            onTouchStart={handlePreload}
+          >
             <h3 className="font-medium text-[12px] sm:text-[13px] leading-tight text-foreground line-clamp-2 mb-1.5 min-h-[2rem] hover:text-orange-600 transition-colors">
               {product.name}
             </h3>
