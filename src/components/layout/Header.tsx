@@ -171,7 +171,7 @@ export function Header() {
               >
                 <img 
                   alt="Durtup.shop" 
-                  className="h-7 sm:h-9 md:h-11 lg:h-12 w-auto object-contain transition-transform group-hover:scale-105 filter drop-shadow-sm max-w-[130px] sm:max-w-none min-h-[24px]" 
+                  className="h-8 sm:h-9 md:h-10 lg:h-11 w-auto object-contain transition-transform group-hover:scale-105 filter drop-shadow-sm max-w-[170px] sm:max-w-[220px] md:max-w-none min-h-[28px]" 
                   src={logoUrl || "/durtup-logo.svg"} 
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "/durtup-logo.svg";
