@@ -15,6 +15,17 @@ window.addEventListener("error", (event) => {
   console.error("Unhandled error:", event.error);
 });
 
+// Auto-register Service Worker for instant background push notifications on phone
+if (typeof window !== "undefined" && "serviceWorker" in navigator) {
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      console.log("[Storefront SW] Registered for push notifications:", reg.scope);
+    }).catch((err) => {
+      console.warn("[Storefront SW] Registration warning:", err);
+    });
+  });
+}
+
 const rootElement = document.getElementById("root");
 
 if (rootElement) {

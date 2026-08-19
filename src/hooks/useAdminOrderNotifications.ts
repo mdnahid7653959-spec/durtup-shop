@@ -81,48 +81,96 @@ export function playNewOrderSound() {
   }
 }
 
-// Trigger real Mobile/OS native push notification with Product Image & Vibration
+// Trigger real Mobile/OS native push notification with Product Image & Vibration (Android Notification Shade)
 export async function sendBrowserNotification(
   title: string,
   options?: NotificationOptions & { product_image?: string; order_id?: string; data?: any }
 ) {
   if (typeof window === "undefined" || !("Notification" in window)) return;
 
-  if (Notification.permission === "granted") {
-    const img = options?.product_image || (options as any)?.image;
-    const notificationOpts: NotificationOptions = {
-      body: options?.body || "New order received on Durtup.shop",
-      icon: img || "/durtup-logo.png",
-      badge: "/durtup-logo.png",
-      image: img || undefined, // Displays large product preview in Android & mobile notification tray
-      vibrate: [400, 150, 400, 150, 400, 150, 800],
-      tag: (options as any)?.tag || `durtup-order-${Date.now()}`,
-      requireInteraction: true,
-      silent: false,
-      ...options,
-    };
-
+  let currentPerm = Notification.permission;
+  if (currentPerm === "default") {
     try {
-      if ("serviceWorker" in navigator) {
-        const reg = await navigator.serviceWorker.ready;
-        if (reg && reg.showNotification) {
-          await reg.showNotification(title, {
-            ...notificationOpts,
-            actions: [
-              { action: "view_order", title: "🛍️ View Order" },
-              { action: "open_admin", title: "⚡ Open Admin" }
-            ]
-          });
-          return;
-        }
+      currentPerm = await Notification.requestPermission();
+    } catch (e) {}
+  }
+
+  if (currentPerm !== "granted") {
+    console.warn("Notification permission is not granted:", currentPerm);
+    return;
+  }
+
+  const img = options?.product_image || (options as any)?.image;
+  const targetUrl = (options as any)?.data?.url || "/admin/orders";
+
+  const notificationOpts: NotificationOptions = {
+    body: options?.body || "New order received on Durtup.shop",
+    icon: img || "/durtup-logo.png",
+    badge: "/favicon-32x32.png",
+    image: img || undefined, // Displays large product preview in Android notification shade
+    vibrate: [400, 150, 400, 150, 400, 150, 800],
+    tag: (options as any)?.tag || `durtup-order-${Date.now()}`,
+    requireInteraction: true,
+    silent: false,
+    data: {
+      url: targetUrl,
+      order_id: options?.order_id,
+      ...options?.data,
+    },
+    actions: [
+      { action: "view_order", title: "🛍️ View Order" },
+      { action: "open_admin", title: "⚡ Open Admin" }
+    ],
+    ...options,
+  };
+
+  // 1. Try ServiceWorkerRegistration (Required for Android / Mobile Notification shade)
+  if ("serviceWorker" in navigator) {
+    try {
+      let reg = await navigator.serviceWorker.getRegistration();
+      if (!reg) {
+        reg = await navigator.serviceWorker.register("/sw.js");
       }
-      new Notification(title, notificationOpts);
-    } catch (err) {
-      console.warn("System notification error:", err);
-      try {
-        new Notification(title, notificationOpts);
-      } catch (e) {}
+
+      // Use Promise.race with 1.5s timeout so ready never hangs
+      const readyPromise = navigator.serviceWorker.ready;
+      const timeoutPromise = new Promise<ServiceWorkerRegistration | null>((resolve) =>
+        setTimeout(() => resolve(reg || null), 1500)
+      );
+      const activeReg = await Promise.race([readyPromise, timeoutPromise]);
+
+      if (activeReg && activeReg.showNotification) {
+        await activeReg.showNotification(title, notificationOpts);
+
+        // Also postMessage to SW controller
+        if (navigator.serviceWorker.controller) {
+          navigator.serviceWorker.controller.postMessage({
+            type: "SHOW_NOTIFICATION",
+            payload: {
+              title,
+              body: notificationOpts.body,
+              image: img,
+              tag: notificationOpts.tag,
+              data: notificationOpts.data,
+            }
+          });
+        }
+        return;
+      }
+    } catch (swErr) {
+      console.warn("ServiceWorker showNotification error:", swErr);
     }
+  }
+
+  // 2. Fallback to Window Notification (Desktop browsers)
+  try {
+    const notif = new Notification(title, notificationOpts);
+    notif.onclick = () => {
+      window.focus();
+      window.location.href = targetUrl;
+    };
+  } catch (err) {
+    console.warn("Window Notification error:", err);
   }
 }
 
