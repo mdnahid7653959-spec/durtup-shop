@@ -171,8 +171,8 @@ export function Header() {
               >
                 <img 
                   alt="Durtup.shop" 
-                  className="h-10 sm:h-12 md:h-14 lg:h-16 w-auto object-contain transition-transform group-hover:scale-105 filter drop-shadow-md min-w-[130px] sm:min-w-[170px] md:min-w-[210px] min-h-[40px]" 
-                  src={(logoUrl && !logoUrl.endsWith(".svg")) ? logoUrl : "/durtup-logo-transparent.png"} 
+                  className="h-10 sm:h-12 md:h-13 lg:h-14 w-auto object-contain transition-transform group-hover:scale-105 filter drop-shadow-md" 
+                  src={(logoUrl && !logoUrl.includes("durtup-logo.svg")) ? logoUrl : "/durtup-logo-transparent.png?v=7"} 
                   onError={(e) => {
                     (e.target as HTMLImageElement).src = "/durtup-logo-transparent.png";
                   }}
