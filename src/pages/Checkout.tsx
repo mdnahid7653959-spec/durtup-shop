@@ -35,6 +35,7 @@ export default function Checkout() {
   const navigate = useNavigate();
   const { toast } = useToast();
   const [loading, setLoading] = useState(false);
+  const [orderPlaced, setOrderPlaced] = useState(false);
   const [checkoutStep, setCheckoutStep] = useState<"shipping" | "payment">("shipping");
   const [paymentMethod, setPaymentMethod] = useState("cod");
   const [showOrderSummary, setShowOrderSummary] = useState(false);
@@ -664,6 +665,9 @@ export default function Checkout() {
         console.warn("Telegram trigger error:", tgErr);
       }
 
+      // Mark order placed immediately to prevent rendering empty cart state
+      setOrderPlaced(true);
+
       // Clear both carts
       await clearCart();
       clearCJCart();
@@ -686,9 +690,11 @@ export default function Checkout() {
         description: `Your order #${orderNumber} has been confirmed.`
       });
 
-      navigate(`/orders?success=${orderNumber}`);
+      // Navigate immediately and reliably to Orders page
+      navigate(`/orders?success=${orderNumber}`, { replace: true });
     } catch (error: any) {
       console.error("Order error:", error);
+      setOrderPlaced(false);
       toast({ 
         variant: "destructive", 
         title: "Failed to place order", 
@@ -699,7 +705,24 @@ export default function Checkout() {
     }
   };
 
-  if (totalItems === 0) {
+  if (orderPlaced) {
+    return (
+      <div className="min-h-screen flex flex-col bg-background">
+        <Header />
+        <main className="flex-1 container py-16 text-center pb-24 md:pb-8 flex flex-col items-center justify-center space-y-4">
+          <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center text-emerald-500 animate-bounce">
+            <CheckCircle className="h-8 w-8" />
+          </div>
+          <h1 className="text-2xl font-bold text-foreground">Order Confirmed! 🎉</h1>
+          <p className="text-muted-foreground text-sm">Redirecting to your orders...</p>
+          <Loader2 className="h-6 w-6 animate-spin text-primary mt-2" />
+        </main>
+        <Footer />
+      </div>
+    );
+  }
+
+  if (totalItems === 0 && !loading && !orderPlaced) {
     return (
       <div className="min-h-screen flex flex-col bg-background">
         <Header />
