@@ -1314,8 +1314,8 @@ export default function ProductDetail() {
 
 
 
-                {/* Product Action Buttons */}
-                <div className="flex gap-2 sm:gap-3 w-full">
+                {/* Product Action Buttons (Desktop Only - Mobile uses sticky bottom bar) */}
+                <div className="hidden md:flex gap-2 sm:gap-3 w-full">
                   <Button size="lg" variant="outline" className="flex-1 h-12 sm:h-14 text-sm sm:text-base md:text-lg border-2 border-primary/30 hover:border-primary hover:bg-primary/5 rounded-xl font-bold" onClick={handleAddToCart} disabled={addingToCart}>
                     {addingToCart ? <Loader2 className="h-5 w-5 mr-2 animate-spin" /> : <ShoppingCart className="h-5 w-5 mr-2" />}
                     Add to Cart
