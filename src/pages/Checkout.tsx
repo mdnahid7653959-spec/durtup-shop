@@ -18,6 +18,7 @@ import { db } from "@/integrations/firebase/client";
 import { doc, setDoc, getDoc, collection, getDocs } from "firebase/firestore";
 import { useToast } from "@/hooks/use-toast";
 import { sendTelegramOrderNotification } from "@/utils/telegramNotifier";
+import { sendOrderSuccessPushNotification, requestNotificationPermission } from "@/services/notificationService";
 
 
 interface AppliedCoupon {
@@ -666,6 +667,19 @@ export default function Checkout() {
       // Clear both carts
       await clearCart();
       clearCJCart();
+
+      // Send instant native push notification + audio chime to phone/browser
+      sendOrderSuccessPushNotification({
+        orderNumber: orderNumber,
+        customerName: shippingInfo.firstName || "Customer",
+        productName: primaryProductName,
+        productImage: primaryProductImage,
+        totalAmount: total,
+        paymentMethod: paymentMethod,
+        orderId: order.id,
+      }).catch((err) => {
+        console.warn("Order push notification trigger error:", err);
+      });
 
       toast({ 
         title: "Order placed successfully! 🎉", 
