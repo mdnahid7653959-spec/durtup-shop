@@ -1,6 +1,6 @@
-const CACHE_NAME = 'durtup-v10';
-const STATIC_CACHE = 'durtup-static-v10';
-const DYNAMIC_CACHE = 'durtup-dynamic-v10';
+const CACHE_NAME = 'durtup-v11';
+const STATIC_CACHE = 'durtup-static-v11';
+const DYNAMIC_CACHE = 'durtup-dynamic-v11';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
