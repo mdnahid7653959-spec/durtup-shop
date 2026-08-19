@@ -6,20 +6,20 @@ import { useToast } from "@/hooks/use-toast";
 
 /**
  * GlobalAdminNotificationListener
- * Runs 24/7 in the Admin Panel background.
- * Instantly triggers real-time sound, phone vibration, and Android notification shade alerts
- * whenever a new order is placed by any user — completely automatically with zero button clicks!
+ * 24/7 background listener across the entire Admin Panel.
+ * Automatically sounds chime, vibrates phone, and posts native Android system push notification
+ * whenever ANY customer places an order on the storefront.
  */
 export const GlobalAdminNotificationListener: React.FC = () => {
   const { toast } = useToast();
-  const initializedTimeRef = useRef<number>(Date.now() - 30000); // Only catch orders within last 30s or new
   const processedDocIds = useRef<Set<string>>(new Set());
+  const mountTimeRef = useRef<number>(Date.now() - 60000); // 1 minute window
 
-  // 1. Auto-request notification permission on first user touch/interaction
+  // 1. Permission request & Screen WakeLock
   useEffect(() => {
-    if (typeof window === "undefined" || !("Notification" in window)) return;
+    if (typeof window === "undefined") return;
 
-    // Load previously notified orders from session
+    // Load previously notified orders
     try {
       const saved = sessionStorage.getItem("durtup_notified_orders");
       if (saved) {
@@ -27,42 +27,56 @@ export const GlobalAdminNotificationListener: React.FC = () => {
       }
     } catch {}
 
-    const handleFirstInteraction = async () => {
-      if (Notification.permission === "default") {
+    // Auto-request permission on first user touch/tap
+    const handleFirstTouch = async () => {
+      if ("Notification" in window && Notification.permission === "default") {
         try {
           const perm = await Notification.requestPermission();
           if (perm === "granted") {
             playNewOrderSound();
             sendBrowserNotification("🔔 Durtup Admin Alerts Active!", {
-              body: "You will now receive automatic real-time order alerts on your phone!",
+              body: "Real-time order push notifications enabled on this phone!",
               product_image: "/durtup-logo.png",
               data: { url: "/orders" }
             });
           }
         } catch (e) {
-          console.warn("[Admin Notification] Auto-permission request error:", e);
+          console.warn("[Admin Notification] Permission error:", e);
         }
       }
-      window.removeEventListener("click", handleFirstInteraction);
-      window.removeEventListener("touchstart", handleFirstInteraction);
+      window.removeEventListener("click", handleFirstTouch);
+      window.removeEventListener("touchstart", handleFirstTouch);
     };
 
-    window.addEventListener("click", handleFirstInteraction, { once: true });
-    window.addEventListener("touchstart", handleFirstInteraction, { once: true });
+    window.addEventListener("click", handleFirstTouch, { once: true });
+    window.addEventListener("touchstart", handleFirstTouch, { once: true });
+
+    // Optional WakeLock to prevent phone sleep while admin panel is open
+    let wakeLock: any = null;
+    if ("wakeLock" in navigator) {
+      try {
+        (navigator as any).wakeLock.request("screen").then((lock: any) => {
+          wakeLock = lock;
+        }).catch(() => {});
+      } catch {}
+    }
 
     return () => {
-      window.removeEventListener("click", handleFirstInteraction);
-      window.removeEventListener("touchstart", handleFirstInteraction);
+      window.removeEventListener("click", handleFirstTouch);
+      window.removeEventListener("touchstart", handleFirstTouch);
+      if (wakeLock) {
+        try { wakeLock.release(); } catch {}
+      }
     };
   }, []);
 
-  // 2. Real-time background order listener (Firestore admin_notifications)
+  // 2. Real-time Firestore listener on `admin_notifications`
   useEffect(() => {
     if (typeof window === "undefined") return;
 
     try {
       const notifRef = collection(db, "admin_notifications");
-      const q = query(notifRef, orderBy("created_at", "desc"), limit(20));
+      const q = query(notifRef, orderBy("created_at", "desc"), limit(25));
 
       const unsubscribe = onSnapshot(q, (snapshot) => {
         snapshot.docChanges().forEach((change) => {
@@ -70,12 +84,10 @@ export const GlobalAdminNotificationListener: React.FC = () => {
             const data = change.doc.data();
             const orderId = change.doc.id;
 
-            // Check if already notified
             if (processedDocIds.current.has(orderId)) return;
 
-            // Check order timestamp (must be after mount time minus 30s)
             const orderTime = data.created_at ? new Date(data.created_at).getTime() : Date.now();
-            const isFresh = orderTime > initializedTimeRef.current || (Date.now() - orderTime < 60000);
+            const isFresh = orderTime > mountTimeRef.current || (Date.now() - orderTime < 90000);
 
             if (isFresh) {
               processedDocIds.current.add(orderId);
@@ -90,10 +102,10 @@ export const GlobalAdminNotificationListener: React.FC = () => {
               const prodImg = data.product_image || data.image_url || "/durtup-logo.png";
               const payMethod = data.payment_method ? data.payment_method.toUpperCase() : "COD";
 
-              // 🔊 1. Play loud cash-register audio chime & vibrate phone
+              // 🔊 1. Sound & Vibration
               playNewOrderSound();
 
-              // 📱 2. Send instant Android Notification Shade push alert with product picture
+              // 📱 2. Android Notification Tray Push
               sendBrowserNotification(`🛍️ New Order #${orderNum}! (৳${amount.toLocaleString()})`, {
                 body: `${customerName} ordered "${prodName}" • ${payMethod}`,
                 product_image: prodImg,
@@ -114,14 +126,72 @@ export const GlobalAdminNotificationListener: React.FC = () => {
           }
         });
       }, (err) => {
-        console.warn("[GlobalAdminNotificationListener] Firestore listener warning:", err);
+        console.warn("[GlobalAdminNotificationListener] Firestore realtime listener warning:", err);
       });
 
       return () => unsubscribe();
     } catch (e) {
-      console.warn("[GlobalAdminNotificationListener] Error setting up listener:", e);
+      console.warn("[GlobalAdminNotificationListener] Error:", e);
     }
   }, [toast]);
+
+  // 3. Backup real-time listener on `orders` collection
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const ordersRef = collection(db, "orders");
+      const q = query(ordersRef, orderBy("created_at", "desc"), limit(10));
+
+      const unsubscribe = onSnapshot(q, (snapshot) => {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            const orderId = change.doc.id;
+            const backupKey = `order_backup_${orderId}`;
+
+            if (processedDocIds.current.has(orderId) || processedDocIds.current.has(backupKey)) return;
+
+            const orderTime = data.created_at ? new Date(data.created_at).getTime() : Date.now();
+            const isFresh = orderTime > mountTimeRef.current || (Date.now() - orderTime < 90000);
+
+            if (isFresh) {
+              processedDocIds.current.add(orderId);
+              processedDocIds.current.add(backupKey);
+
+              const orderNum = data.order_number || orderId.slice(0, 8);
+              const customerName = data.customer_name || data.shipping_address?.firstName || "Customer";
+              const firstItem = Array.isArray(data.items) && data.items.length > 0 ? data.items[0] : null;
+              const prodName = firstItem?.name || firstItem?.product_name || "New Item";
+              const prodImg = firstItem?.image || "/durtup-logo.png";
+              const amount = Number(data.total_amount || data.total || 0);
+
+              // 🔊 1. Sound & Vibration
+              playNewOrderSound();
+
+              // 📱 2. Android Notification Tray Push
+              sendBrowserNotification(`🛍️ New Order #${orderNum}! (৳${amount.toLocaleString()})`, {
+                body: `${customerName} ordered "${prodName}" • ${data.payment_method?.toUpperCase() || "COD"}`,
+                product_image: prodImg,
+                tag: `admin-order-${orderId}`,
+                data: {
+                  url: "/orders",
+                  order_id: orderId,
+                  order_number: orderNum
+                }
+              });
+            }
+          }
+        });
+      }, (err) => {
+        console.warn("[GlobalAdminNotificationListener] Orders collection listener warning:", err);
+      });
+
+      return () => unsubscribe();
+    } catch (e) {
+      console.warn("[GlobalAdminNotificationListener] Backup listener error:", e);
+    }
+  }, []);
 
   return null;
 };
