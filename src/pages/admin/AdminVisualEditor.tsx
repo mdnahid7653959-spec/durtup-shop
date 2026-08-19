@@ -176,8 +176,8 @@ export default function AdminVisualEditor() {
   });
 
   const [headerConfig, setHeaderConfig] = useState({
-    storeName: "Darzo.com",
-    logoUrl: "/darzo-logo.png",
+    storeName: "Durtup.shop",
+    logoUrl: "/durtup-logo.png",
     showCategories: true,
     showSearch: true
   });
