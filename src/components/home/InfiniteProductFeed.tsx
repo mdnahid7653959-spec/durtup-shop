@@ -32,11 +32,11 @@ export function InfiniteProductFeed() {
 
     initCatalog();
 
-    // Auto 10-minute product shuffle & refresh timer
+    // Auto 5-minute product shuffle & refresh timer
     const autoRotateTimer = setInterval(async () => {
       const products = await getCachedMohasagorProducts();
       if (products && products.length > 0) {
-        const timeBlock = Math.floor(Date.now() / (10 * 60 * 1000));
+        const timeBlock = Math.floor(Date.now() / (5 * 60 * 1000));
         const shift = (timeBlock * BATCH_SIZE) % products.length;
         const rotated = [...products.slice(shift), ...products.slice(0, shift)];
         setAllCatalog(rotated);
@@ -45,13 +45,17 @@ export function InfiniteProductFeed() {
         setHasMore(rotated.length > BATCH_SIZE);
         prefetchProductImages(rotated, 60);
       }
-    }, 10 * 60 * 1000);
+    }, 5 * 60 * 1000);
 
     // Listen for background API product updates
     const handleUpdate = async () => {
       const updated = await getCachedMohasagorProducts();
       if (updated && updated.length > 0) {
         setAllCatalog(updated);
+        setDisplayedProducts((prev) => {
+          const currentCount = Math.max(prev.length, BATCH_SIZE);
+          return updated.slice(0, currentCount);
+        });
         prefetchProductImages(updated, 60);
       }
     };

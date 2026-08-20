@@ -165,8 +165,25 @@ export const FALLBACK_SUPPLIER_PRODUCTS: Product[] = [
 // Initialize index map with fallback items immediately
 updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
 
+export function startMohasagorAutoSync() {
+  if (typeof window === "undefined") return;
+  if (autoSyncTimer !== null) return;
+
+  // Run auto-sync from live API every 5 minutes
+  autoSyncTimer = window.setInterval(async () => {
+    try {
+      console.log("[Mohasagor Auto-Sync] Auto-fetching fresh products from all API pages (5-min interval)...");
+      await fetchAllPagesMohasagorProducts(true);
+    } catch (err) {
+      console.warn("[Mohasagor Auto-Sync] 5-minute background sync error:", err);
+    }
+  }, AUTO_SYNC_INTERVAL_MS);
+}
+
 // Eagerly bootstrap cache on client startup: IndexedDB -> Static CDN Catalog -> Live Sync
 if (typeof window !== "undefined") {
+  startMohasagorAutoSync();
+
   (async () => {
     try {
       // 1. Try IndexedDB first (if it has full catalog of 2000+ items)

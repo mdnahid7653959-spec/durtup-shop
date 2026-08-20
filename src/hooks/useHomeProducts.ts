@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEffect } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/lib/firebaseAdapter";
 import type { Product } from "@/components/products/ProductCard";
 import { calculateProductPrice } from "@/utils/pricingMargin";
@@ -409,16 +410,25 @@ async function fetchAllHomeProducts() {
 
 
 export function useHomeProducts() {
-  const current10MinBlock = Math.floor(Date.now() / (10 * 60 * 1000));
+  const queryClient = useQueryClient();
+  const current5MinBlock = Math.floor(Date.now() / (5 * 60 * 1000));
+
+  useEffect(() => {
+    const handleUpdate = () => {
+      queryClient.invalidateQueries({ queryKey: ["home-products"] });
+    };
+    window.addEventListener("mohasagor_products_updated", handleUpdate);
+    return () => window.removeEventListener("mohasagor_products_updated", handleUpdate);
+  }, [queryClient]);
 
   return useQuery({
-    queryKey: ["home-products", current10MinBlock],
+    queryKey: ["home-products", current5MinBlock],
     queryFn: fetchAllHomeProducts,
     initialData: getInitialCachedProducts,
-    staleTime: 10 * 60 * 1000, // 10 minutes cache
-    refetchInterval: 10 * 60 * 1000, // Auto-rotate and fetch fresh unique products every 10 minutes!
+    staleTime: 5 * 60 * 1000, // 5 minutes cache
+    refetchInterval: 5 * 60 * 1000, // Auto-rotate and fetch fresh unique products every 5 minutes!
     refetchIntervalInBackground: true,
-    gcTime: 30 * 60 * 1000,
+    gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
     retry: 2,
