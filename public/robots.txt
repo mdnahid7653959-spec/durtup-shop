@@ -15,3 +15,9 @@ Allow: /
 
 User-agent: *
 Allow: /
+Allow: /favicon.ico
+Allow: /favicon*.png
+Allow: /icon-*.png
+Allow: /apple-touch-icon*.png
+Allow: /manifest.json
+
