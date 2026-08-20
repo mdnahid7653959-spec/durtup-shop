@@ -203,7 +203,35 @@ export default function AdminOrders() {
       console.warn("Profiles map fetch error:", e);
     }
 
-    // Direct DB query first
+    const isMockOrder = (o: any) => {
+      if (!o) return true;
+      const num = (o.order_number || o.orderNumber || o.id || "").toString();
+      const name = (o.shipping_address?.full_name || o.shipping_address?.name || o.customer_name || "").toString();
+      const phone = (o.shipping_address?.phone || o.customer_phone || "").toString();
+      if (num === "ORD-2026-1001" || num === "ORD-2026-1002" || o.id === "ord-1001" || o.id === "ord-1002") {
+        return true;
+      }
+      if ((name.includes("Rahim Ahmed") && phone.includes("01711223344")) || (name.includes("Fatema Tuz Zohra") && phone.includes("01899887766"))) {
+        return true;
+      }
+      return false;
+    };
+
+    // Purge mock orders from local caches if present
+    try {
+      ["enterprise_admin_orders", "local_orders"].forEach((key) => {
+        const raw = localStorage.getItem(key);
+        if (raw) {
+          const list = JSON.parse(raw);
+          if (Array.isArray(list)) {
+            const cleaned = list.filter((item: any) => !isMockOrder(item));
+            localStorage.setItem(key, JSON.stringify(cleaned));
+          }
+        }
+      });
+    } catch {}
+
+    // 1. Direct DB query first
     try {
       const { data: dbOrders, error: dbErr } = await supabase
         .from("orders")
@@ -212,37 +240,43 @@ export default function AdminOrders() {
         .limit(100);
 
       if (!dbErr && dbOrders && dbOrders.length > 0) {
-        setOrders(dbOrders as Order[]);
-        setLoading(false);
-        return;
+        const validOrders = (dbOrders as Order[]).filter((o) => !isMockOrder(o));
+        if (validOrders.length > 0) {
+          setOrders(validOrders);
+          setLoading(false);
+          return;
+        }
       }
     } catch (dbErr) {
       console.warn("Direct fetch orders error:", dbErr);
     }
 
-    // Try edge function if available
+    // 2. Try edge function if available
     if (admin?.id) {
       try {
         const { data } = await supabase.functions.invoke("admin-orders", {
           body: { action: "list", adminId: admin.id, data: { limit: 100 } }
         });
-        if (data?.orders && data.orders.length > 0) {
-          setOrders(data.orders);
-          setLoading(false);
-          return;
+        if (data?.orders && Array.isArray(data.orders) && data.orders.length > 0) {
+          const validOrders = (data.orders as Order[]).filter((o) => !isMockOrder(o));
+          if (validOrders.length > 0) {
+            setOrders(validOrders);
+            setLoading(false);
+            return;
+          }
         }
       } catch (efErr) {
         console.warn("Edge function fetch orders error:", efErr);
       }
     }
 
-    // Fallback: Firestore 'orders' collection
+    // 3. Fallback: Firestore 'orders' collection
     try {
       const snap = await getDocs(collection(db, "orders"));
       const list: any[] = [];
       snap.forEach((d) => {
         const data = d.data();
-        list.push({
+        const item = {
           id: d.id,
           order_number: data.order_number || data.orderNumber || d.id,
           user_id: data.user_id || data.userId || "guest",
@@ -259,7 +293,10 @@ export default function AdminOrders() {
           billing_address: data.billing_address || data.billingAddress || {},
           created_at: data.created_at || data.createdAt || new Date().toISOString(),
           updated_at: data.updated_at || data.updatedAt || null,
-        });
+        };
+        if (!isMockOrder(item)) {
+          list.push(item);
+        }
       });
       if (list.length > 0) {
         setOrders(list as Order[]);
@@ -270,84 +307,26 @@ export default function AdminOrders() {
       console.warn("Firestore orders fetch warning:", fsErr);
     }
 
-    // Fallback: LocalStorage Cache
+    // 4. Fallback: LocalStorage Cache
     try {
       const raw = localStorage.getItem("enterprise_admin_orders") || localStorage.getItem("local_orders");
       if (raw) {
         const list = JSON.parse(raw);
         if (Array.isArray(list) && list.length > 0) {
-          setOrders(list as Order[]);
-          setLoading(false);
-          return;
+          const validOrders = (list as Order[]).filter((o) => !isMockOrder(o));
+          if (validOrders.length > 0) {
+            setOrders(validOrders);
+            setLoading(false);
+            return;
+          }
         }
       }
     } catch (lsErr) {
       console.warn("Local storage orders fetch warning:", lsErr);
     }
 
-    // Default Marketplace Orders Fallback
-    const defaultMarketplaceOrders: Order[] = [
-      {
-        id: "ord-1001",
-        order_number: "ORD-2026-1001",
-        user_id: "user-cust-01",
-        status: "pending",
-        payment_status: "pending",
-        payment_method: "cod",
-        subtotal: 2500,
-        shipping_cost: 60,
-        discount_amount: 0,
-        tax_amount: 0,
-        total: 2560,
-        notes: "Please call before delivery",
-        shipping_address: {
-          full_name: "Rahim Ahmed",
-          phone: "01711223344",
-          address: "House 12, Road 5, Block B, Mirpur-10",
-          city: "Dhaka",
-          district: "Dhaka"
-        },
-        billing_address: {
-          full_name: "Rahim Ahmed",
-          phone: "01711223344"
-        },
-        courier_name: "Pathao Express",
-        tracking_number: "PTH-8876123",
-        created_at: new Date(Date.now() - 3600000).toISOString(),
-        updated_at: new Date().toISOString()
-      },
-      {
-        id: "ord-1002",
-        order_number: "ORD-2026-1002",
-        user_id: "user-cust-02",
-        status: "processing",
-        payment_status: "paid",
-        payment_method: "bKash",
-        subtotal: 490,
-        shipping_cost: 60,
-        discount_amount: 50,
-        tax_amount: 0,
-        total: 500,
-        notes: null,
-        shipping_address: {
-          full_name: "Fatema Tuz Zohra",
-          phone: "01899887766",
-          address: "15/A Nasirabad Housing Society",
-          city: "Chittagong",
-          district: "Chittagong"
-        },
-        billing_address: {
-          full_name: "Fatema Tuz Zohra",
-          phone: "01899887766"
-        },
-        courier_name: "SteadFast Courier",
-        tracking_number: "SFC-998877",
-        created_at: new Date(Date.now() - 86400000).toISOString(),
-        updated_at: new Date().toISOString()
-      }
-    ];
-
-    setOrders(defaultMarketplaceOrders);
+    // If no real orders exist, show clean empty state
+    setOrders([]);
     setLoading(false);
   };
 
