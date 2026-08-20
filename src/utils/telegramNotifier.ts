@@ -134,19 +134,27 @@ export async function sendTelegramOrderNotification(order: {
     ? order.items.map(item => `  ▫️ <b>${item.name}</b> (x${item.quantity}) - ৳${(item.price * item.quantity).toLocaleString()}`).join("\n")
     : "  ▫️ Details in Admin Panel";
 
-  const message = `🛍 <b>NEW ORDER RECEIVED!</b> 🎉
+  const adminUrl = typeof window !== "undefined" && window.location.origin
+    ? `${window.location.origin}/admin/orders`
+    : "https://www.durtup.shop/admin/orders";
+
+  const timeString = new Date().toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit", hour12: true });
+  const dateString = new Date().toLocaleDateString("en-BD", { day: "numeric", month: "short", year: "numeric" });
+
+  const message = `🔔 <b>NEW ORDER RECEIVED!</b> 🎉
 ━━━━━━━━━━━━━━━━━━━━━━
 📦 <b>Order ID:</b> <code>#${order.orderNumber}</code>
-👤 <b>Customer:</b> ${order.customerName}
+⏰ <b>Time:</b> ${dateString} at ${timeString}
+👤 <b>Customer:</b> <b>${order.customerName}</b>
 📞 <b>Phone:</b> <code>${order.phone}</code>
 ${order.email ? `📧 <b>Email:</b> ${order.email}\n` : ""}📍 <b>Address:</b> ${order.address}, ${order.city}
-💳 <b>Payment Method:</b> <b>${order.paymentMethod.toUpperCase()}</b>
+💳 <b>Payment:</b> <b>${order.paymentMethod.toUpperCase()}</b>
 💰 <b>Total Amount:</b> <b>৳${order.total.toLocaleString()}</b>
 
 🛒 <b>Ordered Items (${order.items?.length || 0}):</b>
 ${itemsList}
 ━━━━━━━━━━━━━━━━━━━━━━
-⚡️ <a href="https://durtup-shop-c3fa.vercel.app/admin/orders">Click Here to Open Admin Orders</a>`;
+⚡️ <a href="${adminUrl}">👉 Click Here to View & Process Order in Admin Panel</a>`;
 
   return sendTelegramMessage(message, config);
 }
