@@ -3,13 +3,13 @@ import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants } from "@/utils/productVariantHelper";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v9";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v10";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // IndexedDB configuration for unlimited, fast persistent storage
 const IDB_NAME = "durtup_catalog_db";
 const IDB_STORE = "products_store";
-const IDB_KEY = "mohasagor_catalog_master";
+const IDB_KEY = "mohasagor_catalog_master_v10";
 const IDB_VERSION = 1;
 
 let inMemoryProductsCache: Product[] | null = null;
@@ -169,15 +169,18 @@ updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
 if (typeof window !== "undefined") {
   (async () => {
     try {
-      // 1. Try IndexedDB first (0-20ms)
+      // 1. Try IndexedDB first (if it has full catalog of 2000+ items)
       const idbData = await getIdbProducts();
-      if (idbData && idbData.length > 50) {
+      if (idbData && idbData.length >= 2000) {
         inMemoryProductsCache = idbData;
         updateIndexMap(idbData);
         window.dispatchEvent(new Event("mohasagor_products_updated"));
       } else {
         // 2. Fetch Static CDN Public Catalog (/mohasagor_catalog.json) instantly
-        fetchStaticCatalog().catch(() => {});
+        const staticList = await fetchStaticCatalog();
+        if (!staticList || staticList.length < 2000) {
+          fetchAllPagesMohasagorProducts(true).catch(() => {});
+        }
       }
     } catch (e) {
       console.warn("Bootstrap cache error:", e);
@@ -209,8 +212,8 @@ async function fetchStaticCatalog(): Promise<Product[]> {
 let ongoingFetchPromise: Promise<Product[]> | null = null;
 
 export async function getCachedMohasagorProducts(): Promise<Product[]> {
-  // 1. In-memory cache first (0ms)
-  if (inMemoryProductsCache && inMemoryProductsCache.length > 50) {
+  // 1. In-memory cache first (if full catalog is loaded)
+  if (inMemoryProductsCache && inMemoryProductsCache.length >= 2000) {
     return inMemoryProductsCache;
   }
 
@@ -218,7 +221,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
   if (typeof window !== "undefined") {
     try {
       const idbItems = await getIdbProducts();
-      if (idbItems && idbItems.length > 50) {
+      if (idbItems && idbItems.length >= 2000) {
         inMemoryProductsCache = idbItems;
         updateIndexMap(idbItems);
         return idbItems;
@@ -226,19 +229,21 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
     } catch {}
   }
 
-  // 3. Check static CDN catalog (/mohasagor_catalog.json)
+  // 3. Check static CDN catalog (/mohasagor_catalog.json) which has all 2788 items
   const staticItems = await fetchStaticCatalog();
-  if (staticItems && staticItems.length > 50) {
+  if (staticItems && staticItems.length >= 2000) {
     return staticItems;
   }
 
-  // 4. Live network fetch
+  // 4. Live network fetch from all API pages
   const fetched = await fetchAllPagesMohasagorProducts().catch(() => []);
   if (fetched && fetched.length > 0) {
     return fetched;
   }
 
   // 5. Guaranteed Fallback
+  if (staticItems && staticItems.length > 0) return staticItems;
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) return inMemoryProductsCache;
   inMemoryProductsCache = FALLBACK_SUPPLIER_PRODUCTS;
   updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
   return FALLBACK_SUPPLIER_PRODUCTS;
@@ -377,7 +382,7 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
   if (!forceRefresh && ongoingFetchPromise) {
     return ongoingFetchPromise;
   }
-  if (!forceRefresh && inMemoryProductsCache && inMemoryProductsCache.length > 50) {
+  if (!forceRefresh && inMemoryProductsCache && inMemoryProductsCache.length >= 2000) {
     return inMemoryProductsCache;
   }
 
@@ -399,7 +404,7 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
         if (res1 && res1.ok) {
           const data1 = await res1.json();
           rawProductsPage1 = data1.products || (Array.isArray(data1) ? data1 : []);
-          if (data1.last_page) lastPage = Math.min(data1.last_page, 20);
+          if (data1.last_page) lastPage = data1.last_page;
         }
       } catch (err) {
         console.warn("Live page 1 fetch warning, attempting static catalog...", err);
@@ -415,30 +420,28 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
       }
 
       const base = "https://mohasagor.com.bd";
-      let allMappedProducts = mapRawProducts(rawProductsPage1, base);
+
+      // 2. Fetch all remaining pages concurrently and collect cleanly
+      const pagePromises: Promise<any[]>[] = [];
+      for (let p = 2; p <= lastPage; p++) {
+        pagePromises.push(fetchPageWithFallback(p, headers));
+      }
+
+      const otherPagesRaw = await Promise.all(pagePromises);
+      const allRaw = [rawProductsPage1, ...otherPagesRaw].flat();
+
+      // Deduplicate by ID
+      const uniqueMap = new Map<string, any>();
+      allRaw.forEach((p) => {
+        if (p && p.id) {
+          uniqueMap.set(String(p.id), p);
+        }
+      });
+      const uniqueRaw = Array.from(uniqueMap.values());
+
+      const allMappedProducts = mapRawProducts(uniqueRaw, base);
       updateIndexMap(allMappedProducts);
       inMemoryProductsCache = allMappedProducts;
-
-      // 2. Fetch remaining pages and stream-insert them as they resolve
-      if (lastPage > 1) {
-        const pagePromises: Promise<void>[] = [];
-        for (let p = 2; p <= lastPage; p++) {
-          pagePromises.push(
-            fetchPageWithFallback(p, headers)
-              .then((pageRaw) => {
-                if (pageRaw.length > 0) {
-                  const mapped = mapRawProducts(pageRaw, base);
-                  allMappedProducts = [...allMappedProducts, ...mapped];
-                  updateIndexMap(mapped);
-                  inMemoryProductsCache = allMappedProducts;
-                }
-              })
-              .catch(() => {})
-          );
-        }
-
-        await Promise.all(pagePromises);
-      }
 
       lastSyncTimestamp = Date.now();
       setIdbProducts(allMappedProducts).catch(() => {});

@@ -40,7 +40,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useAdminCacheInvalidation } from "@/hooks/useRealtimeSync";
 import { AdminProductPreviewDialog } from "@/components/admin/AdminProductPreviewDialog";
-import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
+import { getCachedMohasagorProducts, fetchAllPagesMohasagorProducts } from "@/utils/mohasagorCache";
 
 
 interface Product {
@@ -175,9 +175,10 @@ export default function AdminProducts() {
 
   const handleRefresh = async () => {
     setRefreshing(true);
+    await fetchAllPagesMohasagorProducts(true).catch(() => {});
     await fetchProducts(true);
     invalidateProducts();
-    toast({ title: "Products refreshed", description: "All caches updated" });
+    toast({ title: "Products synchronized", description: "All API product pages updated" });
     setRefreshing(false);
   };
 
