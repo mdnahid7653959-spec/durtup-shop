@@ -27,8 +27,16 @@ function isSecretAdminPath(pathname: string): boolean {
 }
 
 export function isAdminGateUnlocked(): boolean {
-  return true;
+  try {
+    return (
+      sessionStorage.getItem(ADMIN_GATE_KEY) === "1" ||
+      localStorage.getItem(ADMIN_GATE_KEY) === "1"
+    );
+  } catch {
+    return false;
+  }
 }
+
 
 /** Wrap any /admin/* route so it renders safely. */
 export function AdminGate({ children }: { children: ReactNode }) {

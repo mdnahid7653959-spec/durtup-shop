@@ -8,9 +8,16 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { useAdminAuth } from "@/contexts/AdminAuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { isAdminGateUnlocked } from "@/components/admin/AdminGate";
+import NotFound from "@/pages/NotFound";
 
 export default function AdminLogin() {
+  if (!isAdminGateUnlocked()) {
+    return <NotFound />;
+  }
+
   const [username, setUsername] = useState("");
+
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);

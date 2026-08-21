@@ -10,8 +10,11 @@ import { ThemeProvider } from "@/contexts/ThemeContext";
 import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { StaffProvider } from "@/contexts/StaffContext";
 import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
-import { AdminSecretUnlock, ADMIN_SECRET_ROUTE } from "@/components/admin/AdminGate";
+import { AdminSecretUnlock, ADMIN_SECRET_ROUTE, ADMIN_SECRET_PATH } from "@/components/admin/AdminGate";
 import { StaffProtectedRoute } from "@/components/staff/StaffProtectedRoute";
+
+
+
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { FacebookPixel } from "@/components/FacebookPixel";
@@ -239,6 +242,7 @@ const App = () => (
                               <Route path="/free-shipping" element={<Products />} />
                               
                               {/* Secret Gate Route */}
+                              <Route path={ADMIN_SECRET_PATH} element={<AdminSecretUnlock />} />
                               <Route path={ADMIN_SECRET_ROUTE} element={<AdminSecretUnlock />} />
 
                               {/* Admin Portal */}

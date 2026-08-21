@@ -72,6 +72,13 @@
   "categories": ["shopping", "lifestyle", "ecommerce"],
   "shortcuts": [
     {
+      "name": "Categories",
+      "short_name": "Categories",
+      "description": "Browse product categories",
+      "url": "/categories",
+      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
+    },
+    {
       "name": "Cart",
       "short_name": "Cart",
       "description": "View your shopping cart",
@@ -90,13 +97,6 @@
       "short_name": "Wishlist",
       "description": "View your wishlist",
       "url": "/wishlist",
-      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
-    },
-    {
-      "name": "Admin Panel",
-      "short_name": "Admin",
-      "description": "Durtup Admin Dashboard",
-      "url": "/admin",
       "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
     }
   ]
