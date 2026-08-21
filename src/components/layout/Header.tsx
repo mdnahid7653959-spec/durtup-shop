@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Link, useNavigate, useSearchParams, useLocation } from "react-router-dom";
-import { Search, Heart, User, Menu, X, ChevronDown, Truck, HelpCircle, Package, Store, ChevronRight, LogOut, Home, Zap, Smartphone, Shirt, Home as HomeIcon, Dumbbell, Gamepad2, Sparkles, Car, Gem, LucideIcon, MessageCircle, ShoppingBag } from "lucide-react";
+import { Search, Heart, User, Menu, X, ChevronDown, Truck, HelpCircle, Package, Store, ChevronRight, LogOut, Home, Zap, Smartphone, Shirt, Home as HomeIcon, Dumbbell, Gamepad2, Sparkles, Car, Gem, LucideIcon, MessageCircle, ShoppingBag, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
@@ -12,6 +12,8 @@ import { supabase } from "@/lib/firebaseAdapter";
 import { useSiteConfig } from "@/hooks/useSiteConfig";
 import { SmartSearchBar } from "@/components/search/SmartSearchBar";
 import { useCategories } from "@/hooks/useProductSearch";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
+
 
 interface CategoryItem {
   name: string;
@@ -88,7 +90,9 @@ export function Header() {
   const { user, profile, signOut } = useAuth();
   const { itemCount: cartCount } = useCart();
   const { itemCount: wishlistCount } = useWishlist();
+  const { isInstalled, openPrompt } = usePWAInstall();
   const { toast } = useToast();
+
   const [hasUnreadMessages, setHasUnreadMessages] = useState(false);
   const { data: categoriesData } = useCategories();
   const { config: headerConfig } = useSiteConfig<HeaderConfig>("header", defaultHeaderConfig);
@@ -208,6 +212,11 @@ export function Header() {
                       <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
+                      {!isInstalled && (
+                        <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
+                          <Download className="h-4 w-4 mr-2" /> Install Durtup App
+                        </DropdownMenuItem>
+                      )}
                       <DropdownMenuSeparator />
                       <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-destructive">
                         <LogOut className="h-4 w-4 mr-2" /> Logout
@@ -225,8 +234,14 @@ export function Header() {
                       <DropdownMenuItem asChild><Link to="/orders" className="cursor-pointer">My Orders</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/wishlist" className="cursor-pointer">Wishlist</Link></DropdownMenuItem>
                       <DropdownMenuItem asChild><Link to="/account" className="cursor-pointer">Account Settings</Link></DropdownMenuItem>
+                      {!isInstalled && (
+                        <DropdownMenuItem onClick={openPrompt} className="cursor-pointer text-primary font-semibold">
+                          <Download className="h-4 w-4 mr-2" /> Install Durtup App
+                        </DropdownMenuItem>
+                      )}
                     </>
                   )}
+
                 </DropdownMenuContent>
               </DropdownMenu>
 
@@ -341,7 +356,28 @@ export function Header() {
                 <Package className="h-5 w-5" /> All Products
               </Link>
 
+              {!isInstalled && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    openPrompt();
+                  }}
+                  className="w-full flex items-center justify-between py-3 px-4 rounded-xl bg-gradient-to-r from-primary/15 to-orange-500/15 border border-primary/30 text-primary font-bold touch-manipulation press-scale text-left"
+                >
+                  <div className="flex items-center gap-3">
+                    <Download className="h-5 w-5 animate-bounce" />
+                    <div>
+                      <p className="text-xs font-bold leading-tight">ইন্সটল করুন Durtup App</p>
+                      <p className="text-[10px] text-muted-foreground font-normal">১ ক্লিকে মোবাইল অ্যাপ ডাউনলোড</p>
+                    </div>
+                  </div>
+                  <ChevronRight className="h-4 w-4 opacity-70" />
+                </button>
+              )}
+
               <div className="border-t my-2"></div>
+
               <p className="text-[10px] uppercase tracking-wider text-muted-foreground font-bold px-4 py-1.5">Categories</p>
 
               <div className="grid grid-cols-2 gap-1.5">

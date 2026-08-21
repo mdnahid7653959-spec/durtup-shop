@@ -1,12 +1,18 @@
 {
-  "name": "Durtup.shop - Shop Millions of Products",
+  "name": "Durtup.shop - Online Shopping Marketplace",
   "short_name": "Durtup.shop",
   "description": "Shop millions of products at unbeatable prices with fast, reliable shipping.",
+  "id": "/",
   "start_url": "/",
+  "scope": "/",
   "display": "standalone",
+  "display_override": ["standalone", "minimal-ui", "window-controls-overlay"],
   "background_color": "#ffffff",
   "theme_color": "#FF5400",
   "orientation": "portrait-primary",
+  "lang": "en-US",
+  "dir": "ltr",
+  "prefer_related_applications": false,
   "icons": [
     {
       "src": "/favicon-16x16.png",
@@ -42,34 +48,56 @@
       "src": "/icon-192.png",
       "sizes": "192x192",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "maskable"
     },
     {
       "src": "/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
-      "purpose": "any maskable"
+      "purpose": "any"
+    },
+    {
+      "src": "/icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
     }
   ],
-  "categories": ["shopping", "lifestyle"],
+  "categories": ["shopping", "lifestyle", "ecommerce"],
   "shortcuts": [
-    {
-      "name": "Admin Panel",
-      "short_name": "Admin",
-      "description": "Durtup Admin Dashboard",
-      "url": "/admin"
-    },
     {
       "name": "Cart",
       "short_name": "Cart",
       "description": "View your shopping cart",
-      "url": "/cart"
+      "url": "/cart",
+      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
     },
     {
       "name": "Orders",
       "short_name": "Orders",
       "description": "View your orders",
-      "url": "/orders"
+      "url": "/orders",
+      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Wishlist",
+      "short_name": "Wishlist",
+      "description": "View your wishlist",
+      "url": "/wishlist",
+      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Admin Panel",
+      "short_name": "Admin",
+      "description": "Durtup Admin Dashboard",
+      "url": "/admin",
+      "icons": [{ "src": "/favicon-96x96.png", "sizes": "96x96" }]
     }
   ]
 }

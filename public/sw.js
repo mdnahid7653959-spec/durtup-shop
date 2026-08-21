@@ -1,14 +1,17 @@
-const CACHE_NAME = 'durtup-v13';
-const STATIC_CACHE = 'durtup-static-v13';
-const DYNAMIC_CACHE = 'durtup-dynamic-v13';
+const CACHE_NAME = 'durtup-v14';
+const STATIC_CACHE = 'durtup-static-v14';
+const DYNAMIC_CACHE = 'durtup-dynamic-v14';
 
 // Assets to cache immediately
 const STATIC_ASSETS = [
   '/',
   '/index.html',
   '/manifest.json',
-  '/durtup-logo.png',
+  '/durtup-logo-transparent.png',
+  '/icon-192.png',
+  '/icon-512.png',
 ];
+
 
 // Install event - cache static assets
 self.addEventListener('install', (event) => {

@@ -2,6 +2,7 @@ import { ReactNode, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { MobileBottomNav } from "./MobileBottomNav";
 import { PushNotificationInitializer } from "@/components/PushNotificationInitializer";
+import { PWAInstallPrompt } from "@/components/pwa/PWAInstallPrompt";
 
 interface AppLayoutProps {
   children: ReactNode;
@@ -29,9 +30,11 @@ export function AppLayout({ children }: AppLayoutProps) {
   return (
     <>
       <PushNotificationInitializer />
+      {!isAdmin && !isStaff && <PWAInstallPrompt />}
       {children}
       {shouldShowMobileNav && <MobileBottomNav />}
     </>
   );
 }
+
 

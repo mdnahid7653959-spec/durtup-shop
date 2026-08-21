@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck } from "lucide-react";
+import { User, Mail, Phone, MapPin, Lock, Camera, Save, Eye, EyeOff, Store, Clock, CheckCircle, ShieldCheck, Download, Smartphone, Sparkles } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -16,12 +16,15 @@ import { Footer } from "@/components/layout/Footer";
 import { supabase } from "@/lib/firebaseAdapter";
 import { sendPasswordResetEmail } from "firebase/auth";
 import { auth } from "@/integrations/firebase/client";
+import { usePWAInstall } from "@/hooks/usePWAInstall";
 
 export default function Account() {
   const { user, profile, loading } = useAuth();
   const { status: sellerStatus, sellerInfo, isApprovedSeller, isPendingSeller, hasApplied } = useSellerStatus();
+  const { canInstall, isInstalled, installApp, openPrompt } = usePWAInstall();
   const { toast } = useToast();
   const navigate = useNavigate();
+
   
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
@@ -509,9 +512,47 @@ export default function Account() {
               </Card>
             </TabsContent>
           </Tabs>
+
+          {/* Durtup Mobile App Section */}
+          <div className="mt-6 p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-primary/10 via-orange-500/5 to-amber-500/10 border border-primary/20 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-3.5 text-center sm:text-left">
+              <div className="w-12 h-12 rounded-2xl bg-white p-1 shadow-md flex items-center justify-center shrink-0 border border-primary/20">
+                <img src="/durtup-logo-transparent.png" alt="Durtup" className="w-full h-full object-contain" />
+              </div>
+              <div>
+                <div className="flex items-center justify-center sm:justify-start gap-1.5">
+                  <h3 className="font-bold text-sm sm:text-base text-foreground">Durtup Mobile App</h3>
+                  <span className="px-2 py-0.5 rounded-full bg-primary/15 text-primary text-[10px] font-bold">Fast & Free</span>
+                </div>
+                <p className="text-xs text-muted-foreground mt-0.5">
+                  {isInstalled 
+                    ? "✅ অ্যাপটি আপনার ডিভাইসে সফলভাবে ইনস্টল করা আছে।" 
+                    : "প্লে স্টোর ছাড়া সরাসরি ফোনে ইনস্টল করে দ্রুত কেনাকাটা করুন।"}
+                </p>
+              </div>
+            </div>
+
+            <div className="shrink-0 w-full sm:w-auto">
+              {isInstalled ? (
+                <div className="px-4 py-2 rounded-xl bg-green-500/10 text-green-600 border border-green-500/20 text-xs font-bold flex items-center justify-center gap-1.5">
+                  <CheckCircle className="w-4 h-4" />
+                  <span>Installed & Ready</span>
+                </div>
+              ) : (
+                <Button
+                  onClick={openPrompt}
+                  className="w-full sm:w-auto rounded-xl bg-gradient-to-r from-primary to-orange-500 text-white font-bold text-xs sm:text-sm h-10 px-5 shadow-md hover:shadow-lg active:scale-95 transition-all flex items-center justify-center gap-2"
+                >
+                  <Download className="w-4 h-4 animate-bounce" />
+                  <span>ইন্সটল করুন (Install App)</span>
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </main>
       <Footer />
     </div>
   );
 }
+
