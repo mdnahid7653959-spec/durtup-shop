@@ -16,6 +16,7 @@ import { db } from "@/integrations/firebase/client";
 import { collection, getDocs, doc, setDoc } from "firebase/firestore";
 import { Package, AlertTriangle, TrendingDown, Bell, Settings, Search, RefreshCw, Warehouse, Layers, ArrowUpRight } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
+import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
 
 interface Product {
   id: string;
@@ -108,18 +109,31 @@ export default function AdminInventory() {
         });
       } catch (e) {}
 
-      const [productsRes, alertsRes, stocksRes, warehousesRes] = await Promise.all([
+      const [productsRes, alertsRes, stocksRes, warehousesRes, supplierProds] = await Promise.all([
         adminDb.select<Product>("products", { columns: "id, name, sku, stock_quantity, status", orderBy: { col: "stock_quantity", ascending: true } }),
         adminDb.select<InventoryAlert>("inventory_alerts"),
         adminDb.select<WarehouseStock>("warehouse_stock"),
         adminDb.select<WarehouseInfo>("warehouses", { columns: "id, name" }),
+        getCachedMohasagorProducts().catch(() => [])
       ]);
       
-      if (fetchedProducts.length > 0) {
-        setProducts(fetchedProducts);
-      } else if (productsRes.data) {
-        setProducts(productsRes.data);
-      }
+      const mergedMap = new Map<string, Product>();
+      fetchedProducts.forEach((p) => mergedMap.set(p.id, p));
+      (productsRes.data || []).forEach((p) => { if (!mergedMap.has(p.id)) mergedMap.set(p.id, p); });
+      (supplierProds || []).forEach((p: any) => {
+        const id = String(p.id);
+        if (!mergedMap.has(id)) {
+          mergedMap.set(id, {
+            id,
+            name: p.name || "Product",
+            sku: p.sku || (p.product_code ? String(p.product_code) : `API-${id}`),
+            stock_quantity: Number(p.stock_quantity ?? p.stock ?? (p.stock_status === "available" ? 50 : 0)),
+            status: p.status || "active"
+          });
+        }
+      });
+
+      setProducts(Array.from(mergedMap.values()));
       if (alertsRes.data) setAlerts(alertsRes.data);
       if (stocksRes.data) setWarehouseStocks(stocksRes.data);
       if (warehousesRes.data) setWarehouses(warehousesRes.data);

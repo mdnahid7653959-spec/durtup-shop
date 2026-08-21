@@ -377,20 +377,39 @@ export function mapRawProducts(rawProducts: any[], base: string = "https://mohas
   });
 }
 
-async function fetchPageWithFallback(pageNum: number, headers: Record<string, string>): Promise<any[]> {
+async function fetchPageWithFallback(pageNum: number, headers: Record<string, string>, retries = 3): Promise<any[]> {
   const endpoints = [
     `/api/mohasagor/api/reseller/product?page=${pageNum}`,
-    `https://mohasagor.com.bd/api/reseller/product?page=${pageNum}`
+    `https://mohasagor.com.bd/api/reseller/product?page=${pageNum}`,
+    `https://api.allorigins.win/get?url=${encodeURIComponent(`https://mohasagor.com.bd/api/reseller/product?page=${pageNum}`)}`
   ];
 
-  for (const url of endpoints) {
-    try {
-      const res = await fetch(url, { headers });
-      if (res.ok) {
-        const data = await res.json();
-        return data.products || (Array.isArray(data) ? data : []);
+  for (let attempt = 0; attempt < retries; attempt++) {
+    for (const url of endpoints) {
+      try {
+        const isProxy = url.includes("allorigins");
+        const fetchHeaders = isProxy ? undefined : headers;
+        const res = await fetch(url, fetchHeaders ? { headers: fetchHeaders } : undefined);
+        if (res.ok) {
+          const data = await res.json();
+          let parsedData = data;
+          if (isProxy && data.contents) {
+            try {
+              parsedData = JSON.parse(data.contents);
+            } catch {}
+          }
+          const list = parsedData.products || (Array.isArray(parsedData) ? parsedData : parsedData.data || []);
+          if (Array.isArray(list) && list.length > 0) {
+            return list;
+          }
+        }
+      } catch (err) {
+        // continue to next endpoint
       }
-    } catch {}
+    }
+    if (attempt < retries - 1) {
+      await new Promise((resolve) => setTimeout(resolve, 300 * (attempt + 1)));
+    }
   }
   return [];
 }
@@ -415,13 +434,9 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
       let lastPage = 14;
 
       try {
-        const res1 = await fetch(`/api/mohasagor/api/reseller/product?page=1`, { headers })
-          .catch(() => fetch(`https://mohasagor.com.bd/api/reseller/product?page=1`, { headers }));
-
-        if (res1 && res1.ok) {
-          const data1 = await res1.json();
-          rawProductsPage1 = data1.products || (Array.isArray(data1) ? data1 : []);
-          if (data1.last_page) lastPage = data1.last_page;
+        const p1Data = await fetchPageWithFallback(1, headers, 3);
+        if (p1Data && p1Data.length > 0) {
+          rawProductsPage1 = p1Data;
         }
       } catch (err) {
         console.warn("Live page 1 fetch warning, attempting static catalog...", err);
@@ -430,22 +445,30 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
       // If page 1 failed, load static catalog
       if (rawProductsPage1.length === 0) {
         const staticList = await fetchStaticCatalog();
-        if (staticList.length > 0) {
+        if (staticList && staticList.length > 0) {
           return staticList;
         }
         return inMemoryProductsCache || FALLBACK_SUPPLIER_PRODUCTS;
       }
 
       const base = "https://mohasagor.com.bd";
+      const allRawPages: any[][] = [rawProductsPage1];
 
-      // 2. Fetch all remaining pages concurrently and collect cleanly
-      const pagePromises: Promise<any[]>[] = [];
-      for (let p = 2; p <= lastPage; p++) {
-        pagePromises.push(fetchPageWithFallback(p, headers));
+      // 2. Fetch all remaining pages in controlled batches to avoid rate-limiting dropouts
+      const concurrency = 3;
+      for (let p = 2; p <= lastPage; p += concurrency) {
+        const batchPromises: Promise<any[]>[] = [];
+        for (let j = p; j < p + concurrency && j <= lastPage; j++) {
+          batchPromises.push(fetchPageWithFallback(j, headers, 3));
+        }
+        const batchResults = await Promise.all(batchPromises);
+        allRawPages.push(...batchResults);
+        if (p + concurrency <= lastPage) {
+          await new Promise((r) => setTimeout(r, 120));
+        }
       }
 
-      const otherPagesRaw = await Promise.all(pagePromises);
-      const allRaw = [rawProductsPage1, ...otherPagesRaw].flat();
+      const allRaw = allRawPages.flat();
 
       // Deduplicate by ID
       const uniqueMap = new Map<string, any>();
@@ -454,9 +477,18 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
           uniqueMap.set(String(p.id), p);
         }
       });
-      const uniqueRaw = Array.from(uniqueMap.values());
 
-      const allMappedProducts = mapRawProducts(uniqueRaw, base);
+      let allMappedProducts = mapRawProducts(Array.from(uniqueMap.values()), base);
+
+      // SAFETY GUARD: If live fetch retrieved fewer products than the static catalog (e.g. temporary network glitch), merge with static catalog so no products are lost!
+      const staticList = await fetchStaticCatalog().catch(() => []);
+      if (staticList && staticList.length > allMappedProducts.length) {
+        const mergedMap = new Map<string, Product>();
+        staticList.forEach((p) => mergedMap.set(String(p.id), p));
+        allMappedProducts.forEach((p) => mergedMap.set(String(p.id), p));
+        allMappedProducts = Array.from(mergedMap.values());
+      }
+
       updateIndexMap(allMappedProducts);
       inMemoryProductsCache = allMappedProducts;
 
@@ -471,7 +503,7 @@ export async function fetchAllPagesMohasagorProducts(forceRefresh = false): Prom
       return allMappedProducts;
     } catch (e) {
       console.error("Error fetching all pages of Mohasagor products", e);
-      return inMemoryProductsCache || FALLBACK_SUPPLIER_PRODUCTS;
+      return inMemoryProductsCache || (await fetchStaticCatalog()) || FALLBACK_SUPPLIER_PRODUCTS;
     } finally {
       ongoingFetchPromise = null;
     }

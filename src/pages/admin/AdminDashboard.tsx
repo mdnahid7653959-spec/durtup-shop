@@ -21,6 +21,7 @@ import {
 import { useAdminCacheInvalidation } from "@/hooks/useRealtimeSync";
 import { useToast } from "@/hooks/use-toast";
 import { formatDistanceToNow, format } from "date-fns";
+import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
 import {
   AreaChart, Area, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid,
 } from "recharts";
@@ -320,13 +321,13 @@ export default function AdminDashboard() {
       };
       setOrderBreakdown(breakdown);
 
-      // 2. Fetch live products directly from Firestore and DB
-      const allProducts: any[] = [];
+      // 2. Fetch live products directly from Firestore, DB, and Supplier API
+      const allProductsMap = new Map<string, any>();
       try {
         const pSnap = await getDocs(collection(db, "products"));
         pSnap.forEach((d) => {
           const data = d.data();
-          allProducts.push({
+          allProductsMap.set(d.id, {
             id: d.id,
             name: data.name || data.title || "Product",
             regular_price: Number(data.regular_price || data.price || 0),
@@ -336,21 +337,38 @@ export default function AdminDashboard() {
         });
       } catch (e) {}
 
-      if (allProducts.length === 0) {
-        try {
-          const { data: dbProducts } = await supabase.from("products").select("*");
-          (dbProducts || []).forEach((p: any) => {
-            allProducts.push({
+      try {
+        const { data: dbProducts } = await supabase.from("products").select("*");
+        (dbProducts || []).forEach((p: any) => {
+          if (!allProductsMap.has(p.id)) {
+            allProductsMap.set(p.id, {
               id: p.id,
               name: p.name || "Product",
               regular_price: Number(p.regular_price || p.price || 0),
               stock_quantity: Number(p.stock_quantity || 0),
               status: p.status || "active",
             });
-          });
-        } catch (e) {}
-      }
+          }
+        });
+      } catch (e) {}
 
+      try {
+        const supplierProds = await getCachedMohasagorProducts();
+        (supplierProds || []).forEach((sp: any) => {
+          const id = String(sp.id);
+          if (!allProductsMap.has(id)) {
+            allProductsMap.set(id, {
+              id,
+              name: sp.name || "Product",
+              regular_price: Number(sp.originalPrice || sp.price || 0),
+              stock_quantity: Number(sp.stock_quantity ?? sp.stock ?? 50),
+              status: sp.status || "active",
+            });
+          }
+        });
+      } catch (e) {}
+
+      const allProducts = Array.from(allProductsMap.values());
       const lowStock = allProducts.filter(p => p.stock_quantity > 0 && p.stock_quantity <= 10).length;
       const outStock = allProducts.filter(p => p.stock_quantity <= 0).length;
       const valuation = allProducts.reduce((acc, p) => acc + (p.stock_quantity * p.regular_price), 0);
