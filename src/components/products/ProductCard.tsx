@@ -117,6 +117,7 @@ function ProductCardComponent({ product, priority = false }: ProductCardProps) {
                 imageLoaded ? "opacity-100" : "opacity-0"
               )}
               loading={priority ? "eager" : "lazy"}
+              fetchPriority={priority ? "high" : "auto"}
               decoding="async"
               onLoad={() => setImageLoaded(true)}
               onError={(e) => {

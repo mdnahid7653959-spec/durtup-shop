@@ -130,6 +130,23 @@ export function PersonalizedFeed() {
           rows = [...rows, ...(((fb as Row[]) || []))];
         }
 
+        // Fast Seed Catalog Fallback if DB has fewer than 12 items
+        if (rows.length < 12) {
+          const { FAST_SEED_PRODUCTS } = await import("@/data/fastSeedCatalog");
+          const needed = 12 - rows.length;
+          const seedSlice = FAST_SEED_PRODUCTS.slice(0, needed).map(p => ({
+            id: p.id,
+            name: p.name,
+            slug: p.slug,
+            category_id: null,
+            regular_price: p.originalPrice || p.price,
+            discount_price: p.originalPrice ? p.price : null,
+            rating_average: p.rating,
+            product_images: [{ image_url: p.image, is_primary: true }]
+          }));
+          rows = [...rows, ...seedSlice];
+        }
+
         const built: Tile[] = rows.slice(0, 12).map((p, i) => {
           const price = p.discount_price ?? p.regular_price;
           const discountPct =

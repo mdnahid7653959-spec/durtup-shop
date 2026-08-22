@@ -267,7 +267,9 @@ function buildSections(products: Product[]) {
   };
 }
 
-const CACHE_KEY = "mohasagor_cached_home_products_v6";
+import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
+
+const CACHE_KEY = "mohasagor_cached_home_products_v11";
 const CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes 
 
 function preloadImages(products: Product[]) {
@@ -276,7 +278,7 @@ function preloadImages(products: Product[]) {
 }
 
 function getInitialCachedProducts() {
-  if (typeof window === "undefined") return undefined;
+  if (typeof window === "undefined") return buildSections(FAST_SEED_PRODUCTS);
   try {
     const cached = localStorage.getItem(CACHE_KEY);
     if (cached) {
@@ -289,7 +291,21 @@ function getInitialCachedProducts() {
   } catch (e) {
     console.warn("Failed to load cached home products", e);
   }
-  return undefined;
+  // Guaranteed Instant 0ms First-Paint fallback
+  return buildSections(FAST_SEED_PRODUCTS);
+}
+
+async function fetchWithTimeout(url: string, options: RequestInit = {}, timeoutMs = 3500): Promise<Response> {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(timeoutId);
+    return res;
+  } catch (err) {
+    clearTimeout(timeoutId);
+    throw err;
+  }
 }
 
 async function fetchAllHomeProducts() {
@@ -318,7 +334,38 @@ async function fetchAllHomeProducts() {
     }
   } catch {}
 
-  // ── Strategy 1: Fetch from local DB (synced products + images) ──
+  // ── Strategy 1: Fetch directly from live supplier API (Mohasagor API) with fast 3.5s timeout ──
+  try {
+    const apiUrl = "/api/mohasagor/api/reseller/product";
+    const res = await fetchWithTimeout(apiUrl, {
+      headers: {
+        "api-key": "A8niclztH9JtzS4t",
+        "secret-key": "2ff380917a11d3a7c97bcf6dddfb8adf38194c7d6b726ab12c4d0d5fb136fef8"
+      }
+    }, 3500);
+
+    if (res.ok) {
+      const responseData = await res.json();
+      const rawProducts = responseData.products || (Array.isArray(responseData) ? responseData : []);
+      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
+        const mapped = rawProducts.map(mapSupplierProduct);
+        const merged = [
+          ...adminCreatedProducts,
+          ...mapped.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
+        ];
+        const result = buildSections(merged);
+        try {
+          localStorage.setItem(CACHE_KEY, JSON.stringify(result));
+        } catch (e) {}
+        preloadImages(result.latestProducts);
+        return result;
+      }
+    }
+  } catch (err) {
+    // API slow or offline, gracefully continue to local DB / master cache
+  }
+
+  // ── Strategy 2: Fetch from local DB (synced products + images) ──
   try {
     const { data: dbProducts, error: dbError } = await supabase
       .from("products")
@@ -345,42 +392,10 @@ async function fetchAllHomeProducts() {
       return result;
     }
   } catch (dbErr) {
-    console.warn("[useHomeProducts] DB fetch failed, trying live API:", dbErr);
+    console.warn("[useHomeProducts] DB fetch fallback warning:", dbErr);
   }
 
-  // ── Strategy 2: Fetch directly from live supplier API (Mohasagor API) ──
-  try {
-    const apiUrl = "/api/mohasagor/api/reseller/product";
-
-    const res = await fetch(apiUrl, {
-      headers: {
-        "api-key": "A8niclztH9JtzS4t",
-        "secret-key": "2ff380917a11d3a7c97bcf6dddfb8adf38194c7d6b726ab12c4d0d5fb136fef8"
-      }
-    });
-
-    if (res.ok) {
-      const responseData = await res.json();
-      const rawProducts = responseData.products || (Array.isArray(responseData) ? responseData : []);
-      if (Array.isArray(rawProducts) && rawProducts.length > 0) {
-        const mapped = rawProducts.map(mapSupplierProduct);
-        const merged = [
-          ...adminCreatedProducts,
-          ...mapped.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
-        ];
-        const result = buildSections(merged);
-        try {
-          localStorage.setItem(CACHE_KEY, JSON.stringify(result));
-        } catch (e) {}
-        preloadImages(result.latestProducts);
-        return result;
-      }
-    }
-  } catch (err) {
-    console.warn("[useHomeProducts] Error fetching from Mohasagor API:", err);
-  }
-
-  // ── Strategy 3: Mohasagor Supplier Master Cache Fallback ──
+  // ── Strategy 3: Mohasagor Fast Seed / Master Cache Fallback ──
   try {
     const { getCachedMohasagorProducts } = await import("@/utils/mohasagorCache");
     const cachedMohasagor = await getCachedMohasagorProducts();
@@ -400,14 +415,13 @@ async function fetchAllHomeProducts() {
     console.warn("[useHomeProducts] Supplier cache fallback warning:", cachedErr);
   }
 
-  // ── Strategy 4: Hardcoded fallback ──
+  // ── Strategy 4: Instant Fast Seed Fallback ──
   const mergedFallback = [
     ...adminCreatedProducts,
-    ...fallbackProducts.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
+    ...FAST_SEED_PRODUCTS.filter(m => !adminCreatedProducts.some(ap => ap.id === m.id))
   ];
   return buildSections(mergedFallback);
 }
-
 
 export function useHomeProducts() {
   const queryClient = useQueryClient();
@@ -431,6 +445,6 @@ export function useHomeProducts() {
     gcTime: 15 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
-    retry: 2,
+    retry: 1,
   });
 }

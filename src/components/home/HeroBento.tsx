@@ -224,10 +224,23 @@ function getSmartPersonalizedForYou(candidates: Product[]): Product[] {
   return selected;
 }
 
+import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
+
 function HeroBentoComponent({ forYou = [], flashSale = [], trending = [] }: HeroBentoProps) {
   const countdown = useCountdown(30);
   const isMobile = useIsMobile();
-  const [categoryImgs, setCategoryImgs] = useState<Record<string, string>>({});
+  const [categoryImgs, setCategoryImgs] = useState<Record<string, string>>(() => {
+    const techList = filterProductsByCategory(FAST_SEED_PRODUCTS, "electronics");
+    const fashionList = filterProductsByCategory(FAST_SEED_PRODUCTS, "fashion");
+    const homeList = filterProductsByCategory(FAST_SEED_PRODUCTS, "home");
+    const beautyList = filterProductsByCategory(FAST_SEED_PRODUCTS, "beauty");
+    return {
+      cat_tech: techList[0]?.image || "",
+      cat_lifestyle: fashionList[0]?.image || "",
+      cat_home: homeList[0]?.image || "",
+      cat_beauty: beautyList[0]?.image || "",
+    };
+  });
 
   useEffect(() => {
     let isMounted = true;

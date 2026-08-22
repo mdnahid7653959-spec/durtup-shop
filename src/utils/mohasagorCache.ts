@@ -2,23 +2,28 @@ import type { Product } from "@/components/products/ProductCard";
 import { calculateProductPrice } from "@/utils/pricingMargin";
 import { getSmartProductImage } from "@/utils/productImageHelper";
 import { extractProductVariants } from "@/utils/productVariantHelper";
+import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 
-const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v10";
+const MOHASAGOR_CACHE_KEY = "mohasagor_products_master_cache_v11";
 const AUTO_SYNC_INTERVAL_MS = 5 * 60 * 1000; // 5 minutes
 
 // IndexedDB configuration for unlimited, fast persistent storage
 const IDB_NAME = "durtup_catalog_db";
 const IDB_STORE = "products_store";
-const IDB_KEY = "mohasagor_catalog_master_v10";
+const IDB_KEY = "mohasagor_catalog_master_v11";
 const IDB_VERSION = 1;
 
-let inMemoryProductsCache: Product[] | null = null;
+// Initialize in-memory cache synchronously with seed products for 0ms Instant First-Render!
+let inMemoryProductsCache: Product[] | null = [...FAST_SEED_PRODUCTS];
 let isFetchingAllPages = false;
 let autoSyncTimer: number | null = null;
-let lastSyncTimestamp: number | null = null;
+let lastSyncTimestamp: number | null = Date.now();
 
 // Ultra-fast O(1) Hash Map Index for Instant Lookups
 const productIndexMap = new Map<string, Product & { [key: string]: any }>();
+
+// Populate Index Map immediately on module load
+updateIndexMap(FAST_SEED_PRODUCTS);
 
 function openIdb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
@@ -127,7 +132,7 @@ export function findMohasagorProductSync(slugOrId: string): (Product & { [key: s
       return pSlug === targetRaw || 
              pId === targetRaw || 
              pId === cleanId || 
-             pCode === cleanId ||
+             pCode === cleanId || 
              pCode === targetRaw ||
              pSlug === `product-${cleanId}` ||
              (suffixMatch && (pId === suffixMatch[1] || pCode === suffixMatch[1] || pSlug.endsWith(`-${suffixMatch[1]}`))) ||
@@ -147,23 +152,7 @@ export function getLastSyncTime(): string | null {
   return new Date(lastSyncTimestamp).toLocaleTimeString();
 }
 
-export const FALLBACK_SUPPLIER_PRODUCTS: Product[] = [
-  { id: "supplier-101", name: "X-01 Full Charge Separator – Type-C Auto Power-Off Cable", slug: "product-101", image: "https://images.unsplash.com/photo-1583394838336-acd977736f90?w=400&h=400&fit=crop", price: 690, originalPrice: 930, rating: 4.8, reviews: 34, sold: 120, freeShipping: true, category: "electronics" },
-  { id: "supplier-102", name: "Rechargeable Dual Slot Battery Charger with LED Display", slug: "product-102", image: "https://images.unsplash.com/photo-1590658268037-6bf12165a8df?w=400&h=400&fit=crop", price: 280, originalPrice: 380, rating: 4.7, reviews: 22, sold: 85, freeShipping: true, category: "electronics" },
-  { id: "supplier-103", name: "Apache Luminous RGB Gaming Mouse (Batmen Edition)", slug: "product-103", image: "https://images.unsplash.com/photo-1527864550417-7fd91fc51a46?w=400&h=400&fit=crop", price: 750, originalPrice: 1010, rating: 4.9, reviews: 56, sold: 210, freeShipping: true, category: "electronics" },
-  { id: "supplier-104", name: "Rechargeable Water Dispenser Pump | Automatic Electric Pump", slug: "product-104", image: "https://images.unsplash.com/photo-1585336261026-8f5786372966?w=400&h=400&fit=crop", price: 780, originalPrice: 1050, rating: 4.6, reviews: 19, sold: 95, freeShipping: true, category: "home" },
-  { id: "supplier-105", name: "Archer C6 AC1200 Wireless MU-MIMO Gigabit Router", slug: "product-105", image: "https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=400&h=400&fit=crop", price: 3500, originalPrice: 4725, rating: 4.9, reviews: 140, sold: 430, freeShipping: true, category: "electronics" },
-  { id: "supplier-106", name: "Touch Lamp Portable Bluetooth Speaker with Wireless Charger", slug: "product-106", image: "https://images.unsplash.com/photo-1545454675-3531b543be5d?w=400&h=400&fit=crop", price: 699, originalPrice: 940, rating: 4.8, reviews: 45, sold: 180, freeShipping: true, category: "electronics" },
-  { id: "supplier-107", name: "Smart Fitness Watch with Heart Rate & Oxygen Monitor", slug: "product-107", image: "https://images.unsplash.com/photo-1523275335684-37898b6baf30?w=400&h=400&fit=crop", price: 1480, originalPrice: 1990, rating: 4.8, reviews: 88, sold: 340, freeShipping: true, category: "electronics" },
-  { id: "supplier-108", name: "Ultra Quiet Mini Desk Fan with USB Rechargeable Battery", slug: "product-108", image: "https://images.unsplash.com/photo-1618944847828-82e943c3beb9?w=400&h=400&fit=crop", price: 650, originalPrice: 880, rating: 4.7, reviews: 31, sold: 140, freeShipping: true, category: "home" },
-  { id: "supplier-109", name: "Stainless Steel Thermal Coffee Mug (500ml)", slug: "product-109", image: "https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?w=400&h=400&fit=crop", price: 499, originalPrice: 670, rating: 4.9, reviews: 62, sold: 290, freeShipping: true, category: "home" },
-  { id: "supplier-110", name: "Ergonomic Memory Foam Back Pillow Cushion", slug: "product-110", image: "https://images.unsplash.com/photo-1584100936595-c0654b55a2e2?w=400&h=400&fit=crop", price: 950, originalPrice: 1280, rating: 4.8, reviews: 27, sold: 110, freeShipping: true, category: "home" },
-  { id: "supplier-111", name: "Professional Noise Cancelling Studio Headphones", slug: "product-111", image: "https://images.unsplash.com/photo-1505740420928-5e560c06d30e?w=400&h=400&fit=crop", price: 2600, originalPrice: 3500, rating: 4.9, reviews: 104, sold: 520, freeShipping: true, category: "electronics" },
-  { id: "supplier-112", name: "Wireless Ergonomic Vertical Optical Mouse 2.4G", slug: "product-112", image: "https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=400&h=400&fit=crop", price: 850, originalPrice: 1150, rating: 4.6, reviews: 43, sold: 160, freeShipping: true, category: "electronics" }
-];
-
-// Initialize index map with fallback items immediately
-updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
+export const FALLBACK_SUPPLIER_PRODUCTS: Product[] = FAST_SEED_PRODUCTS;
 
 export function startMohasagorAutoSync() {
   if (typeof window === "undefined") return;
@@ -172,38 +161,33 @@ export function startMohasagorAutoSync() {
   // Run auto-sync from live API every 5 minutes
   autoSyncTimer = window.setInterval(async () => {
     try {
-      console.log("[Mohasagor Auto-Sync] Auto-fetching fresh products from all API pages (5-min interval)...");
+      console.log("[Mohasagor Auto-Sync] Refreshing latest products (5-min interval)...");
       await fetchAllPagesMohasagorProducts(true);
     } catch (err) {
-      console.warn("[Mohasagor Auto-Sync] 5-minute background sync error:", err);
+      console.warn("[Mohasagor Auto-Sync] Background sync error:", err);
     }
   }, AUTO_SYNC_INTERVAL_MS);
 }
 
-// Eagerly bootstrap cache on client startup: IndexedDB -> Static CDN Catalog -> Live Sync
+// Non-blocking background catalog hydrator
 if (typeof window !== "undefined") {
   startMohasagorAutoSync();
 
-  (async () => {
+  // Hydrate additional catalog items after browser finishes initial render (2000ms delay)
+  setTimeout(async () => {
     try {
-      // 1. Try IndexedDB first (if it has full catalog of 2000+ items)
       const idbData = await getIdbProducts();
-      if (idbData && idbData.length >= 2000) {
+      if (idbData && idbData.length >= 100) {
         inMemoryProductsCache = idbData;
         updateIndexMap(idbData);
         window.dispatchEvent(new Event("mohasagor_products_updated"));
       } else {
-        // 2. Fetch Static CDN Public Catalog (/mohasagor_catalog.json) instantly
-        const staticList = await fetchStaticCatalog();
-        if (!staticList || staticList.length < 2000) {
-          fetchAllPagesMohasagorProducts(true).catch(() => {});
-        }
+        fetchStaticCatalog().catch(() => {});
       }
     } catch (e) {
-      console.warn("Bootstrap cache error:", e);
-      fetchStaticCatalog().catch(() => {});
+      console.warn("Catalog background hydration warning:", e);
     }
-  })();
+  }, 2000);
 }
 
 async function fetchStaticCatalog(): Promise<Product[]> {
@@ -229,16 +213,16 @@ async function fetchStaticCatalog(): Promise<Product[]> {
 let ongoingFetchPromise: Promise<Product[]> | null = null;
 
 export async function getCachedMohasagorProducts(): Promise<Product[]> {
-  // 1. In-memory cache first (if full catalog is loaded)
-  if (inMemoryProductsCache && inMemoryProductsCache.length >= 2000) {
+  // 1. Instant return from in-memory cache (0ms!)
+  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) {
     return inMemoryProductsCache;
   }
 
-  // 2. Check IndexedDB (10-30ms)
+  // 2. Check IndexedDB
   if (typeof window !== "undefined") {
     try {
       const idbItems = await getIdbProducts();
-      if (idbItems && idbItems.length >= 2000) {
+      if (idbItems && idbItems.length > 0) {
         inMemoryProductsCache = idbItems;
         updateIndexMap(idbItems);
         return idbItems;
@@ -246,24 +230,7 @@ export async function getCachedMohasagorProducts(): Promise<Product[]> {
     } catch {}
   }
 
-  // 3. Check static CDN catalog (/mohasagor_catalog.json) which has all 2788 items
-  const staticItems = await fetchStaticCatalog();
-  if (staticItems && staticItems.length >= 2000) {
-    return staticItems;
-  }
-
-  // 4. Live network fetch from all API pages
-  const fetched = await fetchAllPagesMohasagorProducts().catch(() => []);
-  if (fetched && fetched.length > 0) {
-    return fetched;
-  }
-
-  // 5. Guaranteed Fallback
-  if (staticItems && staticItems.length > 0) return staticItems;
-  if (inMemoryProductsCache && inMemoryProductsCache.length > 0) return inMemoryProductsCache;
-  inMemoryProductsCache = FALLBACK_SUPPLIER_PRODUCTS;
-  updateIndexMap(FALLBACK_SUPPLIER_PRODUCTS);
-  return FALLBACK_SUPPLIER_PRODUCTS;
+  return FAST_SEED_PRODUCTS;
 }
 
 export function mapRawProducts(rawProducts: any[], base: string = "https://mohasagor.com.bd"): Product[] {

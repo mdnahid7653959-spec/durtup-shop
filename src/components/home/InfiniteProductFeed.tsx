@@ -3,12 +3,13 @@ import { Loader2 } from "lucide-react";
 import { ProductCard, type Product } from "@/components/products/ProductCard";
 import { getCachedMohasagorProducts } from "@/utils/mohasagorCache";
 import { prefetchProductImages } from "@/utils/productImageHelper";
+import { FAST_SEED_PRODUCTS } from "@/data/fastSeedCatalog";
 
 const BATCH_SIZE = 18;
 
 export function InfiniteProductFeed() {
-  const [allCatalog, setAllCatalog] = useState<Product[]>([]);
-  const [displayedProducts, setDisplayedProducts] = useState<Product[]>([]);
+  const [allCatalog, setAllCatalog] = useState<Product[]>(() => FAST_SEED_PRODUCTS);
+  const [displayedProducts, setDisplayedProducts] = useState<Product[]>(() => FAST_SEED_PRODUCTS.slice(0, BATCH_SIZE));
   const [page, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
 
@@ -21,7 +22,7 @@ export function InfiniteProductFeed() {
         const products = await getCachedMohasagorProducts();
         if (products && products.length > 0) {
           setAllCatalog(products);
-          setDisplayedProducts(products.slice(0, BATCH_SIZE));
+          setDisplayedProducts((prev) => prev.length > 0 ? prev : products.slice(0, BATCH_SIZE));
           setHasMore(products.length > BATCH_SIZE);
           prefetchProductImages(products, 60);
         }
