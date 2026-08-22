@@ -7,58 +7,14 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ThemeProvider } from "@/contexts/ThemeContext";
-import { AdminAuthProvider } from "@/contexts/AdminAuthContext";
 import { StaffProvider } from "@/contexts/StaffContext";
-import { AdminProtectedRoute } from "@/components/admin/AdminProtectedRoute";
-import { AdminSecretUnlock, ADMIN_SECRET_ROUTE, ADMIN_SECRET_PATH } from "@/components/admin/AdminGate";
 import { StaffProtectedRoute } from "@/components/staff/StaffProtectedRoute";
-
-
-
 import { CartProvider } from "@/contexts/CartContext";
 import { WishlistProvider } from "@/contexts/WishlistContext";
 import { FacebookPixel } from "@/components/FacebookPixel";
 import { AppLayout } from "@/components/layout/AppLayout";
 import { NativeAppProvider } from "@/components/NativeAppProvider";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-
-// Core Admin Pages - lazy load
-const AdminLogin = lazy(() => import("./pages/admin/AdminLogin"));
-const AdminDashboard = lazy(() => import("./pages/admin/AdminDashboard"));
-const AdminProducts = lazy(() => import("./pages/admin/AdminProducts"));
-const ProductForm = lazy(() => import("./pages/admin/ProductForm"));
-const AdminCategories = lazy(() => import("./pages/admin/AdminCategories"));
-const AdminBrands = lazy(() => import("./pages/admin/AdminBrands"));
-const AdminOrders = lazy(() => import("./pages/admin/AdminOrders"));
-const AdminPayments = lazy(() => import("./pages/admin/AdminPayments"));
-const AdminUsers = lazy(() => import("./pages/admin/AdminUsers"));
-const AdminCoupons = lazy(() => import("./pages/admin/AdminCoupons"));
-const AdminReviews = lazy(() => import("./pages/admin/AdminReviews"));
-const AdminSettings = lazy(() => import("./pages/admin/AdminSettings"));
-const AdminCJSettings = lazy(() => import("./pages/admin/AdminCJSettings"));
-const AdminSupplierIntegrations = lazy(() => import("./pages/admin/AdminSupplierIntegrations"));
-const AdminSellers = lazy(() => import("./pages/admin/AdminSellers"));
-const AdminShipping = lazy(() => import("./pages/admin/AdminShipping"));
-const AdminCommissions = lazy(() => import("./pages/admin/AdminCommissions"));
-const AdminInventory = lazy(() => import("./pages/admin/AdminInventory"));
-const AdminMarketing = lazy(() => import("./pages/admin/AdminMarketing"));
-const AdminLoyalty = lazy(() => import("./pages/admin/AdminLoyalty"));
-const AdminFreeDelivery = lazy(() => import("./pages/admin/AdminFreeDelivery"));
-const AdminReports = lazy(() => import("./pages/admin/AdminReports"));
-const AdminSecurity = lazy(() => import("./pages/admin/AdminSecurity"));
-const AdminCMS = lazy(() => import("./pages/admin/AdminCMS"));
-const AdminConsignments = lazy(() => import("./pages/admin/AdminConsignments"));
-const AdminWarehouses = lazy(() => import("./pages/admin/AdminWarehouses"));
-const AdminHomeBento = lazy(() => import("./pages/admin/AdminHomeBento"));
-const AdminHomePromos = lazy(() => import("./pages/admin/AdminHomePromos"));
-const AdminPushNotifications = lazy(() => import("./pages/admin/AdminPushNotifications"));
-const AdminReturns = lazy(() => import("./pages/admin/AdminReturns"));
-const AdminSearchManagement = lazy(() => import("./pages/admin/AdminSearchManagement"));
-const AdminFinance = lazy(() => import("./pages/admin/AdminFinance"));
-const AdminStaff = lazy(() => import("./pages/admin/AdminStaff"));
-const AdminSellerSupport = lazy(() => import("./pages/admin/AdminSellerSupport"));
-const AdminWallet = lazy(() => import("./pages/admin/AdminWallet"));
-const AdminVisualEditor = lazy(() => import("./pages/admin/AdminVisualEditor"));
 
 // Eager load - critical pages
 import Index from "./pages/Index";
@@ -158,9 +114,8 @@ const App = () => (
           <NativeAppProvider>
             <AuthProvider>
               <ThemeProvider>
-                <AdminAuthProvider>
-                  <StaffProvider>
-                    <CartProvider>
+                <StaffProvider>
+                  <CartProvider>
                       <WishlistProvider>
                         <FacebookPixel />
                         <AppLayout>
@@ -241,54 +196,7 @@ const App = () => (
                               <Route path="/flash-sale" element={<Products />} />
                               <Route path="/free-shipping" element={<Products />} />
                               
-                              {/* Secret Gate Route */}
-                              <Route path={ADMIN_SECRET_PATH} element={<AdminSecretUnlock />} />
-                              <Route path={ADMIN_SECRET_ROUTE} element={<AdminSecretUnlock />} />
-
-                              {/* Admin Portal */}
-                              <Route path="/admin/login" element={<AdminLogin />} />
-                              <Route path="/admin" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-                              <Route path="/admin/dashboard" element={<AdminProtectedRoute><AdminDashboard /></AdminProtectedRoute>} />
-                              <Route path="/admin/products" element={<AdminProtectedRoute><AdminProducts /></AdminProtectedRoute>} />
-                              <Route path="/admin/products/new" element={<AdminProtectedRoute><ProductForm /></AdminProtectedRoute>} />
-                              <Route path="/admin/products/:id" element={<AdminProtectedRoute><ProductForm /></AdminProtectedRoute>} />
-                              <Route path="/admin/categories" element={<AdminProtectedRoute><AdminCategories /></AdminProtectedRoute>} />
-                              <Route path="/admin/brands" element={<AdminProtectedRoute><AdminBrands /></AdminProtectedRoute>} />
-                              <Route path="/admin/orders" element={<AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
-                              <Route path="/admin/orders/:id" element={<AdminProtectedRoute><AdminOrders /></AdminProtectedRoute>} />
-                              <Route path="/admin/returns" element={<AdminProtectedRoute><AdminReturns /></AdminProtectedRoute>} />
-                              <Route path="/admin/inventory" element={<AdminProtectedRoute><AdminInventory /></AdminProtectedRoute>} />
-                              <Route path="/admin/consignments" element={<AdminProtectedRoute><AdminConsignments /></AdminProtectedRoute>} />
-                              <Route path="/admin/warehouses" element={<AdminProtectedRoute><AdminWarehouses /></AdminProtectedRoute>} />
-                              <Route path="/admin/shipping" element={<AdminProtectedRoute><AdminShipping /></AdminProtectedRoute>} />
-                              <Route path="/admin/free-delivery" element={<AdminProtectedRoute><AdminFreeDelivery /></AdminProtectedRoute>} />
-                              <Route path="/admin/payments" element={<AdminProtectedRoute><AdminPayments /></AdminProtectedRoute>} />
-                              <Route path="/admin/finance" element={<AdminProtectedRoute><AdminFinance /></AdminProtectedRoute>} />
-                              <Route path="/admin/wallet" element={<AdminProtectedRoute><AdminWallet /></AdminProtectedRoute>} />
-                              <Route path="/admin/commissions" element={<AdminProtectedRoute><AdminCommissions /></AdminProtectedRoute>} />
-                              <Route path="/admin/users" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
-                              <Route path="/admin/customers" element={<AdminProtectedRoute><AdminUsers /></AdminProtectedRoute>} />
-                              <Route path="/admin/sellers" element={<AdminProtectedRoute><AdminSellers /></AdminProtectedRoute>} />
-                              <Route path="/admin/staff" element={<AdminProtectedRoute><AdminStaff /></AdminProtectedRoute>} />
-                              <Route path="/admin/seller-support" element={<AdminProtectedRoute><AdminSellerSupport /></AdminProtectedRoute>} />
-                              <Route path="/admin/marketing" element={<AdminProtectedRoute><AdminMarketing /></AdminProtectedRoute>} />
-                              <Route path="/admin/coupons" element={<AdminProtectedRoute><AdminCoupons /></AdminProtectedRoute>} />
-                              <Route path="/admin/loyalty" element={<AdminProtectedRoute><AdminLoyalty /></AdminProtectedRoute>} />
-                              <Route path="/admin/home-promos" element={<AdminProtectedRoute><AdminHomePromos /></AdminProtectedRoute>} />
-                              <Route path="/admin/home-bento" element={<AdminProtectedRoute><AdminHomeBento /></AdminProtectedRoute>} />
-                              <Route path="/admin/push-notifications" element={<AdminProtectedRoute><AdminPushNotifications /></AdminProtectedRoute>} />
-                              <Route path="/admin/cms" element={<AdminProtectedRoute><AdminCMS /></AdminProtectedRoute>} />
-                              <Route path="/admin/reviews" element={<AdminProtectedRoute><AdminReviews /></AdminProtectedRoute>} />
-                              <Route path="/admin/visual-editor" element={<AdminProtectedRoute><AdminVisualEditor /></AdminProtectedRoute>} />
-                              <Route path="/admin/cj-settings" element={<AdminProtectedRoute><AdminCJSettings /></AdminProtectedRoute>} />
-                              <Route path="/admin/supplier-integrations" element={<AdminProtectedRoute><AdminSupplierIntegrations /></AdminProtectedRoute>} />
-                              <Route path="/admin/suppliers" element={<AdminProtectedRoute><AdminSupplierIntegrations /></AdminProtectedRoute>} />
-                              <Route path="/admin/reports" element={<AdminProtectedRoute><AdminReports /></AdminProtectedRoute>} />
-                              <Route path="/admin/security" element={<AdminProtectedRoute><AdminSecurity /></AdminProtectedRoute>} />
-                              <Route path="/admin/search" element={<AdminProtectedRoute><AdminSearchManagement /></AdminProtectedRoute>} />
-                              <Route path="/admin/settings" element={<AdminProtectedRoute><AdminSettings /></AdminProtectedRoute>} />
-
-                              {/* Staff Portal */}
+                               {/* Staff Portal */}
                               <Route path="/staff/login" element={<StaffLogin />} />
                               <Route path="/staff/activate" element={<StaffActivate />} />
                               <Route path="/staff" element={<StaffProtectedRoute><StaffIndex /></StaffProtectedRoute>} />
@@ -308,7 +216,6 @@ const App = () => (
                       </WishlistProvider>
                     </CartProvider>
                   </StaffProvider>
-                </AdminAuthProvider>
               </ThemeProvider>
             </AuthProvider>
           </NativeAppProvider>
