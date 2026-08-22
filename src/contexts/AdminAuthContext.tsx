@@ -1,6 +1,7 @@
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
 import { useLocation } from "react-router-dom";
 import { supabase } from "@/lib/firebaseAdapter";
+import { lockAdminGate } from "@/components/admin/AdminGate";
 
 interface AdminUser {
   id: string;
@@ -313,6 +314,7 @@ export function AdminAuthProvider({ children }: { children: ReactNode }) {
     }
     
     localStorage.removeItem(ADMIN_SESSION_KEY);
+    lockAdminGate();
     setAdmin(null);
   };
 

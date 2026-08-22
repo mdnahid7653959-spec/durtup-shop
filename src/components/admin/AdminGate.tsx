@@ -2,68 +2,80 @@ import { ReactNode, useEffect, useState } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import NotFound from "@/pages/NotFound";
 
-export const ADMIN_GATE_KEY = "admin_gate_unlocked";
+export const ADMIN_GATE_KEY = "admin_gate_session_token_v2";
+
 export const ADMIN_SECRET_PREFIX =
   "/nahid/dreem/e/comarce/467265@/apple789@/dreem/project";
 export const ADMIN_SECRET_SLUG = "contole";
 export const ADMIN_SECRET_PATH = `${ADMIN_SECRET_PREFIX}/${ADMIN_SECRET_SLUG}`;
 export const ADMIN_SECRET_ROUTE = `${ADMIN_SECRET_PREFIX}/:unlockCode/*`;
 
-function normalizeAdminPath(pathname: string): string {
-  let decoded = pathname;
-  try {
-    decoded = decodeURI(pathname);
-  } catch {
-    decoded = pathname;
-  }
-
-  return decoded
-    .replace(/\/+$/g, "")
-    .replace(/[\s\u2013\u2014-]+$/u, "");
-}
-
-function isSecretAdminPath(pathname: string): boolean {
-  return normalizeAdminPath(pathname) === ADMIN_SECRET_PATH;
-}
-
+/**
+ * Checks if the current browser tab session has unlocked the admin gate.
+ * Strictly uses temporary sessionStorage (no permanent localStorage bypass).
+ */
 export function isAdminGateUnlocked(): boolean {
+  if (typeof window === "undefined") return false;
   try {
-    return (
-      sessionStorage.getItem(ADMIN_GATE_KEY) === "1" ||
-      localStorage.getItem(ADMIN_GATE_KEY) === "1"
-    );
+    // Clear any legacy insecure localStorage keys
+    localStorage.removeItem("admin_gate_unlocked");
+    localStorage.removeItem(ADMIN_GATE_KEY);
+
+    const token = sessionStorage.getItem(ADMIN_GATE_KEY);
+    return Boolean(token && token.startsWith("gate_unlocked_"));
   } catch {
     return false;
   }
 }
 
-
-/** Wrap any /admin/* route so it renders safely. */
-export function AdminGate({ children }: { children: ReactNode }) {
-  // Always unlock if on secret path or if previously unlocked
-  useEffect(() => {
-    try {
-      sessionStorage.setItem(ADMIN_GATE_KEY, "1");
-      localStorage.setItem(ADMIN_GATE_KEY, "1");
-    } catch {}
-  }, []);
-
-  return <>{children}</>;
+/**
+ * Unlocks the admin gate for the current tab session only.
+ */
+export function unlockAdminGate(): void {
+  if (typeof window === "undefined") return;
+  try {
+    localStorage.removeItem("admin_gate_unlocked");
+    localStorage.removeItem(ADMIN_GATE_KEY);
+    sessionStorage.setItem(ADMIN_GATE_KEY, `gate_unlocked_${Date.now()}`);
+  } catch {}
 }
 
-/** Route component mounted at the secret URL. Sets the flag and forwards to admin login. */
+/**
+ * Locks the admin gate and clears all session gate tokens.
+ */
+export function lockAdminGate(): void {
+  if (typeof window === "undefined") return;
+  try {
+    sessionStorage.removeItem(ADMIN_GATE_KEY);
+    sessionStorage.removeItem("admin_gate_unlocked");
+    localStorage.removeItem("admin_gate_unlocked");
+    localStorage.removeItem(ADMIN_GATE_KEY);
+  } catch {}
+}
+
+/**
+ * Route component mounted ONLY at the secret URL.
+ * Unlocks the gate for this tab and navigates to the login screen.
+ */
 export function AdminSecretUnlock() {
   const location = useLocation();
   const [ready, setReady] = useState(false);
 
   useEffect(() => {
-    try {
-      sessionStorage.setItem(ADMIN_GATE_KEY, "1");
-      localStorage.setItem(ADMIN_GATE_KEY, "1");
-    } catch {}
+    unlockAdminGate();
     setReady(true);
   }, [location.pathname]);
 
   if (!ready) return null;
-  return <Navigate to="/admin/login" replace state={{ from: location }} />;
+  return <Navigate to="/admin/login" replace state={{ from: location, gateUnlocked: true }} />;
+}
+
+/**
+ * Wrapper for admin routes to guard them from direct access.
+ */
+export function AdminGate({ children }: { children: ReactNode }) {
+  if (!isAdminGateUnlocked()) {
+    return <NotFound />;
+  }
+  return <>{children}</>;
 }
